@@ -1,0 +1,33 @@
+﻿#ifndef SQLSERVER_H
+#define SQLSERVER_H
+
+#include <QList>
+#include <QSqlDatabase>
+
+class SqlServer
+{
+public:
+    SqlServer();
+
+    virtual ~SqlServer();
+    //创建数据库连接
+    bool createConnection();
+
+    //检查表，如果表存在就OK，不存在创建表
+    bool checkTables();
+
+    //关闭数据库连接
+    bool closeConnection();
+
+    //执行sql语句
+    //原则上，除了id 时间日期 外的其他字段统统text(vchar)
+    bool exec(QString qeurysql,QStringList args);
+
+    //查询数据
+    QList<QStringList> query(QString qeurysql, QStringList args);
+
+private:
+    QSqlDatabase database;
+};
+
+#endif // SQLSERVER_H
