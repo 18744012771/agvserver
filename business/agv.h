@@ -16,6 +16,11 @@ enum{
     AGV_STATUS_CHARGING=6,//正在充电
 };
 
+enum{
+    AGV_MODE_AUTO = 0,//自动模式
+    AGV_MODE_HAND = 1//手动模式
+};
+
 class Agv : public QObject
 {
     Q_OBJECT
@@ -26,7 +31,7 @@ public:
 
     int getPathRfidAmount();
 
-    void sendToAgv(QByteArray qba);
+    bool sendToAgv(QByteArray qba);
 
     //getter
     int id(){return m_id;}

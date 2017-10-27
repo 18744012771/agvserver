@@ -35,8 +35,8 @@ public:
 signals:
 
 public slots:
-    void unassignedTasksProcess();
-    void doingTaskProcess();
+    void unassignedTasksProcess();//未分配的任务
+    void doingTaskProcess();//正在执行的任务(由于线路占用的问题，导致小车停在了某个位置，需要启动它)
 
 //    void onPickUpFinish(int taskKey);
 //    void onAimFinish(int taskKey);

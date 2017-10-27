@@ -62,10 +62,17 @@ int Agv::getPathRfidAmount()
 
 }
 
-void Agv::sendToAgv(QByteArray qba)
+bool Agv::sendToAgv(QByteArray qba)
 {
     if(m_sock.state() == QAbstractSocket::ConnectedState){
-        m_sock.write(qba);
+        int sendLen = m_sock.write(qba);
+        if(sendLen != qba.length())return false;
+    }else{
+        return false;
     }
+
+    //等待收到确认消息？？
+
+    return true;
 }
 

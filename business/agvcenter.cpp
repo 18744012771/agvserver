@@ -25,6 +25,5 @@ bool AgvCenter::agvStartTask(int agvId, QList<int> path)
     g_m_agvs[agvId]->setCurrentPath(path);
     QByteArray qba =  g_msgCenter.taskControlCmd(agvId,false);
     //组包完成，发送
-    g_m_agvs[agvId]->sendToAgv(qba);
-
+    return g_m_agvs[agvId]->sendToAgv(qba);
 }

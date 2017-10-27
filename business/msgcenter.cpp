@@ -166,20 +166,14 @@ QByteArray MsgCenter::taskControlCmd(int agvId, bool changeDirect)
 
 
     //然后对接下来的要执行的数量进行预判
-    int kk = g_m_agvs[agvId]->getPathRfidAmount();
-    if(kk<4){
-        //一次性执行完
-        for(int i=0;i<g_m_agvs[agvId]->currentPath().length();++i){
-            AgvLine *line = g_m_agvs[agvId]->currentPath().at(i);
-            AgvStation station = g_m_stations[line->endStation()];
-            if(station.type()!=AGV_STATION_TYPE_FATE){
-                //加入一个命令
-                content.append(auto_instruct_forward(station.rfid(),g_m_agvs[agvId]->speed()));
-                instrct_length +=1;
-            }
+    for(int i=0;i<g_m_agvs[agvId]->currentPath().length() && instrct_length <=5;++i){
+        AgvLine *line = g_m_agvs[agvId]->currentPath().at(i);
+        AgvStation station = g_m_stations[line->endStation()];
+        if(station.type()!=AGV_STATION_TYPE_FATE){
+            //加入一个命令
+            content.append(auto_instruct_forward(station.rfid(),g_m_agvs[agvId]->speed()));
+            instrct_length +=1;
         }
-    }else{
-        //分多次执行，先执行四个
     }
 
     //固定长度五组
@@ -190,14 +184,13 @@ QByteArray MsgCenter::taskControlCmd(int agvId, bool changeDirect)
     //计算校验和
     unsigned char sum = checkSum(content.data(),content.length());
 
-    //加入包头、功能码、内容、校验和、包尾//组包
+    //组包//加入包头、功能码、内容、校验和、包尾
     QByteArray result;
-    result.append(AGV_PACK_HEAD);
-    //加入
-    result.append(AGV_PACK_SEND_CODE_AUDTO_MODE);
-    result.append(content);
-    result.append(sum);
-    result.append(AGV_PACK_END);
+    result.append(AGV_PACK_HEAD);//包头
+    result.append(AGV_PACK_SEND_CODE_AUDTO_MODE);//功能吗
+    result.append(content);//内容
+    result.append(sum);//校验和
+    result.append(AGV_PACK_END);//包尾
 
     return result;
 }
