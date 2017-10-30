@@ -364,7 +364,7 @@ bool MapCenter::load()
     result = g_sql->query(squeryLineSql,params);
     for(int i=0;i<result.length();++i){
         QStringList qsl = result.at(i);
-        if(qsl.length()!=18){
+        if(qsl.length()!=17){
             qDebug() << "select error!!!!!!"<<squeryLineSql;
             return false;
         }

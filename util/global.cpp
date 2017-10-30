@@ -8,6 +8,7 @@ QString g_strExeRoot;
 Sql *g_sql = NULL;
 Log *g_log = NULL;
 SqlServer *g_sqlServer = NULL;
+AgvNetWork *g_netWork;//服务器中心
 
 //所有的bean集合
 QMap<int,Agv *> g_m_agvs;             //所有车辆们
@@ -42,3 +43,4 @@ int getRandom(int maxRandom)
     return qrand();
 }
 
+moodycamel::ConcurrentQueue<QyhDataItem> g_user_msg_queue;

@@ -9,6 +9,7 @@
 #include "log/log.h"
 #include "concurrentqueue.h"
 #include "sql/sqlserver.h"
+#include "network/agvnetwork.h"
 
 #include "business/agv.h"
 #include "business/agvline.h"
@@ -19,6 +20,8 @@
 #include "business/mapcenter.h"
 #include "business/taskcenter.h"
 #include "business/msgcenter.h"
+
+#include "util/concurrentqueue.h"
 
 #define qyhLog (qDebug())
 #define endll ("")
@@ -60,12 +63,14 @@ extern QString g_strExeRoot;
 extern Sql *g_sql;
 extern Log *g_log;
 extern SqlServer *g_sqlServer;
+extern AgvNetWork *g_netWork;//服务器中心
 
 //全局业务处理类实例
 extern MapCenter g_agvMapCenter;//地图路径中心
 extern TaskCenter g_taskCenter;//任务中心
 extern AgvCenter g_hrgAgvCenter;//车辆管理中心
 extern MsgCenter g_msgCenter;
+
 
 //bean的容器
 extern QMap<int,Agv *> g_m_agvs;//车辆
@@ -78,5 +83,8 @@ extern QMap<int,int> g_reverseLines;//线路和它的反方向线路的集合。
 void QyhSleep(int msec);
 
 int getRandom(int maxRandom);
+
+//用户上来的消息队列
+extern moodycamel::ConcurrentQueue<QyhDataItem> g_user_msg_queue;
 
 #endif // GLOBAL_H

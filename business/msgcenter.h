@@ -2,6 +2,14 @@
 #define MSGCENTER_H
 
 #include <QObject>
+#include <QThread>
+
+//这里将会启动一个CPU个数*2的线程，用于处理用户的数据
+//保证并发量和响应时间
+
+
+
+
 
 class MsgCenter : public QObject
 {
@@ -9,7 +17,7 @@ class MsgCenter : public QObject
 public:
     explicit MsgCenter(QObject *parent = nullptr);
 
-
+    void init();
     QByteArray taskControlCmd(int agvId,bool changeDirect);
 signals:
 

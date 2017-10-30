@@ -2,6 +2,7 @@
 
 #include "util/global.h"
 #include "util/common.h"
+#include "usermsgprocessor.h"
 //宏定义一些
 
 //包头
@@ -38,6 +39,15 @@
 MsgCenter::MsgCenter(QObject *parent) : QObject(parent)
 {
 
+}
+
+void MsgCenter::init()
+{
+    for(int i=0;i<8;++i){
+        UserMsgProcessor *workerThread = new UserMsgProcessor(this);
+        connect(workerThread, &UserMsgProcessor::finished, workerThread, &QObject::deleteLater);
+        workerThread->start();
+    }
 }
 
 QByteArray MsgCenter::auto_instruct_wait(){
