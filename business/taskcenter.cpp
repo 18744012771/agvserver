@@ -31,6 +31,7 @@ void TaskCenter::init()
         }
     }
 
+    connect(&g_hrgAgvCenter,SIGNAL(carArriveStation(int,int)),this,SLOT(carArriveStation(int,int)));
     //每隔一秒对尚未分配进行的任务进行分配
     taskProcessTimer.setInterval(1000);
     connect(&taskProcessTimer,SIGNAL(timeout()),this,SLOT(unassignedTasksProcess()));
@@ -60,7 +61,12 @@ void TaskCenter::unassignedTasksProcess()
         if(ttask->excuteCar()>0){//固定车辆去执行该任务
             Agv *excutecar = g_m_agvs[ttask->excuteCar()];
             if(excutecar->status()!=AGV_STATUS_IDLE)continue;
-            QList<int> result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nowStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+            QList<int> result;
+            if(excutecar->nowStation()>0){
+                result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nowStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+            }else{
+                result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nextStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+            }
             if(result.length()>0&&tempDis!=distance_infinity){
                 bestCar = excutecar;
                 minDis = tempDis;
@@ -75,8 +81,12 @@ void TaskCenter::unassignedTasksProcess()
             for(ppos = idleAgvs.begin();ppos!=idleAgvs.end();++ppos)
             {
                 Agv *agv = *ppos;
-
-                QList<int> result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nowStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+                QList<int> result;
+                if(agv->nowStation()>0){
+                    result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nowStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+                }else{
+                    result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nextStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+                }
                 if(result.length()>0&&tempDis!=distance_infinity)
                 {
                     //一个可用线路的结果//当然并不一定是最优的线路
@@ -114,6 +124,7 @@ void TaskCenter::unassignedTasksProcess()
             //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
             bestCar->setStatus(AGV_STATUS_TASKING);
             bestCar->setTask(ttask->id());
+            bestCar->setCurrentPath(path);
             //将任务移动到正在执行的任务//6.把这个任务定为doing。
             unassignedTasks.removeAt(mmm);
             mmm--;
@@ -479,16 +490,16 @@ void TaskCenter::carArriveStation(int car,int station)
     AgvStation *sstation = g_m_stations[station];
     if(sstation==NULL){return ;}
 
-    //更新小车的位置
-    agv->setX(sstation->x());
-    agv->setY(sstation->y());
-    if(agv->nowStation()!=sstation->id()){
-        if(agv->nowStation()>0)
-            agv->setLastStation(agv->nowStation());
-        else
-            agv->setLastStation(sstation->id());
-        agv->setNowStation(sstation->id());
-    }
+//    //更新小车的位置
+//    agv->setX(sstation->x());
+//    agv->setY(sstation->y());
+//    if(agv->nowStation()!=sstation->id()){
+//        if(agv->nowStation()>0)
+//            agv->setLastStation(agv->nowStation());
+//        else
+//            agv->setLastStation(sstation->id());
+//        agv->setNowStation(sstation->id());
+//    }
 
     //小车是手动模式，那么就不管了
     if(agv->mode() == AGV_MODE_HAND){
@@ -566,7 +577,6 @@ void TaskCenter::carArriveStation(int car,int station)
         }
         //更新发给小车的内容
         g_msgCenter.taskControlCmd(car,false);
-
     }
 }
 

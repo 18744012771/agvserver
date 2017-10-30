@@ -36,7 +36,7 @@ public:
     int length() const {return m_length;}
     int startStation() const {return m_startStation;}
     int endStation() const {return m_endStation;}
-
+    double rate(){return m_rate;}
 
     //setter
     void setStartX(int newStartX){m_startX=newStartX;emit startXChanged(newStartX);}
@@ -57,6 +57,7 @@ public:
     void setLength(int newLength){m_length=newLength;emit lengthChanged(newLength);}
     void setStartStation(int newStartStation){m_startStation=newStartStation;emit startStationChanged(newStartStation);}
     void setEndStation(int newEndStation){m_endStation=newEndStation;emit endStationChanged(newEndStation);}
+    void setRate(double newRate){m_rate=newRate;emit rateChanged(newRate);}
 
 signals:
     void startXChanged(int newStartX);
@@ -77,6 +78,7 @@ signals:
     void lengthChanged(int newLength);
     void startStationChanged(int newKUrtStation);
     void endStationChanged(int newKUndStation);
+    void rateChanged(double newRate);
 public slots:
 
 private:
@@ -98,6 +100,7 @@ private:
     int m_length;
     int m_startStation;
     int m_endStation;
+    double m_rate;//和实际线路的比例
 
 public:
     //计算路径用的

@@ -112,7 +112,7 @@ QByteArray MsgCenter::auto_instruct_mp3_left(int rfid, int mp3Id)
     qba.append(((rfid>>16) & 0xFF));
     qba.append(((rfid>>8) & 0xFF));
     qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3LEFT<<4)&0xF0)|(mp3Id<<4 & 0x0F));
+    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3LEFT<<4)&0xF0)|(mp3Id>>4 & 0x0F));
     return qba;
 }
 
@@ -123,7 +123,7 @@ QByteArray MsgCenter::auto_instruct_mp3_right(int rfid,int mp3Id)
     qba.append(((rfid>>16) & 0xFF));
     qba.append(((rfid>>8) & 0xFF));
     qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3RIGHT<<4)&0xF0)|(speed & 0x0F));
+    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3RIGHT<<4)&0xF0)|(mp3Id & 0x0F));
     return qba;
 }
 
@@ -153,7 +153,7 @@ QByteArray MsgCenter::taskControlCmd(int agvId, bool changeDirect)
     //首先需要启动
     if(!changeDirect){
         //1.立即启动
-        content.append(auto_instruct_forward(AGV_RFID_CODE_IMMEDIATELY,g_m_agvs[agvId]->speed()));
+        content.append(auto_instruct_forward(AGV_PACK_SEND_RFID_CODE_IMMEDIATELY,g_m_agvs[agvId]->speed()));
         instrct_length +=1;
     }
     //        else{
@@ -167,13 +167,13 @@ QByteArray MsgCenter::taskControlCmd(int agvId, bool changeDirect)
 
     //然后对接下来的要执行的数量进行预判
     for(int i=0;i<g_m_agvs[agvId]->currentPath().length() && instrct_length <=5;++i){
-        AgvLine *line = g_m_agvs[agvId]->currentPath().at(i);
-        AgvStation station = g_m_stations[line->endStation()];
-        if(station.type()!=AGV_STATION_TYPE_FATE){
-            //加入一个命令
-            content.append(auto_instruct_forward(station.rfid(),g_m_agvs[agvId]->speed()));
-            instrct_length +=1;
-        }
+        AgvLine *line = g_m_lines[g_m_agvs[agvId]->currentPath().at(i)];
+        AgvStation *station = g_m_stations[line->endStation()];
+
+        //加入一个命令
+        content.append(auto_instruct_forward(station->rfid(),g_m_agvs[agvId]->speed()));
+        instrct_length +=1;
+
     }
 
     //固定长度五组
@@ -182,7 +182,7 @@ QByteArray MsgCenter::taskControlCmd(int agvId, bool changeDirect)
     }
 
     //计算校验和
-    unsigned char sum = checkSum(content.data(),content.length());
+    unsigned char sum = checkSum((unsigned char *)content.data(),content.length());
 
     //组包//加入包头、功能码、内容、校验和、包尾
     QByteArray result;

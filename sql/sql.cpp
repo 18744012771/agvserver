@@ -25,6 +25,7 @@ bool Sql::checkTables()
     /// 4.agv_adj
     /// 5.agv_log
     /// 6.agv_user
+    /// 7.agv_agv
 
     args.clear();
     args<<"agv_station";
@@ -114,6 +115,19 @@ bool Sql::checkTables()
     }else{
         //不存在.创建
         QString createSql = "CREATE TABLE agv_user(id INTEGER PRIMARY KEY AUTOINCREMENT,name text,pwd text,realName TEXT,lastSignTime datetime,signState integer,tickeId text,sex bool,age int,createTime DATETIME,role INTEGER);";
+        args.clear();
+        bool b = exec(createSql,args);
+        if(!b)return false;
+    }
+
+    args.clear();
+    args<<"agv_agv";
+    qsl = query(querySql,args);
+    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0]=="1"){
+        //存在了
+    }else{
+        //不存在.创建
+        QString createSql = "CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTOINCREMENT,name text,ip text);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;

@@ -13,8 +13,11 @@ public:
     QList<Agv *> getIdleAgvs();
 
     bool agvStartTask(int agvId,QList<int> path);
-signals:
 
+    bool load();//从数据库载入所有的agv
+    bool save();//将agv保存到数据库
+signals:
+    void carArriveStation(int agvId,int station);
 public slots:
 };
 
