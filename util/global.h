@@ -4,6 +4,12 @@
 #include <QDebug>
 #include <QList>
 #include <QMap>
+#include <map>
+#include <string>
+#include <mutex>
+using std::map;
+using std::mutex;
+using std::string;
 
 #include "sql/sql.h"
 #include "log/log.h"
@@ -27,10 +33,13 @@
 #define endll ("")
 
 
-struct QyhDataItem
+struct QyhMsgDateItem
 {
-    void *data;
-    int size;
+    void *data;//消息内容
+    int size;//消息内容长度
+    std::string ip;//发送方IP
+    int port;//发送方端口
+    SOCKET sock;
 };
 
 struct PATH_LEFT_MIDDLE_RIGHT{
@@ -85,6 +94,9 @@ void QyhSleep(int msec);
 int getRandom(int maxRandom);
 
 //用户上来的消息队列
-extern moodycamel::ConcurrentQueue<QyhDataItem> g_user_msg_queue;
+extern moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
+
+//用户消息的缓存区(用于拆包、分包)
+extern std::map<int,std::string> client2serverBuffer;
 
 #endif // GLOBAL_H

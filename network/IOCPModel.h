@@ -33,6 +33,8 @@ Date:
 #pragma once
 
 #include <vector>
+#include <string>
+using std::string;
 using std::vector;
 // winsock 2 的头文件和库
 #include <winsock2.h>
@@ -50,7 +52,7 @@ using std::vector;
 
 
 
-typedef void(*IOCP_RECV_CALL_BACK)(void *param,char *s, int len);
+typedef void(*IOCP_RECV_CALL_BACK)(void *owner,char *s, int len,SOCKET sock,const std::string &fromIp,int fromPort);
 
 
 // 在完成端口上投递的I/O操作的类型

@@ -37,10 +37,10 @@ public:
 
     //读取的回调函数
     //static void onRecvAgvMsg(void *param,char *buf, int len);
-    static void onRecvClientMsg(void *param,char *buf, int len);
+    static void onRecvClientMsg(void *param, char *buf, int len, SOCKET sock, const std::string &sIp, int port);
 
     //void recvAgvMsgProcess(char *buf, int len);
-    void recvClientMsgProcess(char *buf, int len);
+    void recvClientMsgProcess(char *buf, int len, SOCKET sock, const std::string &ip, int port);
 
     //发送消息线程
     static void serverSendFunc(void *param);

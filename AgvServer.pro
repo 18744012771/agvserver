@@ -56,3 +56,12 @@ HEADERS += \
     business/taskcenter.h \
     business/msgcenter.h \
     business/usermsgprocessor.h
+
+#pluginXml
+INCLUDEPATH += D:\thirdparty\pugixml\include
+CONFIG(debug, debug|release) {
+    LIBS += D:\thirdparty\pugixml\staticlib\Debug\pugixml.lib
+} else {
+    LIBS += D:\thirdparty\pugixml\staticlib\Release\pugixml.lib
+}
+

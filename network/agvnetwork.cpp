@@ -16,11 +16,11 @@ AgvNetWork::~AgvNetWork()
 
 void AgvNetWork::sendToOne(int id,char *buf,int len)//发送给某个id的消息
 {
-//    try{
-//        m_agvIOCP.doSend(agv_id_and_sockets.at(id),buf,len);
-//    }catch(const std::out_of_range& oor){
+    //    try{
+    //        m_agvIOCP.doSend(agv_id_and_sockets.at(id),buf,len);
+    //    }catch(const std::out_of_range& oor){
 
-//    }
+    //    }
     try{
         m_clientIOCP.doSend(client_id_and_sockets.at(id),buf,len);
     }catch(const std::out_of_range& oor){
@@ -61,12 +61,12 @@ void AgvNetWork::sendToSome(QList<int> ones,char *buf,int len)//发送给某些i
 //}
 
 
-void AgvNetWork::onRecvClientMsg(void *param,char *buf, int len)
+void AgvNetWork::onRecvClientMsg(void *param, char *buf, int len,SOCKET sock,const std::string &sIp,int port)
 {
     //TODO:
     if (param != NULL)
     {
-        ((AgvNetWork *)param)->recvClientMsgProcess(buf, len);
+        ((AgvNetWork *)param)->recvClientMsgProcess(buf, len,sock,sIp,port);
     }
 }
 
@@ -84,44 +84,44 @@ void AgvNetWork::onRecvClientMsg(void *param,char *buf, int len)
 //}
 
 
-void AgvNetWork::recvClientMsgProcess(char *buf, int len)
+void AgvNetWork::recvClientMsgProcess(char *buf, int len,SOCKET sock,const std::string &ip, int port)
 {
     if(len<=0||buf==NULL)return ;
-    QyhDataItem item;
-    item.data=malloc(len);
-    memcpy(item.data,buf,len);
-    item.size=len;
-    g_user_msg_queue.enqueue(item);
-    //sendToAll(buf,len);
-//    //只做初步处理，然后丢进队列里去!
-//    qDebug() << "recv from client length="<<len<<" and buf="<<buf;
-//    sendToAll(buf,len);
-//    //定义所有的消息，以 0x88 0x77 0x66 开头  以0x11 0x22 0x33结尾
-//    if(len<=6)return ;
 
-//    if(buf[0]==0x88 && buf[1]==0x77 && buf[3]==0x66 && buf[len-3]==0x11 && buf[len-2]==0x22 && buf[len-1]==0x33){
-//        //接下来是内容
-//        //第一个字节是type
-//        switch (buf[3]) {
-//        case CLIENT_MSG_TYPE_LOGIN:
+    //数据
+    std::string ss(buf,len);
 
-//            break;
-//        case CLIENT_MSG_TYPE_INFO:
+    //加入缓冲区
+    if(client2serverBuffer.find(sock)==client2serverBuffer.end()){
+        client2serverBuffer.insert(std::make_pair(sock,ss));
+    }else{
+        client2serverBuffer[sock] = client2serverBuffer[sock]+ss;
+    }
 
-//            break;
-//        case CLIENT_MSG_TYPE_WARNING:
-
-//            break;
-//        case CLIENT_MSG_TYPE_ERROR:
-
-//            break;
-//        case CLIENT_MSG_TYPE_REAL_TIME:
-
-//            break;
-//        default:
-//            break;
-//        }
-//    }
+    //然后对其进行拆包，把拆出来的包放入队列
+    while(true){
+        size_t start = client2serverBuffer[sock].find("<xml>");
+        size_t end = client2serverBuffer[sock].find("</xml>",start);
+        if(start!=std::string::npos&&end!=std::string::npos){
+            //这个是一个包:
+            std::string onPack = client2serverBuffer[sock].substr(start,end-start+6);
+            if(onPack.length()>0){
+                //进行入队
+                QyhMsgDateItem item;
+                item.data=malloc(onPack.length());
+                memcpy(item.data,onPack.c_str(),onPack.length());
+                item.ip = ip;
+                item.port = port;
+                item.size=onPack.length();
+                item.sock=sock;
+                g_user_msg_queue.enqueue(item);
+            }
+            //然后将之前的数据丢弃
+            client2serverBuffer[sock] = client2serverBuffer[sock].substr(end+6);
+        }else{
+            break;
+        }
+    }
 }
 
 
@@ -133,19 +133,19 @@ void AgvNetWork::serverSendFunc(void *param)
 void AgvNetWork::serverSendProcess()
 {
     while (!isQuit) {
-//        QyhDataItem item;
-//        if (interfaceSendQueue.try_dequeue(item))
-//        {
-//            //TODO:
-//            if (item.size > 0 ){
-//                m_IOCP._DoSend((char *)item.data, item.size);
-//                qyhLog << "send client===>" << (char *)item.data<<endll;
-//            }
-//            free(item.data);
-//        }
-//        else {
-//            qyhSleepMs(300);
-//        }
+        //        QyhDataItem item;
+        //        if (interfaceSendQueue.try_dequeue(item))
+        //        {
+        //            //TODO:
+        //            if (item.size > 0 ){
+        //                m_IOCP._DoSend((char *)item.data, item.size);
+        //                qyhLog << "send client===>" << (char *)item.data<<endll;
+        //            }
+        //            free(item.data);
+        //        }
+        //        else {
+        //            qyhSleepMs(300);
+        //        }
     }
 }
 

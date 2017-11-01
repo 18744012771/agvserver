@@ -43,4 +43,5 @@ int getRandom(int maxRandom)
     return qrand();
 }
 
-moodycamel::ConcurrentQueue<QyhDataItem> g_user_msg_queue;
+moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
+std::map<int,std::string> client2serverBuffer;

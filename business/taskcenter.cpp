@@ -35,7 +35,7 @@ void TaskCenter::init()
     //每隔一秒对尚未分配进行的任务进行分配
     taskProcessTimer.setInterval(1000);
     connect(&taskProcessTimer,SIGNAL(timeout()),this,SLOT(unassignedTasksProcess()));
-    connect(&taskProcessTimer,SIGNAL(timeout()),this,SLOT(doingTasksProcess()));
+    connect(&taskProcessTimer,SIGNAL(timeout()),this,SLOT(doingTaskProcess()));
     taskProcessTimer.start();
 }
 

@@ -565,9 +565,11 @@ bool CIOCPModel::_DoRecv(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIo
 {
 	// 先把上一次的数据显示出现，然后就重置状态，发出下一个Recv请求
 	SOCKADDR_IN* ClientAddr = &pSocketContext->m_ClientAddr;
+    std::string sIp(inet_ntoa(ClientAddr->sin_addr));
+    int port = ntohs(ClientAddr->sin_port);
     qyhLog << QStringLiteral("收到") << inet_ntoa(ClientAddr->sin_addr) << ":" << ntohs(ClientAddr->sin_port) << QStringLiteral("信息：") << pIoContext->m_wsaBuf.buf << endll;
 	if (call_back != NULL) {
-		call_back(p_owner, pIoContext->m_wsaBuf.buf, pIoContext->m_wsaBuf.len);
+        call_back(p_owner, pIoContext->m_wsaBuf.buf, pIoContext->m_wsaBuf.len,pSocketContext->m_Socket,sIp,port);
 	}
 	// 然后开始投递下一个WSARecv请求
 	return _PostRecv(pIoContext);
