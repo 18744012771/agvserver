@@ -29,9 +29,21 @@ using std::string;
 
 #include "util/concurrentqueue.h"
 
+#ifndef QYH_LOG_ENDLL
+#define QYH_LOG_ENDLL
 #define qyhLog (qDebug())
 #define endll ("")
+#endif
 
+struct LoginUserInfo
+{
+    int id;//ID
+    SOCKET sock;//对应的socket
+    std::string password;//密码
+    std::string username;//用户名
+    int role;//角色
+    std::string access_tocken;//随机码(安全码)，登录以后，给用户的，之后的所有请求要求带上随机码。
+};
 
 struct QyhMsgDateItem
 {
@@ -98,5 +110,14 @@ extern moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
 
 //用户消息的缓存区(用于拆包、分包)
 extern std::map<int,std::string> client2serverBuffer;
+
+////将结果封装成xml格式(解析-封装 的封装)
+std::string getResponseXml(std::map<std::string,std::string> &responseDatas, std::vector<std::map<std::string,std::string> > &responseDatalists);
+
+////将xml格式转成两个参数模式(解析-封装 的解析)
+bool getRequestParam(const std::string &xmlStr,std::map<std::string,std::string> &params,std::vector<std::map<std::string,std::string> > &datalist);
+
+///登录的客户端的id和它对应的sock
+extern std::list<LoginUserInfo> loginUserIdSock;
 
 #endif // GLOBAL_H

@@ -25,13 +25,9 @@ class Agv : public QObject
     Q_OBJECT
 public:
     explicit Agv(QObject *parent = nullptr);
-
     void init();
-
     bool startTask();
-
     int getPathRfidAmount();
-
     bool sendToAgv(QByteArray qba);
 
     //getter
@@ -52,17 +48,10 @@ public:
     QList<int> currentPath(){return m_currentPath;}
     int lastStationOdometer(){return m_lastStationOdometer;}
     int nowOdometer(){return m_nowOdometer;}
-//    int leftMotorEncoder(){return m_leftMotorEncoder;}
-//    int rightMotorEncoder(){return m_rightMotorEncoder;}
-//    int leftMotorSpeed(){return m_leftMotorSpeed;}
-//    int rightMotorSpeed(){return m_rightMotorSpeed;}
-//    int leftMotorVoltage(){return m_leftMotorVoltage;}
-//    int rightMotorVoltage(){return m_rightMotorVoltage;}
-//    int leftMotorCurrent(){return m_leftMotorCurrent;}
-//    int rightMotorCurrent(){return m_rightMotorCurrent;}
-//    int motorStatus(){return m_motorStatus;}
 
-
+    int mileage(){return m_mileage;}
+    int rad(){return m_rad;}
+    int currentRfid(){return m_currentRfid;}
     int speed(){return m_speed;}
     int turnSpeed(){return m_turnSpeed;}
     int cpu(){return m_cpu;}
@@ -77,8 +66,11 @@ public:
     int currentOrder(){return m_currentOrder;}
     int currentQueueNumber(){return m_currentQueueNumber;}
     QString ip(){return m_ip;}
-    //setter
 
+    //setter
+    void setMileage(int newMileage){m_mileage=newMileage;emit mileageChanged(newMileage);}
+    void setRad(int newRad){m_rad=newRad;emit radChanged(newRad);}
+    void setCurrentRfid(int newCurrentRfid){m_currentRfid=newCurrentRfid;emit currentRfidChanged(newCurrentRfid);}
     void setId(int newId){m_id=newId;emit idChanged(newId);}
     void setX(int newX){m_x=newX;emit xChanged(newX);}
     void setY(int newY){m_y=newY;emit yChanged(newY);}
@@ -102,15 +94,6 @@ public:
     void setCurrentPath(QList<int> newCurrentPath){m_currentPath=newCurrentPath;emit currentPathChanged(newCurrentPath);}
     void setLastStationOdometer(int newLastStationOdometer){m_lastStationOdometer=newLastStationOdometer;emit lastStationOdometerChanged(newLastStationOdometer);}
     void setNowOdometer(int newNowOdometer){m_nowOdometer=newNowOdometer;emit nowOdometerChanged(newNowOdometer);}
-//    void setLeftMotorEncoder(int newLeftMotorEncoder){m_leftMotorEncoder=newLeftMotorEncoder;emit leftMotorEncoderChanged(newLeftMotorEncoder);}
-//    void setRightMotorEncoder(int newRightMotorEncoder){m_rightMotorEncoder=newRightMotorEncoder;emit rightMotorEncoderChanged(newRightMotorEncoder);}
-//    void setLeftMotorSpeed(int newLeftMotorSpeed){m_leftMotorSpeed=newLeftMotorSpeed;emit leftMotorSpeedChanged(newLeftMotorSpeed);}
-//    void setRightMotorSpeed(int newRightMotorSpeed){m_rightMotorSpeed=newRightMotorSpeed;emit rightMotorSpeedChanged(newRightMotorSpeed);}
-//    void setLeftMotorVoltage(int newLeftMotorVoltage){m_leftMotorVoltage=newLeftMotorVoltage;emit leftMotorVoltageChanged(newLeftMotorVoltage);}
-//    void setRightMotorVoltage(int newRightMotorVoltage){m_rightMotorVoltage=newRightMotorVoltage;emit rightMotorVoltageChanged(newRightMotorVoltage);}
-//    void setLeftMotorCurrent(int newLeftMotorCurrent){m_leftMotorCurrent=newLeftMotorCurrent;emit leftMotorCurrentChanged(newLeftMotorCurrent);}
-//    void setRightMotorCurrent(int newRightMotorCurrent){m_rightMotorCurrent=newRightMotorCurrent;emit rightMotorCurrentChanged(newRightMotorCurrent);}
-//    void setMotorStatus(int newMotorStatus){m_motorStatus=newMotorStatus;emit motorStatusChanged(newMotorStatus);}
     void setSystemVoltage(int newSystemVoltage){m_systemVoltage=newSystemVoltage;emit systemVoltageChanged(newSystemVoltage);}
     void setSystemCurrent(int newSystemCurrent){m_systemCurrent=newSystemCurrent;emit systemCurrentChanged(newSystemCurrent);}
     void setFrontObstruct(bool newFrontObstruct){m_frontObstruct=newFrontObstruct;emit frontObstructChanged(newFrontObstruct);}
@@ -134,9 +117,10 @@ signals:
     void leftMotorStatusChanged(int newLeftMotorStatus);
     void rightMotorStatusChanged(int newRightMotorStatus);
     void positionMagneticStripeChanged(int newpositionMagneticStripe);
-
+    void mileageChanged(int newMileage);
+    void radChanged(int newRad);
+    void currentRfidChanged(int newCurrentRfid);
     void statusChanged(int newStatus);
-    //void batteryChanged(int newBattery);
     void isConnectedChanged(bool newIsConnected);
     void taskChanged(int newTask);
     void modeChanged(int newMode);
@@ -144,15 +128,6 @@ signals:
     void currentPathChanged(QList<int> newCurrentPath);
     void lastStationOdometerChanged(int newLastStationOdometer);
     void nowOdometerChanged(int newNowOdometer);
-//    void leftMotorEncoderChanged(int newLeftMotorEncoder);
-//    void rightMotorEncoderChanged(int newRightMotorEncoder);
-//    void leftMotorSpeedChanged(int newLeftMotorSpeed);
-//    void rightMotorSpeedChanged(int newRightMotorSpeed);
-//    void leftMotorVoltageChanged(int newLeftMotorVoltage);
-//    void rightMotorVoltageChanged(int newRightMotorVoltage);
-//    void leftMotorCurrentChanged(int newLeftMotorCurrent);
-//    void rightMotorCurrentChanged(int newRightMotorCurrent);
-//    void motorStatusChanged(int newMotorStatus);
     void systemVoltageChanged(int newSystemVoltage);
     void systemCurrentChanged(int newSystemCurrent);
     void frontObstructChanged(bool newFrontObstruct);
@@ -173,7 +148,9 @@ private:
     int m_x;
     int m_y;
     double m_rotation;//根据地图线路，计算出来的
-
+    int m_mileage;//开机里程
+    int m_rad;//开机弧度
+    int m_currentRfid;//当前卡号
     int m_lastStation;//上一站
     int m_nowStation;//现在所在站点
     int m_nextStation;//要去的下一站
@@ -195,15 +172,6 @@ private:
     QList<int> m_currentPath;
     int m_lastStationOdometer;
     int m_nowOdometer;
-//    int m_leftMotorEncoder;
-//    int m_rightMotorEncoder;
-//    int m_leftMotorSpeed;
-//    int m_rightMotorSpeed;
-//    int m_leftMotorVoltage;
-//    int m_rightMotorVoltage;
-//    int m_leftMotorCurrent;
-//    int m_rightMotorCurrent;
-//    int m_motorStatus;
 
     bool m_frontObstruct;
     bool m_backObstruct;

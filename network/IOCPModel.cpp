@@ -29,7 +29,7 @@ CIOCPModel::CIOCPModel(void) :
 	m_nPort(DEFAULT_PORT),
 	m_lpfnAcceptEx(NULL),
 	m_pListenContext(NULL),
-	call_back(NULL)
+    recv_call_back(NULL)
 {
 }
 
@@ -168,9 +168,10 @@ bool CIOCPModel::LoadSocketLib()
 
 //////////////////////////////////////////////////////////////////
 //	启动服务器
-bool CIOCPModel::Start(IOCP_RECV_CALL_BACK _call_back)
+bool CIOCPModel::Start(IOCP_RECV_CALL_BACK _recv_call_back, IOCP_DISCONNECT_CALL_BACK _disconnect_call_back)
 {
-	call_back = _call_back;
+    recv_call_back = _recv_call_back;
+    disconnect_call_back = _disconnect_call_back;
 	// 初始化线程互斥量
 	InitializeCriticalSection(&m_csContextList);
 
@@ -568,8 +569,8 @@ bool CIOCPModel::_DoRecv(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIo
     std::string sIp(inet_ntoa(ClientAddr->sin_addr));
     int port = ntohs(ClientAddr->sin_port);
     qyhLog << QStringLiteral("收到") << inet_ntoa(ClientAddr->sin_addr) << ":" << ntohs(ClientAddr->sin_port) << QStringLiteral("信息：") << pIoContext->m_wsaBuf.buf << endll;
-	if (call_back != NULL) {
-        call_back(p_owner, pIoContext->m_wsaBuf.buf, pIoContext->m_wsaBuf.len,pSocketContext->m_Socket,sIp,port);
+    if (recv_call_back != NULL) {
+        recv_call_back(p_owner, pIoContext->m_wsaBuf.buf, pIoContext->m_wsaBuf.len,pSocketContext->m_Socket,sIp,port);
 	}
 	// 然后开始投递下一个WSARecv请求
 	return _PostRecv(pIoContext);
@@ -615,7 +616,7 @@ void CIOCPModel::_DoSend(char *buf, int len)
 	LeaveCriticalSection(&m_csContextList);
 }
 
-void CIOCPModel::doSend(int socket,char *buf,int len)
+void CIOCPModel::doSend(int socket,const char *buf,int len)
 {
     EnterCriticalSection(&m_csContextList);
     for (vector<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
@@ -697,6 +698,14 @@ bool CIOCPModel::HandleError(PER_SOCKET_CONTEXT *pContext, const DWORD& dwErr)
 		if (!_IsSocketAlive(pContext->m_Socket))
 		{
             qyhLog << QStringLiteral("检测到客户端异常退出！") << endll;
+
+            if (disconnect_call_back != NULL) {
+                SOCKADDR_IN* ClientAddr = &pContext->m_ClientAddr;
+                std::string sIp(inet_ntoa(ClientAddr->sin_addr));
+                int port = ntohs(ClientAddr->sin_port);
+                disconnect_call_back(p_owner,pContext->m_Socket,sIp,port);
+            }
+
 			this->_RemoveContext(pContext);
 			return true;
 		}

@@ -14,7 +14,7 @@ AgvNetWork::~AgvNetWork()
     m_clientIOCP.Stop();
 }
 
-void AgvNetWork::sendToOne(int id,char *buf,int len)//发送给某个id的消息
+void AgvNetWork::sendToOne(SOCKET sock,const char *buf, int len)//发送给某个id的消息
 {
     //    try{
     //        m_agvIOCP.doSend(agv_id_and_sockets.at(id),buf,len);
@@ -22,7 +22,7 @@ void AgvNetWork::sendToOne(int id,char *buf,int len)//发送给某个id的消息
 
     //    }
     try{
-        m_clientIOCP.doSend(client_id_and_sockets.at(id),buf,len);
+        m_clientIOCP.doSend(sock,buf,len);
     }catch(const std::out_of_range& oor){
 
     }
@@ -70,18 +70,32 @@ void AgvNetWork::onRecvClientMsg(void *param, char *buf, int len,SOCKET sock,con
     }
 }
 
-////定义登录消息
-//void AgvNetWork::recvAgvMsgProcess(char *buf, int len)
-//{
-//    qDebug() << "recv from agv length="<<len<<" and buf="<<buf;
-//    //sendToAll(buf,len);
+void AgvNetWork::onDisconnectClient(void *owner, SOCKET sock, const std::string &sIp, int port)
+{
+    //一个客户端掉线了
+    //1.提出所有它订阅的东西
+    g_msgCenter.removeAgvPositionSubscribe(sock);
+    g_msgCenter.removeAgvStatusSubscribe(sock);
+    //2.将在线状态修改
+    int user_id = -1;
+    for(std::list<LoginUserInfo>::iterator itr = loginUserIdSock.begin();itr!=loginUserIdSock.end();++itr){
+        LoginUserInfo info = *itr;
+        if(info.sock == sock){
+            user_id = info.id;
+            ///从已登录 移出
+            loginUserIdSock.erase(itr);
+            break;
+        }
+    }
 
-//    ///这里要更新小车的信息到agvcenter还有任务信息到taskcenter
-
-
-
-
-//}
+    //设置在线状态
+    if(user_id>0){
+        QString updateSql = "update agv_user set signState = 0 where user_id=?";
+        QStringList params;
+        params<<QString("%1").arg(user_id);
+        g_sql->exec(updateSql,params);
+    }
+}
 
 
 void AgvNetWork::recvClientMsgProcess(char *buf, int len,SOCKET sock,const std::string &ip, int port)
@@ -180,7 +194,7 @@ bool AgvNetWork::initClientServer()
     }
     m_clientIOCP.SetPort(8988);
     m_clientIOCP.setOwner(this);
-    if (false == m_clientIOCP.Start(onRecvClientMsg))
+    if (false == m_clientIOCP.Start(onRecvClientMsg,onDisconnectClient))
     {
         qyhLog << "Agv iocp服务器启动失败！" << endll;
         return false;

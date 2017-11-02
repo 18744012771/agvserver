@@ -29,15 +29,17 @@ public:
     explicit AgvNetWork(QObject *parent = nullptr);
     ~AgvNetWork();
 
-    void sendToOne(int id,char *buf,int len);//发送给某个id的消息
+    void sendToOne(SOCKET sock, const char *buf, int len);//发送给某个id的消息
     void sendToAll(char *buf,int len);//发送给所有的人的信息
     void sendToSome(QList<int> ones,char *buf,int len);//发送给某些id的人的消息
     //void sendToAllAgv(char *buf,int len);
     //void sendToAllClient(char *buf,int len);
 
     //读取的回调函数
-    //static void onRecvAgvMsg(void *param,char *buf, int len);
     static void onRecvClientMsg(void *param, char *buf, int len, SOCKET sock, const std::string &sIp, int port);
+
+    //断开连接的回调函数
+    static void onDisconnectClient(void *owner, SOCKET sock, const std::string &sIp, int port);
 
     //void recvAgvMsgProcess(char *buf, int len);
     void recvClientMsgProcess(char *buf, int len, SOCKET sock, const std::string &ip, int port);
@@ -60,7 +62,7 @@ private:
     //bool initAgvServer();
     bool initClientServer();
     //map<int,int> agv_id_and_sockets;
-    map<int,int> client_id_and_sockets;
+    //map<int,int> client_id_and_sockets;
 };
 
 #endif // AGVNETWORK_H

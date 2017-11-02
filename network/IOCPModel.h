@@ -53,6 +53,7 @@ using std::vector;
 
 
 typedef void(*IOCP_RECV_CALL_BACK)(void *owner,char *s, int len,SOCKET sock,const std::string &fromIp,int fromPort);
+typedef void(*IOCP_DISCONNECT_CALL_BACK)(void *owner,SOCKET sock,const std::string &fromIp,int fromPort);
 
 
 // 在完成端口上投递的I/O操作的类型
@@ -175,7 +176,7 @@ public:
 public:
 
 	// 启动服务器
-	bool Start(IOCP_RECV_CALL_BACK _call_back);
+    bool Start(IOCP_RECV_CALL_BACK _recv_call_back, IOCP_DISCONNECT_CALL_BACK _disconnect_call_back);
 
 	//	停止服务器
 	void Stop();
@@ -193,7 +194,7 @@ public:
 
 	void _DoSend(char *buf, int len);
 
-    void doSend(int socket,char *buf,int len);
+    void doSend(int socket, const char *buf, int len);
 
 	// 获得本机的IP地址
 	std::string GetLocalIP();
@@ -267,7 +268,8 @@ private:
 	LPFN_ACCEPTEX                m_lpfnAcceptEx;                // AcceptEx 和 GetAcceptExSockaddrs 的函数指针，用于调用这两个扩展函数
 	LPFN_GETACCEPTEXSOCKADDRS    m_lpfnGetAcceptExSockAddrs; 
 
-	IOCP_RECV_CALL_BACK call_back;
+    IOCP_RECV_CALL_BACK recv_call_back;
+    IOCP_DISCONNECT_CALL_BACK disconnect_call_back;
 
 	void *p_owner;
 };

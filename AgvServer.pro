@@ -25,7 +25,10 @@ SOURCES += main.cpp \
     business/mapcenter.cpp \
     business/taskcenter.cpp \
     business/msgcenter.cpp \
-    business/usermsgprocessor.cpp
+    business/usermsgprocessor.cpp \
+    business/agvpositionpublisher.cpp \
+    business/agvstatuspublisher.cpp \
+    business/logpublisher.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -55,7 +58,10 @@ HEADERS += \
     business/mapcenter.h \
     business/taskcenter.h \
     business/msgcenter.h \
-    business/usermsgprocessor.h
+    business/usermsgprocessor.h \
+    business/agvpositionpublisher.h \
+    business/agvstatuspublisher.h \
+    business/logpublisher.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include
