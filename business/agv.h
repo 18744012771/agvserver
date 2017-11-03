@@ -20,6 +20,8 @@ enum{
     AGV_MODE_HAND = 1//手动模式
 };
 
+
+
 class Agv : public QObject
 {
     Q_OBJECT
@@ -186,6 +188,9 @@ public:
     int queueNumber;
     double m_m_angle;//这个值仅供参考，后续再考虑
 
+
+    int currentHandUser;//当前手动控制这辆车的用户(默认是0，没有人手动控制)
+    int currentHandUserRole;//当前手动控制这辆车的用户 权限
 private:
     QTimer connectTimer;
 

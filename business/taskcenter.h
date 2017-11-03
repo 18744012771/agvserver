@@ -29,9 +29,9 @@ public:
 
     int queryTaskStatus(int taskId);//返回task的状态。
     int queryTaskCar(int taskId);//查询这个任务是那辆车执行的
-    void cancelTask(int taskId);//取消一个任务
+    int cancelTask(int taskId);//取消一个任务
 
-
+    bool saveTaskToDatabase(AgvTask *task);
 signals:
 
 public slots:

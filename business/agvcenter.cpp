@@ -93,4 +93,5 @@ bool AgvCenter::save()//将agv保存到数据库
         params<<QString("%1").arg(itr.value()->id())<<itr.value()->name()<<itr.value()->ip();
         if(!g_sql->exec(insertSql,params))return false;
     }
+    return true;
 }

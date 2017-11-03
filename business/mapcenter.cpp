@@ -606,7 +606,7 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
 
     //对于起始线路开始着色并标记距离
     //两种情况，
-    AgvStation *lastStation = g_m_stations[lastPoint];
+    //AgvStation *lastStation = g_m_stations[lastPoint];
     if(lastPoint == startPoint){
         //如果lastPoint和startPoint相同，那么说明每个方向都可以
         for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr){

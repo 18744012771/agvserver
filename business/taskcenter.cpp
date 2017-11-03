@@ -441,7 +441,7 @@ int TaskCenter::queryTaskCar(int taskId)
 }
 
 //取消一个任务
-void TaskCenter::cancelTask(int taskId)
+int TaskCenter::cancelTask(int taskId)
 {
     //查找未分配的任务
     for(int i=0;i<unassignedTasks.length();++i){
@@ -452,10 +452,10 @@ void TaskCenter::cancelTask(int taskId)
             //移出待分配的队列
             unassignedTasks.removeAt(i);
             //保存数据库TODO:
-
+            saveTaskToDatabase(task);
             //释放
             delete task;
-            return ;
+            return 1;
         }
     }
 
@@ -472,14 +472,32 @@ void TaskCenter::cancelTask(int taskId)
             //移出待分配的队列
             doingTasks.removeAt(i);
             //保存数据库TODO:
-
+            saveTaskToDatabase(task);
+            //设置小车路径为空
+            QList<int> nullPath;
+            g_m_agvs[task->excuteCar()]->setTask(0);
+            g_m_agvs[task->excuteCar()]->setCurrentPath(nullPath);
+            if(g_m_agvs[task->excuteCar()]->status() == AGV_STATUS_TASKING)
+                g_m_agvs[task->excuteCar()]->setStatus(AGV_STATUS_IDLE);
             //释放
             delete task;
-            return ;
+            return 2;
         }
     }
+    return 0;
 }
 
+bool TaskCenter::saveTaskToDatabase(AgvTask *task)
+{
+    QString insertSql = "insert into agv_task (produceTime,doneTime,doTime,excuteCar,status)values(?,?,?,?,?);";
+    QStringList params;
+    params<<task->produceTime().toString()<<task->doneTime().toString()<<QString("%1").arg( task->excuteCar())<<QString("%1").arg(task->status());
+    if(!g_sql->exec(insertSql,params))return false;
+    //TODO: 保存路径节点！！！
+
+
+    return true;
+}
 
 void TaskCenter::carArriveStation(int car,int station)
 {
@@ -489,17 +507,6 @@ void TaskCenter::carArriveStation(int car,int station)
     //达到的站点
     AgvStation *sstation = g_m_stations[station];
     if(sstation==NULL){return ;}
-
-//    //更新小车的位置
-//    agv->setX(sstation->x());
-//    agv->setY(sstation->y());
-//    if(agv->nowStation()!=sstation->id()){
-//        if(agv->nowStation()>0)
-//            agv->setLastStation(agv->nowStation());
-//        else
-//            agv->setLastStation(sstation->id());
-//        agv->setNowStation(sstation->id());
-//    }
 
     //小车是手动模式，那么就不管了
     if(agv->mode() == AGV_MODE_HAND){
@@ -616,92 +623,5 @@ void TaskCenter::doingTaskProcess()
         }
     }
 }
-
-//void TaskCenter::onPickUpFinish(int taskKey)
-//{
-//    //取货完成了
-//    //当前的任务
-//    AgvTask *ttask = NULL;
-//    QList<AgvTask *>::iterator taskItr;
-//    for(taskItr= doingTasks.begin();taskItr!=doingTasks.end();++taskItr){
-//        AgvTask *taskTemp = *taskItr;
-//        if(taskTemp->id == taskKey)
-//        {
-//            ttask = taskTemp;
-//            break;
-//        }
-//    }
-//    if(ttask==NULL)return ;
-//    //小车
-//    HrgAgv *agv = NULL;
-//    for(QMap<int,HrgAgv *>::iterator itr= g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
-//        HrgAgv *agvTemp = itr.value();
-//        if(agvTemp->id == ttask->excuteCar){
-//            agv = agvTemp;
-//            break;
-//        }
-//    }
-//    if(agv==NULL)return ;
-
-//    //小车置位 //无变化
-//    //任务置位
-//    ttask->goPickGoAim = (false);
-//    //线路置位//无变化
-//    //站点置位//无变化
-//    //从doing放入todoaim中
-//    doingTasks.erase(taskItr);
-//    todoAimTasks.append(ttask);
-//}
-
-
-//void TaskCenter::onAimFinish(int taskKey)
-//{
-//    //小车当前的任务
-//    AgvTask *ttask = NULL;
-//    QList<AgvTask *>::iterator taskItr;
-//    for(taskItr= doingTasks.begin();taskItr!=doingTasks.end();++taskItr){
-//        AgvTask *taskTemp = *taskItr;
-//        if(taskTemp->id == taskKey)
-//        {
-//            ttask = taskTemp;
-//            break;
-//        }
-//    }
-//    if(ttask==NULL)return ;
-//    //小车
-//    HrgAgv *agv = NULL;
-//    for(QMap<int,HrgAgv *>::iterator itr= g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
-//        HrgAgv *agvTemp = (HrgAgv *)*itr;
-//        if(agvTemp->id == ttask->excuteCar){
-//            agv = agvTemp;
-//            break;
-//        }
-//    }
-//    if(agv==NULL)return ;
-
-//    //小车置位
-//    if(agv->battery>10)
-//        agv->status = (HRG_AGV_STATUS_IDLE);
-//    else
-//        agv->status = (HRG_AGV_STATUS_POWER_LOW);//TODO:返回充电桩
-
-//    agv->task = (0);
-//    //任务置位
-//    ttask->doneTime = (QDateTime::currentDateTime());
-//    ttask->status = (AGV_TASK_STATUS_DONE);
-//    //线路置位//无变化
-
-//    //站点置位//无变化
-
-//    //从doing释放
-
-//    doingTasks.erase(taskItr);
-//    //存入数据库
-
-//    //释放
-//    delete ttask;
-
-//    ++doneTasksAmount;
-//}
 
 

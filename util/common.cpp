@@ -47,7 +47,7 @@ unsigned char checkSum(unsigned char *data,int len)
 {
     int sum = 0;
     for(int i=0;i<len;++i){
-        int v = data[i] &0xFF;
+        //int v = data[i] &0xFF;
         sum += data[i] & 0xFF;
         sum &= 0xFF;
     }

@@ -37,6 +37,8 @@
 
 
 
+const char CHAR_NULL = '\0';
+
 MsgCenter::MsgCenter(QObject *parent) : QObject(parent),
     positionPublisher(NULL),
     statusPublisher(NULL)
@@ -63,17 +65,17 @@ bool MsgCenter::removeAgvPositionSubscribe(int subscribe)
     return true;
 }
 
-bool MsgCenter::addAgvStatusSubscribe(int subscribe)
+bool MsgCenter::addAgvStatusSubscribe(int subscribe, int agvId)
 {
     if(!statusPublisher)return false;
-    statusPublisher->addSubscribe(subscribe);
+    statusPublisher->addSubscribe(subscribe,agvId);
     return true;
 }
 
-bool MsgCenter::removeAgvStatusSubscribe(int subscribe)
+bool MsgCenter::removeAgvStatusSubscribe(int subscribe,int agvId)
 {
     if(!statusPublisher)return false;
-    statusPublisher->removeSubscribe(subscribe);
+    statusPublisher->removeSubscribe(subscribe,agvId);
     return true;
 }
 
@@ -200,6 +202,94 @@ QByteArray MsgCenter::auto_instruct_mp3_volume(int rfid,int volume)
     return qba;
 }
 
+//将内容封包
+//加入包头、(功能码)、包长、(内容)、校验和、包尾
+QByteArray MsgCenter::packet(char code_mode,QByteArray content)
+{
+    //计算校验和
+    unsigned char sum = checkSum((unsigned char *)content.data(),content.length());
+
+    //组包//加入包头、功能码、内容、校验和、包尾
+    QByteArray result;
+    result.append(AGV_PACK_HEAD);//包头
+    result.append(code_mode);//功能码
+
+    //包长2Byte
+    int contentLength = content.length();
+    result.append((contentLength>>8) & 0xFF);
+    result.append((contentLength) & 0xFF);
+
+    result.append(content);//内容
+    result.append(sum);//校验和
+    result.append(AGV_PACK_END);//包尾
+
+    return result;
+}
+
+bool MsgCenter::handControlCmd(int agvId,int agvHandType,int speed)
+{
+    if(!g_m_agvs.contains(agvId))return false;
+    //组装一个手控的命令
+    QByteArray content;
+    content.append(0x33);//手控的功能码
+    short baseSpeed = speed & 0xFFFF;
+    short forwardSpeed = 0;
+    short leftSpeed = 0;
+    switch(agvHandType){
+    case AGV_HAND_TYPE_STOP:
+        break;
+    case AGV_HAND_TYPE_FORWARD:
+        forwardSpeed = baseSpeed;
+        break;
+    case AGV_HAND_TYPE_BACKWARD:
+        forwardSpeed = -1*baseSpeed;
+        break;
+    case AGV_HAND_TYPE_TURNLEFT:
+        leftSpeed = baseSpeed;
+        break;
+    case AGV_HAND_TYPE_TURNRIGHT:
+        leftSpeed = -1 * baseSpeed;
+        break;
+    default:
+        return false;
+    }
+
+    //前后方向 2Byte
+    content.append((forwardSpeed>>8) &0xFF);
+    content.append((forwardSpeed) &0xFF);
+
+    //左右方向 2Byte
+    content.append((leftSpeed>>8) &0xFF);
+    content.append((leftSpeed) &0xFF);
+
+    //附件命令 4Byte
+    content.append(CHAR_NULL);
+    content.append(CHAR_NULL);
+    content.append(CHAR_NULL);
+    content.append(CHAR_NULL);
+
+    //灯带数据 1Byte
+    content.append(CHAR_NULL);
+
+    //控制交接 1Byte
+    content.append(CHAR_NULL);
+
+    //设备地址，指令发起者 2Byte
+    content.append(CHAR_NULL);
+    content.append(CHAR_NULL);
+
+    //备用字节S32*4 = 16Byte
+    for(int i=0;i<16;++i){
+        content.append(CHAR_NULL);
+    }
+
+    QByteArray result = packet(AGV_PACK_SEND_CODE_HAND_MODE,content);
+
+
+    //发送命令
+    return g_m_agvs[agvId]->sendToAgv(result);
+}
+
 QByteArray MsgCenter::taskControlCmd(int agvId, bool changeDirect)
 {
     //组装一个agv执行path的命令
@@ -243,16 +333,8 @@ QByteArray MsgCenter::taskControlCmd(int agvId, bool changeDirect)
         content.append(auto_instruct_wait());
     }
 
-    //计算校验和
-    unsigned char sum = checkSum((unsigned char *)content.data(),content.length());
-
     //组包//加入包头、功能码、内容、校验和、包尾
-    QByteArray result;
-    result.append(AGV_PACK_HEAD);//包头
-    result.append(AGV_PACK_SEND_CODE_AUDTO_MODE);//功能吗
-    result.append(content);//内容
-    result.append(sum);//校验和
-    result.append(AGV_PACK_END);//包尾
+    QByteArray result = packet(AGV_PACK_SEND_CODE_AUDTO_MODE,content);
 
     return result;
 }

@@ -40,7 +40,9 @@ Agv::Agv(QObject *parent) : QObject(parent),
     m_rotation(0.0),
     m_name(""),
     queueNumber(0),
-    m_ip("")
+    m_ip(""),
+    currentHandUser(0),
+    currentHandUserRole(0)
 {
     connectTimer.setInterval(5000);
     connect(&m_sock,&QAbstractSocket::stateChanged,this,&Agv::connectStatusChanged);
