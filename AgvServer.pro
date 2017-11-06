@@ -28,7 +28,10 @@ SOURCES += main.cpp \
     business/usermsgprocessor.cpp \
     business/agvpositionpublisher.cpp \
     business/agvstatuspublisher.cpp \
-    business/logpublisher.cpp
+    business/logpublisher.cpp \
+    business/agvlogpublisher.cpp \
+    log/agvlog.cpp \
+    log/agvlogprocess.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -61,7 +64,10 @@ HEADERS += \
     business/usermsgprocessor.h \
     business/agvpositionpublisher.h \
     business/agvstatuspublisher.h \
-    business/logpublisher.h
+    business/logpublisher.h \
+    business/agvlogpublisher.h \
+    log/agvlog.h \
+    log/agvlogprocess.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include

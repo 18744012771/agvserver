@@ -5,6 +5,7 @@
 #include <QThread>
 #include "agvpositionpublisher.h"
 #include "agvstatuspublisher.h"
+#include "agvlogpublisher.h"
 
 //这里将会启动一个CPU个数*2的线程，用于处理用户的数据
 //保证并发量和响应时间
@@ -28,6 +29,8 @@ public:
     bool removeAgvPositionSubscribe(int subscribe);
     bool addAgvStatusSubscribe(int subscribe,int agvId);
     bool removeAgvStatusSubscribe(int subscribe,int agvId = 0);
+    bool addLogSubscribe(int subscribe,int agvId);
+    bool removeLogSubscribe(int subscribe,int agvId = 0);
     QByteArray taskControlCmd(int agvId,bool changeDirect);
     bool handControlCmd(int agvId,int agvHandType,int speed);
 signals:
@@ -47,6 +50,7 @@ private:
 
     AgvPositionPublisher *positionPublisher;
     AgvStatusPublisher *statusPublisher;
+    AgvLogPublisher *logPublisher;
 
     QByteArray packet(char code_mode,QByteArray content);
 };

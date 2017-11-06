@@ -102,6 +102,14 @@ void MsgCenter::init()
     positionPublisher = new AgvPositionPublisher(this);
     positionPublisher->start();
 
+    //启动订阅 日志
+    if(logPublisher){
+        delete logPublisher;
+        logPublisher = NULL;
+    }
+    logPublisher = new AgvLogPublisher(this);
+    logPublisher->start();
+
 }
 
 QByteArray MsgCenter::auto_instruct_wait(){

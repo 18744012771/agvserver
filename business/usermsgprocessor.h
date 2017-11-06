@@ -122,6 +122,10 @@ private:
     void Task_ListDoneAll(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo);
     //已经完成任务列表(from to 时间)
     void Task_ListDoneDuring(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo);
+    //单个任务的详细情况
+    void Task_Detail(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo);
+
+
 };
 
 #endif // USERMSGPROCESSOR_H

@@ -13,6 +13,7 @@ using std::string;
 
 #include "sql/sql.h"
 #include "log/log.h"
+#include "log/agvlog.h"
 #include "concurrentqueue.h"
 #include "sql/sqlserver.h"
 #include "network/agvnetwork.h"
@@ -119,5 +120,10 @@ bool getRequestParam(const std::string &xmlStr,std::map<std::string,std::string>
 
 ///登录的客户端的id和它对应的sock
 extern std::list<LoginUserInfo> loginUserIdSock;
+
+extern const QString DATE_TIME_FORMAT;
+
+//日志的消息队列
+extern moodycamel::ConcurrentQueue<OneLog> g_log_queue;
 
 #endif // GLOBAL_H

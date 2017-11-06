@@ -47,9 +47,10 @@ void TaskCenter::unassignedTasksProcess()
     {
         AgvTask *ttask = unassignedTasks.at(mmm);
 
-        if(ttask->taskNodesTodo.length()<=0){
+        if(ttask->isDone()){
             //这个任务已经完成了，那么就 从未分配放入到完成中。(这个任务还未开始就结束了！)
             unassignedTasks.removeAt(mmm);
+            //TODO:保存数据库
             --mmm;
             continue;
         }
@@ -63,9 +64,9 @@ void TaskCenter::unassignedTasksProcess()
             if(excutecar->status()!=AGV_STATUS_IDLE)continue;
             QList<int> result;
             if(excutecar->nowStation()>0){
-                result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nowStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+                result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nowStation(), ttask->nextTodoNode()->aimStation,tempDis,true);
             }else{
-                result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nextStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+                result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nextStation(), ttask->nextTodoNode()->aimStation,tempDis,true);
             }
             if(result.length()>0&&tempDis!=distance_infinity){
                 bestCar = excutecar;
@@ -83,9 +84,9 @@ void TaskCenter::unassignedTasksProcess()
                 Agv *agv = *ppos;
                 QList<int> result;
                 if(agv->nowStation()>0){
-                    result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nowStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+                    result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nowStation(), ttask->nextTodoNode()->aimStation,tempDis,true);
                 }else{
-                    result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nextStation(), ttask->taskNodesTodo[0].aimStation,tempDis,true);
+                    result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nextStation(), ttask->nextTodoNode()->aimStation,tempDis,true);
                 }
                 if(result.length()>0&&tempDis!=distance_infinity)
                 {
@@ -106,7 +107,7 @@ void TaskCenter::unassignedTasksProcess()
             //TODO:!!!要求一下操作可以回滚，因为车辆可能不接受该任务！！！！！！！！！！！！！！
 
             //将终点，占领
-            g_m_stations[ttask->taskNodesTodo[0].aimStation]->setOccuAgv(bestCar->id());//TODO:(什么时候释放呢？？)。重点来了
+            g_m_stations[ttask->nextTodoNode()->aimStation]->setOccuAgv(bestCar->id());//TODO:(什么时候释放呢？？)。重点来了
             //将起点，释放//TODO:这里释放起点其实是不合适的，应该在小车启动的时候，释放这个位置,虽然这里就差几行
             if(g_m_stations[bestCar->nowStation()]->occuAgv() == bestCar->id())g_m_stations[bestCar->nowStation()]->setOccuAgv(0);
 
@@ -134,9 +135,8 @@ void TaskCenter::unassignedTasksProcess()
             g_hrgAgvCenter.agvStartTask(bestCar->id(),path);
 
             //如果成功了，那么 将node设置为doing
-            TaskNode node =  ttask->taskNodesTodo.at(0);
-            ttask->taskNodeDoing = node;
-            ttask->taskNodesTodo.removeAt(0);
+            TaskNode *node =  ttask->nextTodoNode();
+            node->status = 1 ;
         }
     }
 }
@@ -339,11 +339,11 @@ int TaskCenter::makeAgvAimTask(int agvKey,int aimStation,int waitType,int waitTi
     if(agvKey<=0||aimStation<=0)return -1;
 
     AgvTask *newtask = new AgvTask;
-    TaskNode node;
-    node.aimStation=aimStation;
-    node.waitType=waitType;
-    node.waitTime=waitTime;
-    newtask->taskNodesTodo.append(node);
+    TaskNode *node = new TaskNode;
+    node->aimStation=aimStation;
+    node->waitType=waitType;
+    node->waitTime=waitTime;
+    newtask->taskNodes.append(node);
     newtask->setExcuteCar(agvKey);
     newtask->setId(++maxId);
 
@@ -355,11 +355,11 @@ int TaskCenter::makeAgvAimTask(int agvKey,int aimStation,int waitType,int waitTi
 int TaskCenter::makeAimTask(int aimStation,int waitType,int waitTime)
 {
     AgvTask *newtask = new AgvTask;
-    TaskNode node;
-    node.aimStation=aimStation;
-    node.waitType=waitType;
-    node.waitTime=waitTime;
-    newtask->taskNodesTodo.append(node);
+    TaskNode *node = new TaskNode;
+    node->aimStation=aimStation;
+    node->waitType=waitType;
+    node->waitTime=waitTime;
+    newtask->taskNodes.append(node);
     newtask->setId(++maxId);
 
     unassignedTasks.append(newtask);
@@ -371,24 +371,145 @@ int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick
 {
     AgvTask *newtask = new AgvTask;
 
-    TaskNode nodePickup;
+    TaskNode *nodePickup = new TaskNode;
 
-    nodePickup.aimStation=pickupStation;
-    nodePickup.waitType=waitTypePick;
-    nodePickup.waitTime=waitTimePick;
-    newtask->taskNodesTodo.append(nodePickup);
+    nodePickup->aimStation=pickupStation;
+    nodePickup->waitType=waitTypePick;
+    nodePickup->waitTime=waitTimePick;
+    newtask->taskNodes.append(nodePickup);
 
-    TaskNode nodeAim;
-    nodeAim.aimStation=aimStation;
-    nodeAim.waitType=waitTypeAim;
-    nodeAim.waitTime=waitTimeAim;
-    newtask->taskNodesTodo.append(nodeAim);
+    TaskNode *nodeAim = new TaskNode;
+    nodeAim->aimStation=aimStation;
+    nodeAim->waitType=waitTypeAim;
+    nodeAim->waitTime=waitTimeAim;
+    newtask->taskNodes.append(nodeAim);
 
     newtask->setId(++maxId);
 
     unassignedTasks.append(newtask);
     return newtask->id();
 }
+
+AgvTask *TaskCenter::queryUndoTask(int taskId)
+{
+    for(int i=0;i<unassignedTasks.length();++i){
+        if(unassignedTasks.at(i)->id() == taskId){
+            return unassignedTasks.at(i);
+        }
+    }
+    return NULL;
+}
+
+AgvTask *TaskCenter::queryDoingTask(int taskId)
+{
+    for(int i=0;i<doingTasks.length();++i){
+        if(doingTasks.at(i)->id() == taskId){
+            return doingTasks.at(i);
+        }
+    }
+    return NULL;
+}
+
+AgvTask *TaskCenter::queryDoneTask(int taskId)
+{
+    //查找已完成的任务
+    AgvTask *result = NULL;
+    QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where id= ?";
+    QStringList param;
+    param.append(QString("%1").arg(taskId));
+    QList<QStringList> queryresult = g_sql->query(querySql,param);
+    if(queryresult.length()==0 ||queryresult.at(0).length()!=6)
+        return result;
+    //这个任务是存在的
+    result = new AgvTask;
+    result->setId(queryresult.at(0).at(0).toInt());
+    result->setProduceTime(QDateTime::fromString(queryresult.at(0).at(1)));
+    result->setDoneTime(QDateTime::fromString(queryresult.at(0).at(2)));
+    result->setDoTime(QDateTime::fromString(queryresult.at(0).at(3)));
+    result->setExcuteCar(queryresult.at(0).at(4).toInt());
+    result->setStatus(queryresult.at(0).at(5).toInt());
+
+    //查询任务的节点信息
+    querySql = "select status,queueNumber,aimStation,waitType,waitTime,arriveTime,leaveTime from agv_task_node where taskid= ? order by queueNumber";
+    queryresult = g_sql->query(querySql,param);
+    if(queryresult.length()==0 ||queryresult.at(0).length()!=7)
+        return result;
+
+    for(int i=0;i<queryresult.length();++i)
+    {
+        QStringList qsl = queryresult.at(i);
+        if(qsl.length()!=7)continue;
+        TaskNode *n = new TaskNode;
+        n->status = qsl.at(0).toInt();
+        n->queueNumber = qsl.at(1).toInt();
+        n->aimStation = qsl.at(2).toInt();
+        n->waitType = qsl.at(3).toInt();
+        n->waitTime = qsl.at(4).toInt();
+        n->arriveTime = QDateTime::fromString( qsl.at(5));
+        n->leaveTime = QDateTime::fromString( qsl.at(6));
+        result->taskNodes.push_back(n);
+    }
+
+    return result;
+}
+
+//AgvTask *TaskCenter::queryTask(int taskId)
+//{
+//    for(int i=0;i<unassignedTasks.length();++i){
+//        if(unassignedTasks.at(i)->id() == taskId){
+//            return unassignedTasks.at(i);
+//        }
+//    }
+//    for(int i=0;i<doingTasks.length();++i){
+//        if(doingTasks.at(i)->id() == taskId){
+//            return doingTasks.at(i);
+//        }
+//    }
+//    //查找已完成的任务
+//    AgvTask *result = NULL;
+//    QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where id= ?";
+//    QStringList param;
+//    param.append(QString("%1").arg(taskId));
+//    QList<QStringList> queryresult = g_sql->query(querySql,param);
+//    if(queryresult.length()==0 ||queryresult.at(0).length()!=6)
+//        return result;
+//    //这个任务是存在的
+//    result = new AgvTask;
+//    result->setId(queryresult.at(0).at(0).toInt());
+//    result->setProduceTime(QDateTime::fromString(queryresult.at(0).at(1)));
+//    result->setDoneTime(QDateTime::fromString(queryresult.at(0).at(2)));
+//    result->setDoTime(QDateTime::fromString(queryresult.at(0).at(3)));
+//    result->setExcuteCar(queryresult.at(0).at(4).toInt());
+//    result->setStatus(queryresult.at(0).at(5).toInt());
+
+//    //查询任务的节点信息
+//    querySql = "select status,queueNumber,aimStation,waitType,waitTime,arriveTime,leaveTime from agv_task_node where taskid= ? order by queueNumber";
+//    queryresult = g_sql->query(querySql,param);
+//    if(queryresult.length()==0 ||queryresult.at(0).length()!=7)
+//        return result;
+
+//    for(int i=0;i<queryresult.length();++i)
+//    {
+//        QStringList qsl = queryresult.at(i);
+//        if(qsl.length()!=7)continue;
+//        TaskNode n;
+//        n.status = qsl.at(0).toInt();
+//        n.queueNumber = qsl.at(1).toInt();
+//        n.aimStation = qsl.at(2).toInt();
+//        n.waitType = qsl.at(3).toInt();
+//        n.waitTime = qsl.at(4).toInt();
+//        n.arriveTime = QDateTime::fromString( qsl.at(5));
+//        n.leaveTime = QDateTime::fromString( qsl.at(6));
+//        if(n.status == 0)//未执行的节点
+//            result->taskNodesTodo.push_back(n);
+//        else if(n.status == 1)//正在执行
+//            result->taskNodeDoing = n;
+//        else if(n.status == 2)//执行过了的节点
+//            result->taskNodeDone.push_back(n);
+//    }
+
+//    return result;
+//}
 
 //返回task的状态。
 int TaskCenter::queryTaskStatus(int taskId)
@@ -529,7 +650,6 @@ void TaskCenter::carArriveStation(int car,int station)
 
     //置线路位,更新道路占用的问题
     QList<int> pppath = agv->currentPath();//当前任务的线路
-    int endStationId = ttask->taskNodeDoing.aimStation;//当前节点任务的终点
 
     //1.该站点是否在线路上
     bool findStation = false;
@@ -579,14 +699,13 @@ void TaskCenter::carArriveStation(int car,int station)
         //更新path后,将小车的任务内容进行更新
         //如果达到终点
         if(agv->currentPath().length() == 0){
-            //到达当前 task_node的 目的地
-            ttask->taskNodeDoing.arriveTime=QDateTime::currentDateTime();
+            //到达当前 task_node的 目的地，设置当前任务节点的到达时间
+            ttask->currentDoingNode()->arriveTime=QDateTime::currentDateTime();
         }
         //更新发给小车的内容
         g_msgCenter.taskControlCmd(car,false);
     }
 }
-
 
 
 void TaskCenter::doingTaskProcess()
@@ -597,29 +716,35 @@ void TaskCenter::doingTaskProcess()
     //qDebug() << QStringLiteral("被挂起任务数:")<<todoAimTasks.length()+todoPickTasks.length()<< QStringLiteral(" 正在执行的任务数:")<<doingTasks.length()<< QStringLiteral(" 已完成的任务数:")<<doneTasksAmount;
     for(int i=0;i<doingTasks.length();++i){
         AgvTask* task = doingTasks.at(i);
-        if(task->taskNodesTodo.length()>0){
+        TaskNode *node = NULL;
+        if((node = task->currentDoingNode())!=NULL)
+        {
             //判断这个节点任务是否到达
-            TaskNode node = task->taskNodesTodo.at(0);
-            if(!node.arriveTime.isValid() && !node.arriveTime.isNull()){
+            if(!node->arriveTime.isValid() && !node->arriveTime.isNull()){
                 //已经到达
                 //说明到达了这个节点的目的地
-                if(node.waitType==AGV_TASK_WAIT_TYPE_TIME && node.arriveTime.secsTo(QDateTime::currentDateTime()) >= node.waitTime){
+                if(node->waitType==AGV_TASK_WAIT_TYPE_TIME && node->arriveTime.secsTo(QDateTime::currentDateTime()) >= node->waitTime){
                     //如果是等待时间，并且时间等到了
                     //将这个节点移动到done里边
-                    task->taskNodesTodo.removeAt(0);
-                    task->taskNodesDone.append(node);
+                    node->status = 2;//这个节点任务已经完成了
+
                     //计算新的线路给这个任务的下一条 节点任务
-                    if(task->taskNodesTodo.length()==0){
+                    if(task->nextTodoNode() == NULL){
                         //这个大任务已经完成了
+                        //TODO
                     }else{
                         //计算到下个节点任务的目的地的路径
-
+                        //TODO
                     }
                 }
             }
 
-        }else{
+        }else if(task->nextTodoNode() != NULL){
+
+        }else
+        {
             //这个任务完成了
+            //TODO
         }
     }
 }

@@ -31,7 +31,16 @@ public:
     int queryTaskCar(int taskId);//查询这个任务是那辆车执行的
     int cancelTask(int taskId);//取消一个任务
 
+    AgvTask *queryUndoTask(int taskId);
+
+    AgvTask *queryDoingTask(int taskId);
+
+    AgvTask *queryDoneTask(int taskId);
+
     bool saveTaskToDatabase(AgvTask *task);
+
+    QList<AgvTask *> getUnassignedTasks(){return unassignedTasks;}
+    QList<AgvTask *> getDoingTasks(){return  doingTasks;}
 signals:
 
 public slots:

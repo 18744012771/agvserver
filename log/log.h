@@ -5,7 +5,8 @@
 #include <QString>
 
 
-#define endll (-999999)
+
+
 
 class Log
 {

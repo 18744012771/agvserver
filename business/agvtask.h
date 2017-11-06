@@ -20,6 +20,8 @@ enum{
 };
 
 struct TaskNode{
+    int status = 0;  //0未执行  1正在执行  2执行完成了
+    int queueNumber = 0; //在这个任务中的序列号
     int aimStation = 0;//要去的位置()如果是0，说明没有节点任务
     int waitType = AGV_TASK_WAIT_TYPE_TIME;//到达该位置后的等待方式
     int waitTime = 30;//到达该位置后的等待时间(秒)
@@ -67,12 +69,20 @@ private:
     int m_excuteCar;
     int m_status;
 
-public://这两个是可以公有访问的.不过一般仅限于task中访问
-    QList<TaskNode> taskNodesDone;//完成后的节点放到做完的这个里边，最后如果都完成了，那么保存数据库的时候，可以保存下来
-    TaskNode taskNodeDoing;//正在执行的节点任务（只有一个）
-    QList<TaskNode> taskNodesTodo;//要去的目标点。有顺序的，完成了第一个点，然后去第二个点，然后去点三个点.
-    //但是每个点的等待方式和等待时间不一定一样怎么办。我们可以定义一个结构体
+public:
+    //这两个是可以公有访问的.不过一般仅限于task中访问
+    QList<TaskNode *> taskNodes;
+
+
+    bool isDone();
+
+    TaskNode *nextTodoNode();
+
+    TaskNode *currentDoingNode();
     //OK 完成了
+
+    //为了给node进行排序，
+    int nodeAmount;
 };
 
 #endif // AGVTASK_H

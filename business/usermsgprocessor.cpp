@@ -1419,30 +1419,33 @@ void UserMsgProcessor::Task_QueryStatus(const QyhMsgDateItem &item, std::map<std
         int status = g_taskCenter.queryTaskStatus(taskid);
 
         std::string strStatus;
+        std::stringstream ss_status;
+        ss_status<<status;
+        ss_status>>strStatus;
 
-        switch (status) {
-        case AGV_TASK_STATUS_UNEXIST:
-            strStatus = "AGV_TASK_STATUS_UNEXIST";
-            break;
-        case AGV_TASK_STATUS_UNEXCUTE:
-            strStatus = "AGV_TASK_STATUS_UNEXCUTE";
-            break;
-        case AGV_TASK_STATUS_EXCUTING:
-            strStatus = "AGV_TASK_STATUS_EXCUTING";
-            break;
-        case AGV_TASK_STATUS_DONE:
-            strStatus = "AGV_TASK_STATUS_DONE";
-            break;
-        case AGV_TASK_STATUS_FAIL:
-            strStatus = "AGV_TASK_STATUS_FAIL";
-            break;
-        case AGV_TASK_STATSU_CANCEL:
-            strStatus = "AGV_TASK_STATSU_CANCEL";
-            break;
-        default:
-            strStatus = "AGV_TASK_STATUS_UNEXIST";
-            break;
-        }
+        //        switch (status) {
+        //        case AGV_TASK_STATUS_UNEXIST:
+        //            strStatus = "AGV_TASK_STATUS_UNEXIST";
+        //            break;
+        //        case AGV_TASK_STATUS_UNEXCUTE:
+        //            strStatus = "AGV_TASK_STATUS_UNEXCUTE";
+        //            break;
+        //        case AGV_TASK_STATUS_EXCUTING:
+        //            strStatus = "AGV_TASK_STATUS_EXCUTING";
+        //            break;
+        //        case AGV_TASK_STATUS_DONE:
+        //            strStatus = "AGV_TASK_STATUS_DONE";
+        //            break;
+        //        case AGV_TASK_STATUS_FAIL:
+        //            strStatus = "AGV_TASK_STATUS_FAIL";
+        //            break;
+        //        case AGV_TASK_STATSU_CANCEL:
+        //            strStatus = "AGV_TASK_STATSU_CANCEL";
+        //            break;
+        //        default:
+        //            strStatus = "AGV_TASK_STATUS_UNEXIST";
+        //            break;
+        //        }
         responseParams.insert(std::make_pair(std::string("status"),strStatus));
         responseParams.insert(std::make_pair(std::string("info"),std::string("")));
         responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
@@ -1456,27 +1459,345 @@ void UserMsgProcessor::Task_Cancel(const QyhMsgDateItem &item, std::map<std::str
         ss_taskid<<requestDatas["taskid"];
         ss_taskid>>taskid;
 
-        g_taskCenter.cancelTask(taskid);
+        if(g_taskCenter.cancelTask(taskid)){
+            responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+            responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+        }else{
+            //
+            responseParams.insert(std::make_pair(std::string("info"),std::string("not find taskid in unassigned or doging tasks list")));
+            responseParams.insert(std::make_pair(std::string("result"),std::string("fail")));
+        }
     }
 }
 //未分配任务列表
 void UserMsgProcessor::Task_ListUnassigned(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
+    responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+    responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+    //添加列表
+    QList<AgvTask *> tasks = g_taskCenter.getUnassignedTasks();
+    for(QList<AgvTask *>::iterator itr = tasks.begin();itr!=tasks.end();++itr){
+        AgvTask * task = *itr;
+        std::map<std::string,std::string> onetask;
+
+        std::stringstream ss_id;
+        std::string str_id;
+        ss_id<<task->id();
+        ss_id>>str_id;
+        onetask.insert(std::make_pair(std::string("id"),str_id));
+
+        std::stringstream ss_produceTime;
+        std::string str_produceTime;
+        ss_produceTime<<task->produceTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        ss_produceTime>>str_produceTime;
+        onetask.insert(std::make_pair(std::string("produceTime"),str_produceTime));
+
+        //        std::stringstream ss_doTime;
+        //        std::string str_doTime;
+        //        ss_doTime<<task->doTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        //        ss_doTime>>str_doTime;
+        //        onetask.insert(std::make_pair(std::string("doTime"),str_doTime));
+
+        //        std::stringstream ss_doneTime;
+        //        std::string str_doneTime;
+        //        ss_doneTime<<task->doneTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        //        ss_doneTime>>str_doneTime;
+        //        onetask.insert(std::make_pair(std::string("doneTime"),str_doneTime));
+
+        std::stringstream ss_excuteCar;
+        std::string str_excuteCar;
+        ss_excuteCar<<task->excuteCar();
+        ss_excuteCar>>str_excuteCar;
+        onetask.insert(std::make_pair(std::string("excuteCar"),str_excuteCar));
+
+        std::stringstream ss_status;
+        std::string str_status;
+        ss_status<<task->status();
+        ss_status>>str_status;
+        onetask.insert(std::make_pair(std::string("status"),str_status));
+
+        responseDatalists.push_back(onetask);
+    }
 
 }
 //正在执行任务列表
 void UserMsgProcessor::Task_ListDoing(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
+    responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+    responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+    //添加列表
+    QList<AgvTask *> tasks = g_taskCenter.getDoingTasks();
+    for(QList<AgvTask *>::iterator itr = tasks.begin();itr!=tasks.end();++itr){
+        AgvTask * task = *itr;
+        std::map<std::string,std::string> onetask;
 
+        std::stringstream ss_id;
+        std::string str_id;
+        ss_id<<task->id();
+        ss_id>>str_id;
+        onetask.insert(std::make_pair(std::string("id"),str_id));
+
+        std::stringstream ss_produceTime;
+        std::string str_produceTime;
+        ss_produceTime<<task->produceTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        ss_produceTime>>str_produceTime;
+        onetask.insert(std::make_pair(std::string("produceTime"),str_produceTime));
+
+        std::stringstream ss_doTime;
+        std::string str_doTime;
+        ss_doTime<<task->doTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        ss_doTime>>str_doTime;
+        onetask.insert(std::make_pair(std::string("doTime"),str_doTime));
+
+        //        std::stringstream ss_doneTime;
+        //        std::string str_doneTime;
+        //        ss_doneTime<<task->doneTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        //        ss_doneTime>>str_doneTime;
+        //        onetask.insert(std::make_pair(std::string("doneTime"),str_doneTime));
+
+        std::stringstream ss_excuteCar;
+        std::string str_excuteCar;
+        ss_excuteCar<<task->excuteCar();
+        ss_excuteCar>>str_excuteCar;
+        onetask.insert(std::make_pair(std::string("excuteCar"),str_excuteCar));
+
+        std::stringstream ss_status;
+        std::string str_status;
+        ss_status<<task->status();
+        ss_status>>str_status;
+        onetask.insert(std::make_pair(std::string("status"),str_status));
+
+        responseDatalists.push_back(onetask);
+    }
 }
 //已经完成任务列表(today)
 void UserMsgProcessor::Task_ListDoneToday(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
+    responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+    responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
 
+    QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where status = ? and done time between ? and ?;";
+    QDate today = QDate::currentDate();
+    QDate tomorrow = today.addDays(1);
+    QStringList params;
+    params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
+
+    QDateTime to = QDateTime::currentDateTime();
+    QDateTime from(QDate::currentDate());
+
+    params<<from.toString(DATE_TIME_FORMAT);
+    params<<to.toString(DATE_TIME_FORMAT);
+
+    QList<QStringList> result = g_sql->query(querySql,params);
+
+    for(int i=0;i<result.length();++i){
+        QStringList qsl = result.at(i);
+        if(qsl.length() == 6)
+        {
+            std::map<std::string,std::string> task;
+            task.insert(std::make_pair(std::string("id"),qsl.at(0).toStdString()));
+            task.insert(std::make_pair(std::string("produceTime"),qsl.at(1).toStdString()));
+            task.insert(std::make_pair(std::string("doneTime"),qsl.at(2).toStdString()));
+            task.insert(std::make_pair(std::string("doTime"),qsl.at(3).toStdString()));
+            task.insert(std::make_pair(std::string("excuteCar"),qsl.at(4).toStdString()));
+            task.insert(std::make_pair(std::string("status"),qsl.at(5).toStdString()));
+            responseDatalists.push_back(task);
+        }
+    }
 }
+
 //已经完成任务列表(all)
-void UserMsgProcessor::Task_ListDoneAll(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_ListDoneAll(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+    responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
 
+    QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where status = ? ";
+    QDate today = QDate::currentDate();
+    QDate tomorrow = today.addDays(1);
+    QStringList params;
+    params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
+    //    params<<QDateTime::currentDateTime().setDate(today).toString(DATE_TIME_FORMAT);
+    //    params<<QDateTime::currentDateTime().setDate(tomorrow).toString(DATE_TIME_FORMAT);
+
+    QList<QStringList> result = g_sql->query(querySql,params);
+
+    for(int i=0;i<result.length();++i){
+        QStringList qsl = result.at(i);
+        if(qsl.length() == 6)
+        {
+            std::map<std::string,std::string> task;
+            task.insert(std::make_pair(std::string("id"),qsl.at(0).toStdString()));
+            task.insert(std::make_pair(std::string("produceTime"),qsl.at(1).toStdString()));
+            task.insert(std::make_pair(std::string("doneTime"),qsl.at(2).toStdString()));
+            task.insert(std::make_pair(std::string("doTime"),qsl.at(3).toStdString()));
+            task.insert(std::make_pair(std::string("excuteCar"),qsl.at(4).toStdString()));
+            task.insert(std::make_pair(std::string("status"),qsl.at(5).toStdString()));
+            responseDatalists.push_back(task);
+        }
+    }
 }
+
 //已经完成任务列表(from to 时间)
-void UserMsgProcessor::Task_ListDoneDuring(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_ListDoneDuring(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    //要求带有from和to
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"from","to")){
+        responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+        responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
 
+        QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where status = ? and done time between ? and ?;";
+        QStringList params;
+        params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
+        QDateTime from = QDateTime::fromString(QString::fromStdString(requestDatas["from"]));
+        QDateTime to = QDateTime::fromString(QString::fromStdString(requestDatas["to"]));
+        params<<from.toString(DATE_TIME_FORMAT);
+        params<<to.toString(DATE_TIME_FORMAT);
+
+        QList<QStringList> result = g_sql->query(querySql,params);
+
+        for(int i=0;i<result.length();++i){
+            QStringList qsl = result.at(i);
+            if(qsl.length() == 6)
+            {
+                std::map<std::string,std::string> task;
+                task.insert(std::make_pair(std::string("id"),qsl.at(0).toStdString()));
+                task.insert(std::make_pair(std::string("produceTime"),qsl.at(1).toStdString()));
+                task.insert(std::make_pair(std::string("doneTime"),qsl.at(2).toStdString()));
+                task.insert(std::make_pair(std::string("doTime"),qsl.at(3).toStdString()));
+                task.insert(std::make_pair(std::string("excuteCar"),qsl.at(4).toStdString()));
+                task.insert(std::make_pair(std::string("status"),qsl.at(5).toStdString()));
+                responseDatalists.push_back(task);
+            }
+        }
+    }
 }
+
+void UserMsgProcessor::Task_Detail(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    //要求带有taskid
+    bool needDelete = false;
+    AgvTask *task = NULL;
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid")){
+        int taskId;
+        std::stringstream ss_taskId;
+        ss_taskId<<requestDatas["taskid"];
+        ss_taskId>>taskId;
+
+        task = g_taskCenter.queryUndoTask(taskId);
+        if(task == NULL){
+            task = g_taskCenter.queryDoingTask(taskId);
+            if(task == NULL){
+                task = g_taskCenter.queryDoneTask(taskId);
+                needDelete = true;
+            }
+        }
+
+        if(task == NULL){
+            //未找到该任务
+            responseParams.insert(std::make_pair(std::string("info"),std::string("not found task with taskid")));
+            responseParams.insert(std::make_pair(std::string("result"),std::string("fail")));
+        }else{
+            responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+            responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+
+            {
+                std::stringstream ss_id;
+                std::string str_id;
+                ss_id<<task->id();
+                ss_id>>str_id;
+                responseParams.insert(std::make_pair(std::string("id"),str_id));
+
+                std::stringstream ss_produceTime;
+                std::string str_produceTime;
+                ss_produceTime<<task->produceTime().toString(DATE_TIME_FORMAT).toStdString();
+                ss_produceTime>>str_produceTime;
+                responseParams.insert(std::make_pair(std::string("produceTime"),str_produceTime));
+
+                std::stringstream ss_doneTime;
+                std::string str_doneTime;
+                ss_doneTime<<task->doneTime().toString(DATE_TIME_FORMAT).toStdString();
+                ss_doneTime>>str_doneTime;
+                responseParams.insert(std::make_pair(std::string("doneTime"),str_doneTime));
+
+                std::stringstream ss_doTime;
+                std::string str_doTime;
+                ss_doTime<<task->doTime().toString(DATE_TIME_FORMAT).toStdString();
+                ss_doTime>>str_doTime;
+                responseParams.insert(std::make_pair(std::string("doTime"),str_doTime));
+
+                std::stringstream ss_excuteCar;
+                std::string str_excuteCar;
+                ss_excuteCar<<task->excuteCar();
+                ss_excuteCar>>str_excuteCar;
+                responseParams.insert(std::make_pair(std::string("id"),str_excuteCar));
+
+                std::stringstream ss_status;
+                std::string str_status;
+                ss_status<<task->status();
+                ss_status>>str_status;
+                responseParams.insert(std::make_pair(std::string("id"),str_status));
+            }
+            //装入节点
+            for(int i=0;i<task->taskNodes.length();++i){
+                TaskNode *tn = task->taskNodes.at(i);
+
+                std::map<std::string,std::string> node;
+
+                std::stringstream ss_status;
+                std::string str_status;
+                ss_status<<tn->status;
+                ss_status>>str_status;
+                node.insert(std::make_pair(std::string("status"),str_status));
+
+//                std::stringstream ss_taskId;
+//                std::string str_taskId;
+//                ss_taskId<<task->id();
+//                ss_taskId>>str_taskId;
+//                node.insert(std::make_pair(std::string("taskId"),str_taskId));
+
+                std::stringstream ss_queueNumber;
+                std::string str_queueNumber;
+                ss_queueNumber<<tn->queueNumber;
+                ss_queueNumber>>str_queueNumber;
+                node.insert(std::make_pair(std::string("queueNumber"),str_queueNumber));
+
+                std::stringstream ss_aimStation;
+                std::string str_aimStation;
+                ss_aimStation<<tn->aimStation;
+                ss_aimStation>>str_aimStation;
+                node.insert(std::make_pair(std::string("aimStation"),str_aimStation));
+
+                std::stringstream ss_waitType;
+                std::string str_waitType;
+                ss_waitType<<tn->waitType;
+                ss_waitType>>str_waitType;
+                node.insert(std::make_pair(std::string("waitType"),str_waitType));
+
+                std::stringstream ss_waitTime;
+                std::string str_waitTime;
+                ss_waitTime<<tn->waitTime;
+                ss_waitTime>>str_waitTime;
+                node.insert(std::make_pair(std::string("waitTime"),str_waitTime));
+
+                std::stringstream ss_arriveTime;
+                std::string str_arriveTime;
+                ss_arriveTime<<tn->arriveTime.toString(DATE_TIME_FORMAT).toStdString();
+                ss_arriveTime>>str_arriveTime;
+                node.insert(std::make_pair(std::string("arriveTime"),str_arriveTime));
+
+                std::stringstream ss_leaveTime;
+                std::string str_leaveTime;
+                ss_leaveTime<<tn->leaveTime.toString(DATE_TIME_FORMAT).toStdString();
+                ss_leaveTime>>str_leaveTime;
+                node.insert(std::make_pair(std::string("leaveTime"),str_leaveTime));
+
+                responseDatalists.push_back(node);
+            }
+
+            if(needDelete)
+                delete task;
+        }
+
+    }
+}
+
+
 
