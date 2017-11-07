@@ -346,12 +346,12 @@ bool MapCenter::load()
     /// adj信息 QMap<int,QVector<AgvLine *> > g_m_adj;
 
     //stations
-    QString queryStationSql = "select mykey,x,y,type,name,lineAmount,lines,rfid from agv_station";
+    QString queryStationSql = "select id,station_x,station_y,station_type,station_name,station_lineAmount,station_rfid from agv_station";
     QStringList params;
     QList<QStringList> result = g_sql->query(queryStationSql,params);
     for(int i=0;i<result.length();++i){
         QStringList qsl = result.at(i);
-        if(qsl.length()!=8){
+        if(qsl.length()!=7){
             std::stringstream ss;
             ss << "select error!!!!!!"<<queryStationSql.toStdString();
             g_log->log(AGV_LOG_LEVEL_ERROR,ss.str());
@@ -364,12 +364,12 @@ bool MapCenter::load()
         station->setType(qsl.at(3).toInt());
         station->setName(qsl.at(4));
         station->setLineAmount(qsl.at(5).toInt());
-        station->setRfid(qsl.at(7).toInt());
+        station->setRfid(qsl.at(6).toInt());
         g_m_stations.insert(station->id(),station);
     }
 
     //lines
-    QString squeryLineSql = "select mykey,startX,startY,endX,endY,radius,clockwise,line,midX,midY,centerX,centerY,angle,length,startStation,endStation,draw from agv_line";
+    QString squeryLineSql = "select id,line_startX,line_startY,line_endX,line_endY,line_radius,line_clockwise,line_line,line_midX,line_midY,line_centerX,line_centerY,line_angle,line_length,line_startStation,line_endStation,line_draw from agv_line";
     result = g_sql->query(squeryLineSql,params);
     for(int i=0;i<result.length();++i){
         QStringList qsl = result.at(i);
@@ -412,7 +412,7 @@ bool MapCenter::load()
     }
 
     //lmr
-    QString queryLmrSql = "select lastLine,nextLine,lmr from agv_lmr";
+    QString queryLmrSql = "select lmr_lastLine,lmr_nextLine,lmr_lmr from agv_lmr";
     result = g_sql->query(queryLmrSql,params);
     for(int i=0;i<result.length();++i){
         QStringList qsl = result.at(i);
@@ -429,9 +429,10 @@ bool MapCenter::load()
     }
 
     //adj
-    QString queryAdjSql = "select mykey,lines from agv_adj";
+    QString queryAdjSql = "select adj_startLine,adj_endLine from agv_adj";
     result = g_sql->query(queryAdjSql,params);
-    for(int i=0;i<result.length();++i){
+    for(int i=0;i<result.length();++i)
+    {
         QStringList qsl = result.at(i);
         if(qsl.length()!=2){
             std::stringstream ss;
@@ -439,13 +440,16 @@ bool MapCenter::load()
             g_log->log(AGV_LOG_LEVEL_ERROR,ss.str());
             return false;
         }
-        QVector<AgvLine*> lines;
-        QStringList linesSStr = qsl.at(1).split(",");
-        for(int j=0;j<linesSStr.length();++j){
-            int kk = linesSStr.at(j).toInt();
-            lines.append(g_m_lines[kk]);
+        AgvLine* endLine = g_m_lines[qsl.at(1).toInt()];
+        int startLine = qsl.at(0).toInt();
+        if(g_m_l_adj.contains(startLine)){
+            g_m_l_adj[startLine].push_back(endLine);
+        }else{
+            QVector<AgvLine*> lines;
+            lines.push_back(endLine);
+            g_m_l_adj[startLine] = lines;
         }
-        g_m_l_adj[qsl.at(0).toInt()] = lines;
+
     }
 
     return true;
@@ -480,11 +484,11 @@ bool MapCenter::save()
         return false;
     }
     //插入数据
-    QString insertStationSql = "insert into agv_station(mykey,x,y,type,name,lineAmount,rfid) values(?,?,?,?,?,?,?,?);";
+    QString insertStationSql = "insert into agv_station(station_x,station_y,station_type,station_name,station_lineAmount,station_rfid) values(?,?,?,?,?,?,?);";
     for(QMap<int,AgvStation *>::iterator itr = g_m_stations.begin();itr!=g_m_stations.end();++itr){
         AgvStation *s = itr.value();
         params.clear();
-        params<<QString("%1").arg(s->id())<<QString("%1").arg(s->x())<<QString("%1").arg(s->y())<<QString("%1").arg(s->type())<<s->name()<<QString("%1").arg(s->lineAmount())<<QString("%1").arg(s->rfid());
+        params<<QString("%1").arg(s->x())<<QString("%1").arg(s->y())<<QString("%1").arg(s->type())<<s->name()<<QString("%1").arg(s->lineAmount())<<QString("%1").arg(s->rfid());
         if(!g_sql->exec(insertStationSql,params))
         {
             g_log->log(AGV_LOG_LEVEL_ERROR," insert into agv_station failed!");
@@ -492,7 +496,7 @@ bool MapCenter::save()
         }
     }
 
-    QString insertLineSql = "insert into agv_line(mykey,startX,startY,endX,endY,radius,clockwise,line,midX,midY,centerX,centerY,angle,length,startStation,endStation,draw) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
+    QString insertLineSql = "insert into agv_line(station_startX,startY,endX,endY,radius,clockwise,line,midX,midY,centerX,centerY,angle,length,startStation,endStation,draw) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
     for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr){
         AgvLine *l = itr.value();
         params.clear();

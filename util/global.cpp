@@ -29,7 +29,7 @@ MsgCenter g_msgCenter;   //消息处理中心，对所有的消息进行解析�
 ///登录的客户端的信息
 std::list<LoginUserInfo> loginUserIdSock;
 
-//const QString DATE_TIME_FORMAT = "yyyy-MM-dd hh:mm:ss";//统一时间格式
+const QString DATE_TIME_FORMAT = "yyyy-MM-dd hh:mm:ss";//统一时间格式
 
 //公共函数
 void QyhSleep(int msec)

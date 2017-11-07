@@ -30,7 +30,7 @@ bool AgvCenter::agvStartTask(int agvId, QList<int> path)
 
 bool AgvCenter::load()//从数据库载入所有的agv
 {
-    QString querySql = "select id,name,ip from agv_agv";
+    QString querySql = "select id,agv_name,agv_ip from agv_agv";
     QStringList params;
     QList<QStringList> result = g_sql->query(querySql,params);
     for(int i=0;i<result.length();++i){
@@ -66,7 +66,7 @@ bool AgvCenter::save()//将agv保存到数据库
     {
         if(g_m_agvs.contains(selectAgvIds.at(i))){
             //含有,进行更新
-            QString updateSql = "update agv_agv set name=?,ip=? where id=?";
+            QString updateSql = "update agv_agv set agv_name=?,agv_ip=? where id=?";
             params.clear();
             params<<g_m_agvs[selectAgvIds.at(i)]->name()<<g_m_agvs[selectAgvIds.at(i)]->ip()<<QString("%1").arg(g_m_agvs[selectAgvIds.at(i)]->id());
             if(!g_sql->exec(updateSql,params))
@@ -88,7 +88,7 @@ bool AgvCenter::save()//将agv保存到数据库
     for(QMap<int,Agv *>::iterator itr=g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
         if(selectAgvIds.contains(itr.key()))continue;
         //插入操作
-        QString insertSql = "insert into agv_agv(id,name,ip) values(?,?,?)";
+        QString insertSql = "insert into agv_agv(id,agv_name,agv_ip) values(?,?,?)";
         params.clear();
         params<<QString("%1").arg(itr.value()->id())<<itr.value()->name()<<itr.value()->ip();
         if(!g_sql->exec(insertSql,params))return false;

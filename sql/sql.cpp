@@ -16,7 +16,11 @@ Sql::~Sql()
 
 bool Sql::checkTables()
 {
-    QString querySql = "SELECT COUNT(*) FROM sqlite_master where type='table' and name=?";
+    //mysql
+    QString querySql = "select count(*) from INFORMATION_SCHEMA.TABLES where TABLE_NAME=? ;";
+    //sqlite
+    //QString querySql = "SELECT COUNT(*) FROM sqlite_master where type='table' and name=?";
+
     QStringList args;
     //检查表如下：
     /// 1.agv_stations
@@ -34,7 +38,8 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "create table agv_station ( id INTEGER PRIMARY KEY AUTOINCREMENT, mykey INTEGER unique, x INTEGER, y INTEGER, type INTEGER, name text,lineAmount INTEGER,lines text,rfid INTEGER);";
+        //MYSQL:
+        QString createSql = "create table agv_station (id INTEGER PRIMARY KEY AUTO_INCREMENT, station_x INTEGER, station_y INTEGER, station_type INTEGER, station_name text,station_lineAmount INTEGER,station_rfid INTEGER);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;
@@ -47,7 +52,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "create table agv_line (id INTEGER PRIMARY KEY AUTOINCREMENT,mykey INTEGER unique,startX INTEGER,startY INTEGER,endX INTEGER,endY INTEGER,radius INTEGER,name text,clockwise BOOLEAN,line BOOLEAN,midX INTEGER,midY INTEGER,centerX INTEGER,centerY INTEGER,angle INTEGER,length INTEGER,startStation INTEGER,endStation INTEGER, draw BOOLEAN);";
+        QString createSql = "create table agv_line (id INTEGER PRIMARY KEY AUTO_INCREMENT,line_startX INTEGER,line_startY INTEGER,line_endX INTEGER,line_endY INTEGER,line_radius INTEGER,line_name text,line_clockwise BOOLEAN,line_line BOOLEAN,line_midX INTEGER,line_midY INTEGER,line_centerX INTEGER,line_centerY INTEGER,line_angle INTEGER,line_length INTEGER,line_startStation INTEGER,line_endStation INTEGER, line_draw BOOLEAN);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;
@@ -60,7 +65,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "create table agv_lmr (id INTEGER PRIMARY KEY AUTOINCREMENT,lastLine INTEGER,nextLine INTEGER,lmr INTEGER);";
+        QString createSql = "create table agv_lmr (id INTEGER PRIMARY KEY AUTO_INCREMENT,lmr_lastLine INTEGER,lmr_nextLine INTEGER,lmr_lmr INTEGER);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;
@@ -73,7 +78,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "create table agv_adj (id INTEGER PRIMARY KEY AUTOINCREMENT,myKey INTEGER,lines text);";
+        QString createSql = "create table agv_adj (id INTEGER PRIMARY KEY AUTO_INCREMENT,adj_startLine INTEGER,adj_endLine INTEGER);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;
@@ -87,7 +92,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "create table agv_log (id INTEGER PRIMARY KEY AUTOINCREMENT,type text,from_id text,level text,msg text,date datetime);";
+        QString createSql = "create table agv_log (id INTEGER PRIMARY KEY AUTO_INCREMENT,log_level INTEGER,log_msg text,log_time datetime);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;
@@ -100,11 +105,25 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "create table agv_task ( id INTEGER PRIMARY KEY AUTOINCREMENT, mykey INTEGER unique, aimStation INTEGER,type INTEGER,pickupStation INTEGER,produceTime datetime,doTime dateTime,doneTime datetime,excuteCar INTEGER,status INTEGER,goPickGoAim bool,waitTypePick INTEGER,waitTimePick INTEGER,waitTypeAim INTEGER,waitTimeAim INTEGER);";
+        QString createSql = "create table agv_task ( id INTEGER PRIMARY KEY AUTO_INCREMENT, task_producetime datetime,task_doTime datetime,task_doneTime datetime,task_excuteCar integer,task_status integer);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;
     }
+
+    args.clear();
+    args<<"agv_task_node";
+    qsl = query(querySql,args);
+    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0]=="1"){
+        //存在了
+    }else{
+        //不存在.创建
+        QString createSql = "create table agv_task_node(id INTEGER PRIMARY KEY AUTO_INCREMENT, task_node_status integer,task_node_queuenumber integer,task_node_aimStation integer,task_node_waitType integer,task_node_waitTime integer,task_node_arriveTime datetime,task_node_leaveTime datetime,task_node_taskId integer);";
+        args.clear();
+        bool b = exec(createSql,args);
+        if(!b)return false;
+    }
+
 
 
     args.clear();
@@ -114,7 +133,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "CREATE TABLE agv_user(id INTEGER PRIMARY KEY AUTOINCREMENT,name text,pwd text,realName TEXT,lastSignTime datetime,signState integer,tickeId text,sex bool,age int,createTime DATETIME,role INTEGER);";
+        QString createSql = "CREATE TABLE agv_user(id INTEGER PRIMARY KEY AUTO_INCREMENT,user_username text,user_password text,user_realName TEXT,user_lastSignTime datetime,user_signState integer,user_sex bool,user_age int,user_createTime datetime,user_role INTEGER);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;
@@ -127,7 +146,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTOINCREMENT,name text,ip text);";
+        QString createSql = "CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTO_INCREMENT,agv_name text,agv_ip text);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;
@@ -147,10 +166,13 @@ bool Sql::createConnection()
     }
     else
     {
-        database = QSqlDatabase::addDatabase("QSQLITE","mysqliteconnection");
-        database.setDatabaseName("database/agv_manager.db");
-        database.setUserName("XingYeZhiXia");
-        database.setPassword("123456");
+        database = QSqlDatabase::addDatabase("QMYSQL","mysqliteconnection");
+        database.setHostName("localhost");
+        database.setDatabaseName("agv");
+        database.setPort(3306);
+
+        database.setUserName("root");
+        database.setPassword("6980103");
     }
 
     if(!database.isValid())return false;
@@ -171,12 +193,13 @@ bool Sql::closeConnection()
 }
 
 //执行sql语句
-bool Sql::exec(QString qeurysql,QStringList args)
+bool Sql::exec(QString exeSql,QStringList args)
 {
-    //g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql.toStdString());
+    if(!exeSql.contains("agv_log") || !exeSql.contains("insert into"))//防止形成自循环
+        g_log->log(AGV_LOG_LEVEL_DEBUG,"exeSql="+exeSql.toStdString());
 
     QSqlQuery sql_query(database);
-    sql_query.prepare(qeurysql);
+    sql_query.prepare(exeSql);
     for(int i=0;i<args.length();++i){
         sql_query.addBindValue(args[i]);
         //g_log->log(AGV_LOG_LEVEL_DEBUG,args.at(i).toStdString());
@@ -194,7 +217,7 @@ bool Sql::exec(QString qeurysql,QStringList args)
 //查询数据
 QList<QStringList> Sql::query(QString qeurysql, QStringList args)
 {
-    //g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql.toStdString());
+    g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql.toStdString());
     QList<QStringList> xx;
     QSqlQuery sql_query(database);
     sql_query.prepare(qeurysql);

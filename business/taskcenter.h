@@ -62,7 +62,6 @@ private:
     //    QList<AgvTask *> doingTasks;//正在执行的任务
 
     void clear();
-    int maxId;
 
     QTimer taskProcessTimer;
 

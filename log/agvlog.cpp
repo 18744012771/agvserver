@@ -46,6 +46,6 @@ void AgvLog::log(AGV_LOG_LEVEL level, std::string msg)
     onelog.time=now;
     onelog.msg = msg;
 
-    g_log_queue.enqueue(onelog);
+    //g_log_queue.enqueue(onelog);
 }
 

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <QUuid>
 #include <stdarg.h>
-
+#include <QDebug>
 
 UserMsgProcessor::UserMsgProcessor(QObject *parent) : QThread(parent),isQuit(false)
 {
@@ -66,14 +66,13 @@ void UserMsgProcessor::parseOneMsg(const QyhMsgDateItem &item, const std::string
             &&(itr=params.find("todo"))!=params.end()
             &&(itr=params.find("queuenumber"))!=params.end()){
         std::stringstream ss;
-        ss<<"good msg"<<oneMsg;
         g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
         //接下来对这条消息进行响应
+        DWORD t1,t2;
+        t1 = GetTickCount();
         responseOneMsg(item,params,datalist);
-    }else{
-        std::stringstream ss;
-        ss<<"bad msg"<<oneMsg;
-        g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+        t2 = GetTickCount();
+        qDebug()<<"reponse one msg total time="<<(t2-t1)*1.0/1000;
     }
 }
 
@@ -164,10 +163,20 @@ void UserMsgProcessor::clientMsgUserProcess(const QyhMsgDateItem &item,std::map<
     /////////////////////////////////////这段是和掐所有地方不应的一个点
     if(requestDatas["todo"]=="login")
     {
+        DWORD t1,t2,t3;
+        t1 = GetTickCount();
+
         User_Login(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+
+        t2 = GetTickCount();
+        qDebug()<<"User_Login total time="<<(t2-t1)*1.0/1000;
         //封装        //发送
         std::string xml = getResponseXml(responseParams,responseDatalists);
         g_netWork->sendToOne(item.sock,xml.c_str(),xml.length());
+
+        t3 = GetTickCount();
+        qDebug()<<"send response time="<<(t3-t2)*1.0/1000;
+
         return ;
     }
     /////////////////////////////////////这段是和掐所有地方不应的一个点
@@ -176,6 +185,7 @@ void UserMsgProcessor::clientMsgUserProcess(const QyhMsgDateItem &item,std::map<
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         std::string xml = getResponseXml(responseParams,responseDatalists);
         g_netWork->sendToOne(item.sock,xml.c_str(),xml.length());
+        return ;
     }
 
     if(requestDatas["todo"]=="logout")
@@ -452,7 +462,8 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, std::map<std::stri
 {
     //////////////////请求登录(做特殊处理，因为这里不需要验证access_token!)
     if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password",NULL)){//要求包含用户名和密码
-        QString querySqlA = "select id,password,role from agv_user where username=?";
+        //是否可以重复登录呢？？ //我觉得应该 不可以，那就添加
+        QString querySqlA = "select id,user_password,user_role,user_signState from agv_user where user_username=?";
         QStringList params;
         params<<QString::fromStdString(requestDatas["username"]);
         QList<QStringList> queryresult = g_sql->query(querySqlA,params);
@@ -460,29 +471,35 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, std::map<std::stri
             responseParams.insert(std::make_pair(std::string("info"),std::string("not exist:username")));
             responseParams.insert(std::make_pair(std::string("result"),std::string("fail")));
         }else{
-            if(queryresult.at(0).at(1) ==QString::fromStdString(requestDatas["password"])){
-                //加入已登录的队伍中
-                LoginUserInfo loginUserInfo;
-                loginUserInfo.id = queryresult.at(0).at(0).toInt();
-                loginUserInfo.sock = item.sock;
-                loginUserInfo.access_tocken = makeAccessToken();
-                loginUserInfo.password = requestDatas["username"];
-                loginUserInfo.username = requestDatas["password"];
-                loginUserInfo.role = queryresult.at(0).at(2).toInt();
-                loginUserIdSock.push_back(loginUserInfo);
+            if(queryresult.at(0).at(1) == QString::fromStdString(requestDatas["password"])){
+                if(queryresult.at(0).at(3).toInt() ==1){//已经登录了！
+                    //用户已经登录了
+                    responseParams.insert(std::make_pair(std::string("info"),std::string("already login by other!")));
+                    responseParams.insert(std::make_pair(std::string("result"),std::string("fail")));
+                }else{
+                    //加入已登录的队伍中
+                    LoginUserInfo loginUserInfo;
+                    loginUserInfo.id = queryresult.at(0).at(0).toInt();
+                    loginUserInfo.sock = item.sock;
+                    loginUserInfo.access_tocken = makeAccessToken();
+                    loginUserInfo.password = requestDatas["username"];
+                    loginUserInfo.username = requestDatas["password"];
+                    loginUserInfo.role = queryresult.at(0).at(2).toInt();
+                    loginUserIdSock.push_back(loginUserInfo);
 
-                //登录成功
-                responseParams.insert(std::make_pair(std::string("info"),std::string("")));
-                responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
-                responseParams.insert(std::make_pair(std::string("role"),queryresult.at(0).at(2).toStdString()));
-                responseParams.insert(std::make_pair(std::string("id"),queryresult.at(0).at(0).toStdString()));
-                responseParams.insert(std::make_pair(std::string("access_token"),loginUserInfo.access_tocken));
+                    //登录成功
+                    responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+                    responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+                    responseParams.insert(std::make_pair(std::string("role"),queryresult.at(0).at(2).toStdString()));
+                    responseParams.insert(std::make_pair(std::string("id"),queryresult.at(0).at(0).toStdString()));
+                    responseParams.insert(std::make_pair(std::string("access_token"),loginUserInfo.access_tocken));
 
-                //设置登录状态和登录时间
-                QString updateSql = "update agv_user set status=1,lastSignTime=? where id=?";
-                params.clear();
-                params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(loginUserInfo.id);
-                g_sql->exec(updateSql,params);
+                    //设置登录状态和登录时间
+                    QString updateSql = "update agv_user set user_signState=1,user_lastSignTime= ? where id=? ";
+                    params.clear();
+                    params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(loginUserInfo.id);
+                    g_sql->exec(updateSql,params);
+                }
             }else{
                 //登录失败
                 responseParams.insert(std::make_pair(std::string("info"),std::string("not correct:password")));
@@ -491,6 +508,7 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, std::map<std::stri
         }
     }
 }
+
 //用户登出
 void UserMsgProcessor:: User_Logout(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     //////////////////退出登录
@@ -507,11 +525,12 @@ void UserMsgProcessor:: User_Logout(const QyhMsgDateItem &item, std::map<std::st
         responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
     }
 }
+
 //修改密码
 void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ///////////////////修改密码
     if(checkParamExistAndNotNull(requestDatas,responseParams,"username","oldpassword","newpassword",NULL)){
-        QString querySqlA = "select password from agv_user where username=?";
+        QString querySqlA = "select user_password from agv_user where user_username=?";
         QStringList params;
         params<<QString::fromStdString(requestDatas["username"]);
         QList<QStringList> queryresult = g_sql->query(querySqlA,params);
@@ -521,7 +540,7 @@ void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, std::map
         }else{
             if(queryresult.at(0).at(0)==QString::fromStdString(requestDatas["oldpassword"])){
                 /////TODO:设置新的密码
-                QString updateSql = "update agv_user set password=? where username=?";
+                QString updateSql = "update agv_user set user_password=? where user_username=?";
                 params.clear();
                 params<<QString::fromStdString(requestDatas["newpassword"])<<QString::fromStdString(requestDatas["username"]);
                 if(!g_sql->exec(updateSql,params)){
@@ -543,7 +562,7 @@ void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, std::map
 void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////////////////////////获取用户列表
     //开始查询用户 只能查看到同等级或者低等级的用户
-    QString querySqlB = "select id,username,password,status,lastSignTime,createTime,role from agv_user where role<=?";
+    QString querySqlB = "select id,user_username,user_password,user_status,user_lastSignTime,user_createTime,user_role from agv_user where user_role<=?";
     QStringList paramsB;
     paramsB<<QString("%1").arg(loginUserInfo.role);
     QList<QStringList> queryresultB = g_sql->query(querySqlB,paramsB);
@@ -606,7 +625,7 @@ void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, std::map<std::strin
             age = QString::fromStdString(requestDatas.at("sex")).toInt();
         }
 
-        QString addSql = "insert into agv_user(username,password,role,realname,sex,age,createTime)values(?,?,?,?,?,?,?);";
+        QString addSql = "insert into agv_user(user_username,user_password,user_role,user_realname,user_sex,user_age,user_createTime)values(?,?,?,?,?,?,?);";
         QStringList params;
         params<<username<<password<<role<<realName<<QString("%1").arg(sex)<<QString("%1").arg(age)<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT);
         if(g_sql->exec(addSql,params)){
@@ -1123,12 +1142,12 @@ void UserMsgProcessor:: AgvManage_List(const QyhMsgDateItem &item, std::map<std:
 void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     //要求name和ip
     if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip",NULL)){
-        QString insertSql = "insert into agv_agv (name,ip)values(?,?)";
+        QString insertSql = "insert into agv_agv (agv_name,agv_ip)values(?,?)";
         QStringList tempParams;
         tempParams<<QString::fromStdString(requestDatas.at("name"))<<QString::fromStdString(requestDatas.at("ip"));
         if(g_sql->exec(insertSql,tempParams)){
             int newId;
-            QString querySql = "select id from agv_agv where name = ? and ip = ?";
+            QString querySql = "select id from agv_agv where agv_name = ? and agv_ip = ?";
             QList<QStringList> queryresult = g_sql->query(querySql,tempParams);
             if(queryresult.length()>0 &&queryresult.at(0).length()>0)
             {
@@ -1214,7 +1233,7 @@ void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, std::map<st
             responseParams.insert(std::make_pair(std::string("info"),std::string("not exist of this agvid.")));
             responseParams.insert(std::make_pair(std::string("result"),std::string("fail")));
         }else{
-            QString updateSql = "update agv_agv set name=?,set ip=? where id=?";
+            QString updateSql = "update agv_agv set agv_name=?,set agv_ip=? where id=?";
             QStringList params;
             params<<(QString::fromStdString(requestDatas["name"]))<<(QString::fromStdString(requestDatas["ip"]))<<(QString::fromStdString(requestDatas["agvid"]));
             if(g_sql->exec(updateSql,params)){
@@ -1583,21 +1602,22 @@ void UserMsgProcessor::Task_ListDoneToday(const QyhMsgDateItem &item, std::map<s
     responseParams.insert(std::make_pair(std::string("info"),std::string("")));
     responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
 
-    QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where status = ? and done time between ? and ?;";
+    QString querySql = "select id,task_produceTime,task_doneTime,task_doTime,task_excuteCar,task_status from agv_task where task_status = ? and task_doneTime between ? and ?;";
     QDate today = QDate::currentDate();
     QDate tomorrow = today.addDays(1);
     QStringList params;
     params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
 
-    QDateTime to = QDateTime::currentDateTime();
-    QDateTime from(QDate::currentDate());
+    QDateTime to(tomorrow);
+    QDateTime from(today);
 
     params<<from.toString(DATE_TIME_FORMAT);
     params<<to.toString(DATE_TIME_FORMAT);
 
     QList<QStringList> result = g_sql->query(querySql,params);
 
-    for(int i=0;i<result.length();++i){
+    for(int i=0;i<result.length();++i)
+    {
         QStringList qsl = result.at(i);
         if(qsl.length() == 6)
         {
@@ -1619,17 +1639,15 @@ void UserMsgProcessor::Task_ListDoneAll(const QyhMsgDateItem &item, std::map<std
     responseParams.insert(std::make_pair(std::string("info"),std::string("")));
     responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
 
-    QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where status = ? ";
-    QDate today = QDate::currentDate();
-    QDate tomorrow = today.addDays(1);
+    QString querySql = "select id,task_produceTime,task_doneTime,task_doTime,task_excuteCar,task_status from agv_task where task_status = ? ";
+
     QStringList params;
     params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
-    //    params<<QDateTime::currentDateTime().setDate(today).toString(DATE_TIME_FORMAT);
-    //    params<<QDateTime::currentDateTime().setDate(tomorrow).toString(DATE_TIME_FORMAT);
 
     QList<QStringList> result = g_sql->query(querySql,params);
 
-    for(int i=0;i<result.length();++i){
+    for(int i=0;i<result.length();++i)
+    {
         QStringList qsl = result.at(i);
         if(qsl.length() == 6)
         {
@@ -1653,7 +1671,7 @@ void UserMsgProcessor::Task_ListDoneDuring(const QyhMsgDateItem &item, std::map<
         responseParams.insert(std::make_pair(std::string("info"),std::string("")));
         responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
 
-        QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where status = ? and done time between ? and ?;";
+        QString querySql = "select id,task_produceTime,task_doneTime,task_doTime,task_excuteCar,task_status from agv_task where task_status = ? and task_doneTime between ? and ?;";
         QStringList params;
         params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
         QDateTime from = QDateTime::fromString(QString::fromStdString(requestDatas["from"]));
@@ -1757,11 +1775,11 @@ void UserMsgProcessor::Task_Detail(const QyhMsgDateItem &item, std::map<std::str
                 ss_status>>str_status;
                 node.insert(std::make_pair(std::string("status"),str_status));
 
-//                std::stringstream ss_taskId;
-//                std::string str_taskId;
-//                ss_taskId<<task->id();
-//                ss_taskId>>str_taskId;
-//                node.insert(std::make_pair(std::string("taskId"),str_taskId));
+                //                std::stringstream ss_taskId;
+                //                std::string str_taskId;
+                //                ss_taskId<<task->id();
+                //                ss_taskId>>str_taskId;
+                //                node.insert(std::make_pair(std::string("taskId"),str_taskId));
 
                 std::stringstream ss_queueNumber;
                 std::string str_queueNumber;
@@ -1827,7 +1845,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, std::map<std::
 
         bool firstappend = true;
 
-        QString querySql = "select level,time,msg from agv_log where time between ? and ? ";
+        QString querySql = "select log_level,log_time,log_msg from agv_log where log_time between ? and ? ";
 
         QStringList params;
         QDateTime from = QDateTime::fromString(QString::fromStdString(requestDatas["from"]));
@@ -1835,71 +1853,76 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, std::map<std::
         params<<from.toString(DATE_TIME_FORMAT);
         params<<to.toString(DATE_TIME_FORMAT);
 
+        if(!trace&&!debug&&!info&&!warn&&!error&&!fatal){
 
-        if(trace){
-            if(firstappend){
-                querySql += QString("and level=? ");
+        }else{
+            querySql += "and (";
+            if(trace){
+                if(firstappend){
+                    querySql += QString(" log_level=? ");
+                }
+                else{
+                    querySql += QString("or log_level=? ");
+                }
+                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                firstappend = false;
             }
-            else{
-                querySql += QString("or level=? ");
-            }
-            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
-            firstappend = false;
-        }
 
-        if(debug){
-            if(firstappend){
-                querySql += QString("and level=? ");
+            if(debug){
+                if(firstappend){
+                    querySql += QString(" log_level=? ");
+                }
+                else{
+                    querySql += QString("or log_level=? ");
+                }
+                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                firstappend = false;
             }
-            else{
-                querySql += QString("or level=? ");
-            }
-            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
-            firstappend = false;
-        }
 
-        if(info){
-            if(firstappend){
-                querySql += QString("and level=? ");
+            if(info){
+                if(firstappend){
+                    querySql += QString(" log_level=? ");
+                }
+                else{
+                    querySql += QString("or log_level=? ");
+                }
+                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                firstappend = false;
             }
-            else{
-                querySql += QString("or level=? ");
-            }
-            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
-            firstappend = false;
-        }
 
-        if(warn){
-            if(firstappend){
-                querySql += QString("and level=? ");
+            if(warn){
+                if(firstappend){
+                    querySql += QString(" log_level=? ");
+                }
+                else{
+                    querySql += QString("or log_level=? ");
+                }
+                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                firstappend = false;
             }
-            else{
-                querySql += QString("or level=? ");
-            }
-            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
-            firstappend = false;
-        }
 
-        if(error){
-            if(firstappend){
-                querySql += QString("and level=? ");
+            if(error){
+                if(firstappend){
+                    querySql += QString(" log_level=? ");
+                }
+                else{
+                    querySql += QString("or log_level=? ");
+                }
+                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                firstappend = false;
             }
-            else{
-                querySql += QString("or level=? ");
-            }
-            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
-            firstappend = false;
-        }
 
-        if(fatal){
-            if(firstappend){
-                querySql += QString("and level=? ");
+            if(fatal){
+                if(firstappend){
+                    querySql += QString(" log_level=? ");
+                }
+                else{
+                    querySql += QString("or log_level=? ");
+                }
+                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                firstappend = false;
             }
-            else{
-                querySql += QString("or level=? ");
-            }
-            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
-            firstappend = false;
+             querySql += ");";
         }
 
         QList<QStringList> result = g_sql->query(querySql,params);
@@ -1927,7 +1950,7 @@ void UserMsgProcessor::Log_ListAll(const QyhMsgDateItem &item, std::map<std::str
         responseParams.insert(std::make_pair(std::string("info"),std::string("")));
         responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
 
-        QString querySql = "select level,time,msg from agv_log where time between ? and ?;";
+        QString querySql = "select log_level,log_time,log_msg from agv_log where log_time between ? and ?;";
         QStringList params;
         QDateTime from = QDateTime::fromString(QString::fromStdString(requestDatas["from"]));
         QDateTime to = QDateTime::fromString(QString::fromStdString(requestDatas["to"]));

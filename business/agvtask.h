@@ -5,12 +5,12 @@
 #include <QDateTime>
 
 enum{
-    AGV_TASK_STATUS_UNEXIST = -3,
-    AGV_TASK_STATUS_UNEXCUTE=-2,
-    AGV_TASK_STATUS_EXCUTING=-1,
-    AGV_TASK_STATUS_DONE=0,
-    AGV_TASK_STATUS_FAIL=1,
-    AGV_TASK_STATSU_CANCEL=2
+    AGV_TASK_STATUS_UNEXIST = -3,//不存在
+    AGV_TASK_STATUS_UNEXCUTE=-2,//未执行
+    AGV_TASK_STATUS_EXCUTING=-1,//正在执行
+    AGV_TASK_STATUS_DONE=0,//完成
+    AGV_TASK_STATUS_FAIL=1,//失败
+    AGV_TASK_STATSU_CANCEL=2//取消
 };
 
 enum{
@@ -19,7 +19,14 @@ enum{
     AGV_TASK_WAIT_TYPE_NOWAIT = 2   //到达就可以了，就是不等待
 };
 
+enum{
+    AGV_TASK_NODE_STATUS_UNDO = 0,
+    AGV_TASK_NODE_STATUS_DOING = 1,
+    AGV_TASK_NODE_STATUS_DONE = 2,
+};
+
 struct TaskNode{
+    int id = 0;
     int status = 0;  //0未执行  1正在执行  2执行完成了
     int queueNumber = 0; //在这个任务中的序列号
     int aimStation = 0;//要去的位置()如果是0，说明没有节点任务
@@ -71,12 +78,14 @@ private:
 
 public:
     //这两个是可以公有访问的.不过一般仅限于task中访问
-    QList<TaskNode *> taskNodes;
+    QVector<TaskNode *> taskNodes;
 
 
     bool isDone();
 
     TaskNode *nextTodoNode();
+
+    TaskNode *lastDoneNode();
 
     TaskNode *currentDoingNode();
     //OK 完成了
