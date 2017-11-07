@@ -7,7 +7,8 @@
 //全局的一些common变量
 QString g_strExeRoot;
 Sql *g_sql = NULL;
-Log *g_log = NULL;
+AgvLog *g_log = NULL;
+AgvLogProcess *g_logProcess = NULL;
 SqlServer *g_sqlServer = NULL;
 AgvNetWork *g_netWork;//服务器中心
 
@@ -28,7 +29,7 @@ MsgCenter g_msgCenter;   //消息处理中心，对所有的消息进行解析�
 ///登录的客户端的信息
 std::list<LoginUserInfo> loginUserIdSock;
 
-const QString DATE_TIME_FORMAT = "yyyy-MM-dd hh:mm:ss";//统一时间格式
+//const QString DATE_TIME_FORMAT = "yyyy-MM-dd hh:mm:ss";//统一时间格式
 
 //公共函数
 void QyhSleep(int msec)
@@ -101,7 +102,7 @@ bool getRequestParam(const std::string &xmlStr,std::map<std::string,std::string>
     pugi::xml_document doc;
     pugi::xml_parse_result parseResult =  doc.load_buffer(xmlStr.c_str(), xmlStr.length());
     if(parseResult.status != pugi::status_ok){
-        qDebug() << QStringLiteral("收到的xml解析错误:")<<xmlStr.c_str();
+        g_log->log(AGV_LOG_LEVEL_ERROR,"收到的xml解析错误:"+xmlStr);
         return false;//解析错误，说明xml格式不正确
     }
 
@@ -109,13 +110,11 @@ bool getRequestParam(const std::string &xmlStr,std::map<std::string,std::string>
     for (pugi::xml_node child: xmlRoot.children())
     {
         if(strcmp(child.name(),"data")!=0){
-            qDebug() << child.name()<<":"<<child.child_value();
             params.insert(std::make_pair(std::string(child.name()),std::string(child.child_value())));
         }else{
             for (pugi::xml_node ccchild: child.children())
             {
                 if(strcmp(ccchild.name(),"datalist")!=0){
-                    qDebug() << ccchild.name()<<":"<<ccchild.child_value();
                     params.insert(std::make_pair(std::string(ccchild.name()),std::string(ccchild.child_value())));
                 }else{
                     for (pugi::xml_node ccccccchild: ccchild.children())

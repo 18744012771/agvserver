@@ -125,7 +125,15 @@ private:
     //单个任务的详细情况
     void Task_Detail(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo);
 
-
+    ////////////////////////////////////日志管理
+    //查询日志 from to时间
+    void Log_ListDuring(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo);
+    //查询所有日志
+    void Log_ListAll(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo);
+    //订阅日志
+    void Log_Subscribe(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo);
+    //取消订阅日志
+    void Log_CancelSubscribe(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo);
 };
 
 #endif // USERMSGPROCESSOR_H

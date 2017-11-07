@@ -102,13 +102,13 @@ void MsgCenter::init()
     positionPublisher = new AgvPositionPublisher(this);
     positionPublisher->start();
 
-    //启动订阅 日志
-    if(logPublisher){
-        delete logPublisher;
-        logPublisher = NULL;
-    }
-    logPublisher = new AgvLogPublisher(this);
-    logPublisher->start();
+//    //启动订阅 日志
+//    if(logPublisher){
+//        delete logPublisher;
+//        logPublisher = NULL;
+//    }
+//    logPublisher = new AgvLogPublisher(this);
+//    logPublisher->start();
 
 }
 

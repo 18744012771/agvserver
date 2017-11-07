@@ -1,5 +1,6 @@
 ﻿#include "agvlogprocess.h"
 #include "util/global.h"
+#include <sstream>
 
 AgvLogProcess::AgvLogProcess(QObject *parent) : QThread(parent),isQuit(false)
 {
@@ -11,18 +12,17 @@ AgvLogProcess::~AgvLogProcess()
     isQuit = true;
 }
 
-void AgvLogProcess::addSubscribe(int sock, int role)
+void AgvLogProcess::addSubscribe(int sock, SubNode node)
 {
     mutex.lock();
-    subscribers.push_back(std::make_pair(sock,role));
+    subscribers.push_back(std::make_pair(sock,node));
     mutex.unlock();
 }
 
 void AgvLogProcess::removeSubscribe(int sock)
 {
     mutex.lock();
-    std::list<int>::iterator itr;
-    for(std::list<std::pair<int,int> >::iterator itr = subscribers.begin();itr!=subscribers.end();++itr){
+    for(std::list<std::pair<int,SubNode> >::iterator itr = subscribers.begin();itr!=subscribers.end();++itr){
         if(itr->first == sock){
             subscribers.erase(itr);
             break;
@@ -49,10 +49,9 @@ void AgvLogProcess::run()
         //保存到数据库
         QString insertSql = "insert into agv_log(level,time,msg)values(?,?,?);";
         QStringList params;
-        params<<QString("%1").arg(onelog.level)<<onelog.time.toString(DATE_TIME_FORMAT)<<QString::fromStdString( onelog.msg);
-
-        g_sql->exec(insertSql,params);
-
+        params<<QString("%1").arg(onelog.level)<<onelog.time.toString(DATE_TIME_FORMAT)<<QString::fromLocal8Bit(onelog.msg.data());
+        if(g_sql)
+            g_sql->exec(insertSql,params);
 
         //组装订阅信息
         std::map<std::string,std::string> responseDatas;
@@ -80,13 +79,18 @@ void AgvLogProcess::run()
 
         //发送订阅信息
         mutex.lock();
-        for(std::list<std::pair<int,int> >::iterator itr = subscribers.begin();itr!=subscribers.end();++itr)
+        for(std::list<std::pair<int,SubNode> >::iterator itr = subscribers.begin();itr!=subscribers.end();++itr)
         {
-            if(itr->second==0 && onelog.onlyAdminVisible)continue;
+            if(onelog.level==AGV_LOG_LEVEL_TRACE &&!itr->second.trace)continue;
+            if(onelog.level==AGV_LOG_LEVEL_DEBUG &&!itr->second.debug)continue;
+            if(onelog.level==AGV_LOG_LEVEL_INFO &&!itr->second.info)continue;
+            if(onelog.level==AGV_LOG_LEVEL_WARN &&!itr->second.warn)continue;
+            if(onelog.level==AGV_LOG_LEVEL_ERROR &&!itr->second.error)continue;
+            if(onelog.level==AGV_LOG_LEVEL_FATAL &&!itr->second.fatal)continue;
             g_netWork->sendToOne(itr->first,xml.c_str(),xml.length());
         }
         mutex.unlock();
 
-        QyhSleep(20);
+        QyhSleep(10);
     }
 }

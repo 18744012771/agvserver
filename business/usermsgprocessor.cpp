@@ -29,9 +29,9 @@ void UserMsgProcessor::run()
             std::string ss((char *)item.data,item.size);
             free(item.data);
             item.data = NULL;
-            qDebug()<<"ss======================"<<ss.length();
-            qDebug()<<ss.c_str();
-            qDebug()<<"ss======================";
+
+            g_log->log(AGV_LOG_LEVEL_INFO,"get client msg="+ss);
+
             parseOneMsg(item,ss);
         }
         QyhSleep(50);
@@ -65,9 +65,15 @@ void UserMsgProcessor::parseOneMsg(const QyhMsgDateItem &item, const std::string
     if((itr=params.find("type"))!=params.end()
             &&(itr=params.find("todo"))!=params.end()
             &&(itr=params.find("queuenumber"))!=params.end()){
-        qDebug()<<"get a good msg"<<params.size()<<datalist.size();
+        std::stringstream ss;
+        ss<<"good msg"<<oneMsg;
+        g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
         //接下来对这条消息进行响应
         responseOneMsg(item,params,datalist);
+    }else{
+        std::stringstream ss;
+        ss<<"bad msg"<<oneMsg;
+        g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
     }
 }
 
@@ -76,16 +82,11 @@ bool UserMsgProcessor::checkParamExistAndNotNull(std::map<std::string,std::strin
     bool result = true;
     //argno代表第几个参数 para就是这个参数
     va_list argp;
-    int argno = 0;
 
-    char *para;
+    const char *para = s;
+
     va_start(argp, s);
-    while (1)
-    {
-        para = va_arg(argp, char *);
-        if (strcmp(para, "") == 0 )
-            break;
-
+    do{
         //检查参数
         std::string strParam = std::string(para);
         if(requestDatas.find(strParam)==requestDatas.end()){
@@ -99,8 +100,9 @@ bool UserMsgProcessor::checkParamExistAndNotNull(std::map<std::string,std::strin
             result =  false;
             break;
         }
-        argno++;
-    }
+        para = va_arg(argp, char *);
+    }while(para!=NULL);
+
     va_end(argp);
 
     return result;
@@ -108,7 +110,8 @@ bool UserMsgProcessor::checkParamExistAndNotNull(std::map<std::string,std::strin
 
 bool UserMsgProcessor::checkAccessToken(const QyhMsgDateItem &item,std::map<std::string,std::string> &requestDatas,std::map<std::string,std::string> &responseParams,LoginUserInfo &loginUserInfo)
 {
-    if(!checkParamExistAndNotNull(requestDatas,responseParams,"access_token")) return false;
+    if(!checkParamExistAndNotNull(requestDatas,responseParams,"access_token",NULL))
+        return false;
 
     ////对access_token判断是否正确
     bool access_token_correct = false;
@@ -406,7 +409,39 @@ void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,std::map<
 
 void UserMsgProcessor::clientMsgLogProcess(const QyhMsgDateItem &item,std::map<string,string> &requestDatas,std::vector<std::map<std::string,std::string> > &datalists)
 {
+    std::map<std::string,std::string> responseParams;
+    std::vector<std::map<std::string,std::string> > responseDatalists;
+    responseParams.insert(std::make_pair(std::string("type"),requestDatas["type"]));
+    responseParams.insert(std::make_pair(std::string("todo"),requestDatas["todo"]));
+    responseParams.insert(std::make_pair(std::string("queuenumber"),requestDatas["queuenumber"]));
+    LoginUserInfo loginUserinfo;
 
+    /////所有的非登录消息，需要进行，安全验证 随机码
+    if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
+        std::string xml = getResponseXml(responseParams,responseDatalists);
+        g_netWork->sendToOne(item.sock,xml.c_str(),xml.length());
+    }
+
+    /// 创建任务(创建到X点的任务)
+    if(requestDatas["todo"]=="listDuring"){
+        Log_ListDuring(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+    /// 创建任务(创建指定车辆到X点的任务)
+    else  if(requestDatas["todo"]=="listAll"){
+        Log_ListAll(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+    /// 创建任务(创建经过Y点到X点的任务)
+    else  if(requestDatas["todo"]=="subscribe"){
+        Log_Subscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+    /// 创建任务(创建指定车辆经过Y点到X点的任务)
+    else  if(requestDatas["todo"]=="cancelSubscribe"){
+        Log_CancelSubscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+    //封装
+    std::string xml = getResponseXml(responseParams,responseDatalists);
+    //发送
+    g_netWork->sendToOne(item.sock,xml.c_str(),xml.length());
 
 }
 
@@ -416,7 +451,7 @@ void UserMsgProcessor::clientMsgLogProcess(const QyhMsgDateItem &item,std::map<s
 void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
 {
     //////////////////请求登录(做特殊处理，因为这里不需要验证access_token!)
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password")){//要求包含用户名和密码
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password",NULL)){//要求包含用户名和密码
         QString querySqlA = "select id,password,role from agv_user where username=?";
         QStringList params;
         params<<QString::fromStdString(requestDatas["username"]);
@@ -446,7 +481,7 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, std::map<std::stri
                 //设置登录状态和登录时间
                 QString updateSql = "update agv_user set status=1,lastSignTime=? where id=?";
                 params.clear();
-                params<<QDateTime::currentDateTime().toString()<<QString("%1").arg(loginUserInfo.id);
+                params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(loginUserInfo.id);
                 g_sql->exec(updateSql,params);
             }else{
                 //登录失败
@@ -459,7 +494,7 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, std::map<std::stri
 //用户登出
 void UserMsgProcessor:: User_Logout(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     //////////////////退出登录
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"id")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"id",NULL)){
         //取消的订阅
         g_msgCenter.removeAgvPositionSubscribe(item.sock);
         g_msgCenter.removeAgvStatusSubscribe(item.sock);
@@ -475,7 +510,7 @@ void UserMsgProcessor:: User_Logout(const QyhMsgDateItem &item, std::map<std::st
 //修改密码
 void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ///////////////////修改密码
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"username")&& checkParamExistAndNotNull(requestDatas,responseParams,"oldpassword")&& checkParamExistAndNotNull(requestDatas,responseParams,"newpassword")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"username","oldpassword","newpassword",NULL)){
         QString querySqlA = "select password from agv_user where username=?";
         QStringList params;
         params<<QString::fromStdString(requestDatas["username"]);
@@ -535,7 +570,7 @@ void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, std::map<std::stri
 //删除用户
 void UserMsgProcessor:: User_Delete(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////////////////////////////////删除用户
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"id")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"id",NULL)){
         QString deleteSql = "delete from agv_user where id=?";
         QStringList params;
         params<<QString::fromStdString(requestDatas["id"]);
@@ -551,9 +586,7 @@ void UserMsgProcessor:: User_Delete(const QyhMsgDateItem &item, std::map<std::st
 //添加用户
 void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ///////////////////////////////////添加用户
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"username")
-            &&checkParamExistAndNotNull(requestDatas,responseParams,"password")
-            &&checkParamExistAndNotNull(requestDatas,responseParams,"role"))
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password","role",NULL))
     {
         QString username =QString::fromStdString(requestDatas.at("username"));
         QString password =QString::fromStdString(requestDatas.at("password"));
@@ -575,7 +608,7 @@ void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, std::map<std::strin
 
         QString addSql = "insert into agv_user(username,password,role,realname,sex,age,createTime)values(?,?,?,?,?,?,?);";
         QStringList params;
-        params<<username<<password<<role<<realName<<QString("%1").arg(sex)<<QString("%1").arg(age)<<QDateTime::currentDateTime().toString();
+        params<<username<<password<<role<<realName<<QString("%1").arg(sex)<<QString("%1").arg(age)<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT);
         if(g_sql->exec(addSql,params)){
             //成功
             responseParams.insert(std::make_pair(std::string("info"),std::string("")));
@@ -780,7 +813,7 @@ void UserMsgProcessor:: Map_AgvPositionCancelSubscribe(const QyhMsgDateItem &ite
 //请求小车控制权
 void UserMsgProcessor:: Agv_Hand(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
         int iAgvId;
         std::stringstream ss;
         ss<<requestDatas["agvid"];
@@ -822,7 +855,7 @@ void UserMsgProcessor:: Agv_Hand(const QyhMsgDateItem &item, std::map<std::strin
 //释放小车控制权
 void UserMsgProcessor:: Agv_Release(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
         int iAgvId;
         std::stringstream ss;
         ss<<requestDatas["agvid"];
@@ -855,7 +888,7 @@ void UserMsgProcessor:: Agv_Release(const QyhMsgDateItem &item, std::map<std::st
 //前进
 void UserMsgProcessor:: Agv_Forward(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed",NULL)){
         int iAgvId;
         std::stringstream ss;
         ss<<requestDatas["agvid"];
@@ -891,7 +924,7 @@ void UserMsgProcessor:: Agv_Forward(const QyhMsgDateItem &item, std::map<std::st
 //后退
 void UserMsgProcessor:: Agv_Backward(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed",NULL)){
         int iAgvId;
         std::stringstream ss;
         ss<<requestDatas["agvid"];
@@ -926,7 +959,7 @@ void UserMsgProcessor:: Agv_Backward(const QyhMsgDateItem &item, std::map<std::s
 //左转
 void UserMsgProcessor:: Agv_Turnleft(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed",NULL)){
         int iAgvId;
         std::stringstream ss;
         ss<<requestDatas["agvid"];
@@ -961,7 +994,7 @@ void UserMsgProcessor:: Agv_Turnleft(const QyhMsgDateItem &item, std::map<std::s
 //右转
 void UserMsgProcessor:: Agv_Turnright(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed",NULL)){
         int iAgvId;
         std::stringstream ss;
         ss<<requestDatas["agvid"];
@@ -998,7 +1031,7 @@ void UserMsgProcessor:: Agv_Light(const QyhMsgDateItem &item, std::map<std::stri
 //小车状态订阅
 void UserMsgProcessor:: Agv_StatusSubscribte(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////订阅id未agvid的小车的状态信息
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
         int iAgvId;
         std::stringstream ss;
         ss<<requestDatas["agvid"];
@@ -1028,7 +1061,7 @@ void UserMsgProcessor:: Agv_StatusSubscribte(const QyhMsgDateItem &item, std::ma
 //取消小车状态订阅
 void UserMsgProcessor:: Agv_CancelStatusSubscribe(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
         int iAgvId;
         std::stringstream ss;
         ss<<requestDatas["agvid"];
@@ -1089,7 +1122,7 @@ void UserMsgProcessor:: AgvManage_List(const QyhMsgDateItem &item, std::map<std:
 //增加
 void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     //要求name和ip
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip",NULL)){
         QString insertSql = "insert into agv_agv (name,ip)values(?,?)";
         QStringList tempParams;
         tempParams<<QString::fromStdString(requestDatas.at("name"))<<QString::fromStdString(requestDatas.at("ip"));
@@ -1122,7 +1155,7 @@ void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, std::map<std::
 //删除
 void UserMsgProcessor:: AgvManage_Delete(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
     //要求agvid
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
         int iAgvId;
         std::stringstream ss_id;
         ss_id<<requestDatas.at("agvid");
@@ -1164,7 +1197,7 @@ void UserMsgProcessor:: AgvManage_Delete(const QyhMsgDateItem &item, std::map<st
 }
 //修改
 void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","name","ip")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","name","ip",NULL)){
         int iAgvId;
         std::stringstream ss_id;
         ss_id<<requestDatas.at("agvid");
@@ -1201,7 +1234,7 @@ void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, std::map<st
 ////////////////////////////////任务部分
 //创建任务(创建到X点的任务)
 void UserMsgProcessor::Task_CreateToX(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"x")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"x",NULL)){
         //可选项<xWaitType><xWaitTime><yWaitType><yWaitTime>
         int iX;
         std::stringstream ss_x;
@@ -1241,7 +1274,7 @@ void UserMsgProcessor::Task_CreateToX(const QyhMsgDateItem &item, std::map<std::
 
 //创建任务(创建指定车辆到X点的任务)
 void UserMsgProcessor::Task_CreateAgvToX(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"x","agvid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"x","agvid",NULL)){
         int iX;
         std::stringstream ss_x;
         ss_x << requestDatas["x"];
@@ -1287,7 +1320,7 @@ void UserMsgProcessor::Task_CreateAgvToX(const QyhMsgDateItem &item, std::map<st
 }
 //创建任务(创建经过Y点到X点的任务)
 void UserMsgProcessor::Task_CreateYToX(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"x","y")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"x","y",NULL)){
         int iX;
         std::stringstream ss_x;
         ss_x << requestDatas["x"];
@@ -1345,7 +1378,7 @@ void UserMsgProcessor::Task_CreateYToX(const QyhMsgDateItem &item, std::map<std:
 }
 //创建任务(创建指定车辆经过Y点到X点的任务)
 void UserMsgProcessor::Task_CreateAgvYToX(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"x","y","agvid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"x","y","agvid",NULL)){
         int iX;
         std::stringstream ss_x;
         ss_x << requestDatas["x"];
@@ -1411,7 +1444,7 @@ void UserMsgProcessor::Task_CreateAgvYToX(const QyhMsgDateItem &item, std::map<s
 }
 //查询任务状态
 void UserMsgProcessor::Task_QueryStatus(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid",NULL)){
         std::stringstream ss_taskid;
         int taskid;
         ss_taskid<<requestDatas["taskid"];
@@ -1423,29 +1456,6 @@ void UserMsgProcessor::Task_QueryStatus(const QyhMsgDateItem &item, std::map<std
         ss_status<<status;
         ss_status>>strStatus;
 
-        //        switch (status) {
-        //        case AGV_TASK_STATUS_UNEXIST:
-        //            strStatus = "AGV_TASK_STATUS_UNEXIST";
-        //            break;
-        //        case AGV_TASK_STATUS_UNEXCUTE:
-        //            strStatus = "AGV_TASK_STATUS_UNEXCUTE";
-        //            break;
-        //        case AGV_TASK_STATUS_EXCUTING:
-        //            strStatus = "AGV_TASK_STATUS_EXCUTING";
-        //            break;
-        //        case AGV_TASK_STATUS_DONE:
-        //            strStatus = "AGV_TASK_STATUS_DONE";
-        //            break;
-        //        case AGV_TASK_STATUS_FAIL:
-        //            strStatus = "AGV_TASK_STATUS_FAIL";
-        //            break;
-        //        case AGV_TASK_STATSU_CANCEL:
-        //            strStatus = "AGV_TASK_STATSU_CANCEL";
-        //            break;
-        //        default:
-        //            strStatus = "AGV_TASK_STATUS_UNEXIST";
-        //            break;
-        //        }
         responseParams.insert(std::make_pair(std::string("status"),strStatus));
         responseParams.insert(std::make_pair(std::string("info"),std::string("")));
         responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
@@ -1453,7 +1463,7 @@ void UserMsgProcessor::Task_QueryStatus(const QyhMsgDateItem &item, std::map<std
 }
 //取消任务
 void UserMsgProcessor::Task_Cancel(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid",NULL)){
         std::stringstream ss_taskid;
         int taskid;
         ss_taskid<<requestDatas["taskid"];
@@ -1487,7 +1497,7 @@ void UserMsgProcessor::Task_ListUnassigned(const QyhMsgDateItem &item, std::map<
 
         std::stringstream ss_produceTime;
         std::string str_produceTime;
-        ss_produceTime<<task->produceTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        ss_produceTime<<task->produceTime().toString(DATE_TIME_FORMAT).toStdString();
         ss_produceTime>>str_produceTime;
         onetask.insert(std::make_pair(std::string("produceTime"),str_produceTime));
 
@@ -1537,13 +1547,13 @@ void UserMsgProcessor::Task_ListDoing(const QyhMsgDateItem &item, std::map<std::
 
         std::stringstream ss_produceTime;
         std::string str_produceTime;
-        ss_produceTime<<task->produceTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        ss_produceTime<<task->produceTime().toString(DATE_TIME_FORMAT).toStdString();
         ss_produceTime>>str_produceTime;
         onetask.insert(std::make_pair(std::string("produceTime"),str_produceTime));
 
         std::stringstream ss_doTime;
         std::string str_doTime;
-        ss_doTime<<task->doTime().toString("yyyy-MM-dd hh:mm:ss").toStdString();
+        ss_doTime<<task->doTime().toString(DATE_TIME_FORMAT).toStdString();
         ss_doTime>>str_doTime;
         onetask.insert(std::make_pair(std::string("doTime"),str_doTime));
 
@@ -1639,7 +1649,7 @@ void UserMsgProcessor::Task_ListDoneAll(const QyhMsgDateItem &item, std::map<std
 void UserMsgProcessor::Task_ListDoneDuring(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
 {
     //要求带有from和to
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"from","to")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"from","to",NULL)){
         responseParams.insert(std::make_pair(std::string("info"),std::string("")));
         responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
 
@@ -1675,7 +1685,7 @@ void UserMsgProcessor::Task_Detail(const QyhMsgDateItem &item, std::map<std::str
     //要求带有taskid
     bool needDelete = false;
     AgvTask *task = NULL;
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid")){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid",NULL)){
         int taskId;
         std::stringstream ss_taskId;
         ss_taskId<<requestDatas["taskid"];
@@ -1796,6 +1806,177 @@ void UserMsgProcessor::Task_Detail(const QyhMsgDateItem &item, std::map<std::str
                 delete task;
         }
 
+    }
+}
+
+//查询日志 from to时间
+void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    //要求带有from和to <trace> <debug> <info> <warn> <error> <fatal>
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"from","to","trace","debug","info","warn","error","fatal",NULL))
+    {
+        responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+        responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+
+        bool trace = requestDatas["trace"]=="true";
+        bool debug = requestDatas["debug"]=="true";
+        bool info = requestDatas["info"]=="true";
+        bool warn = requestDatas["warn"]=="true";
+        bool error = requestDatas["error"]=="true";
+        bool fatal = requestDatas["fatal"]=="true";
+
+        bool firstappend = true;
+
+        QString querySql = "select level,time,msg from agv_log where time between ? and ? ";
+
+        QStringList params;
+        QDateTime from = QDateTime::fromString(QString::fromStdString(requestDatas["from"]));
+        QDateTime to = QDateTime::fromString(QString::fromStdString(requestDatas["to"]));
+        params<<from.toString(DATE_TIME_FORMAT);
+        params<<to.toString(DATE_TIME_FORMAT);
+
+
+        if(trace){
+            if(firstappend){
+                querySql += QString("and level=? ");
+            }
+            else{
+                querySql += QString("or level=? ");
+            }
+            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+            firstappend = false;
+        }
+
+        if(debug){
+            if(firstappend){
+                querySql += QString("and level=? ");
+            }
+            else{
+                querySql += QString("or level=? ");
+            }
+            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+            firstappend = false;
+        }
+
+        if(info){
+            if(firstappend){
+                querySql += QString("and level=? ");
+            }
+            else{
+                querySql += QString("or level=? ");
+            }
+            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+            firstappend = false;
+        }
+
+        if(warn){
+            if(firstappend){
+                querySql += QString("and level=? ");
+            }
+            else{
+                querySql += QString("or level=? ");
+            }
+            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+            firstappend = false;
+        }
+
+        if(error){
+            if(firstappend){
+                querySql += QString("and level=? ");
+            }
+            else{
+                querySql += QString("or level=? ");
+            }
+            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+            firstappend = false;
+        }
+
+        if(fatal){
+            if(firstappend){
+                querySql += QString("and level=? ");
+            }
+            else{
+                querySql += QString("or level=? ");
+            }
+            params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+            firstappend = false;
+        }
+
+        QList<QStringList> result = g_sql->query(querySql,params);
+
+        for(int i=0;i<result.length();++i){
+            QStringList qsl = result.at(i);
+            if(qsl.length() == 3)
+            {
+                std::map<std::string,std::string> log;
+                log.insert(std::make_pair(std::string("level"),qsl.at(0).toStdString()));
+                log.insert(std::make_pair(std::string("time"),qsl.at(1).toStdString()));
+                log.insert(std::make_pair(std::string("msg"),qsl.at(2).toStdString()));
+                responseDatalists.push_back(log);
+            }
+        }
+    }
+}
+
+//查询所有日志
+void UserMsgProcessor::Log_ListAll(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    ////<trace> <debug> <info> <warn> <error> <fatal>
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"trace","debug","info","warn","error","fatal",NULL))
+    {
+        responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+        responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+
+        QString querySql = "select level,time,msg from agv_log where time between ? and ?;";
+        QStringList params;
+        QDateTime from = QDateTime::fromString(QString::fromStdString(requestDatas["from"]));
+        QDateTime to = QDateTime::fromString(QString::fromStdString(requestDatas["to"]));
+        params<<from.toString(DATE_TIME_FORMAT);
+        params<<to.toString(DATE_TIME_FORMAT);
+
+        QList<QStringList> result = g_sql->query(querySql,params);
+
+        for(int i=0;i<result.length();++i){
+            QStringList qsl = result.at(i);
+            if(qsl.length() == 3)
+            {
+                std::map<std::string,std::string> log;
+                log.insert(std::make_pair(std::string("level"),qsl.at(0).toStdString()));
+                log.insert(std::make_pair(std::string("time"),qsl.at(1).toStdString()));
+                log.insert(std::make_pair(std::string("msg"),qsl.at(2).toStdString()));
+                responseDatalists.push_back(log);
+            }
+        }
+    }
+}
+//订阅日志
+void UserMsgProcessor::Log_Subscribe(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"trace","debug","info","warn","error","fatal",NULL))
+    {
+        responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+        responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+        g_logProcess->removeSubscribe(item.sock);//先去掉原来的订阅
+        //加入现在的订阅
+        SubNode subnode;
+        subnode.trace = requestDatas["trace"] == "true";
+        subnode.debug = requestDatas["debug"] == "true";
+        subnode.info = requestDatas["info"] == "true";
+        subnode.warn = requestDatas["warn"] == "true";
+        subnode.error = requestDatas["error"] == "true";
+        subnode.fatal = requestDatas["fatal"] == "true";
+        g_logProcess->addSubscribe(item.sock,subnode);
+    }
+}
+
+//取消订阅日志
+void UserMsgProcessor::Log_CancelSubscribe(const QyhMsgDateItem &item, std::map<std::string, std::string> &requestDatas, std::vector<std::map<std::string, std::string> > &datalists,std::map<std::string,std::string> &responseParams,std::vector<std::map<std::string,std::string> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"trace","debug","info","warn","error","fatal",NULL))
+    {
+        responseParams.insert(std::make_pair(std::string("info"),std::string("")));
+        responseParams.insert(std::make_pair(std::string("result"),std::string("success")));
+        g_logProcess->removeSubscribe(item.sock);
     }
 }
 

@@ -1,19 +1,19 @@
 ﻿#ifndef GLOBAL_H
 #define GLOBAL_H
 
-#include <QDebug>
 #include <QList>
 #include <QMap>
 #include <map>
 #include <string>
+#include <sstream>
 #include <mutex>
 using std::map;
 using std::mutex;
 using std::string;
 
 #include "sql/sql.h"
-#include "log/log.h"
 #include "log/agvlog.h"
+#include "log/agvlogprocess.h"
 #include "concurrentqueue.h"
 #include "sql/sqlserver.h"
 #include "network/agvnetwork.h"
@@ -29,12 +29,6 @@ using std::string;
 #include "business/msgcenter.h"
 
 #include "util/concurrentqueue.h"
-
-#ifndef QYH_LOG_ENDLL
-#define QYH_LOG_ENDLL
-#define qyhLog (qDebug())
-#define endll ("")
-#endif
 
 struct LoginUserInfo
 {
@@ -83,7 +77,8 @@ enum{
 //全局共有变量处理类实例
 extern QString g_strExeRoot;
 extern Sql *g_sql;
-extern Log *g_log;
+extern AgvLog *g_log;
+extern AgvLogProcess *g_logProcess;
 extern SqlServer *g_sqlServer;
 extern AgvNetWork *g_netWork;//服务器中心
 
@@ -121,7 +116,7 @@ bool getRequestParam(const std::string &xmlStr,std::map<std::string,std::string>
 ///登录的客户端的id和它对应的sock
 extern std::list<LoginUserInfo> loginUserIdSock;
 
-extern const QString DATE_TIME_FORMAT;
+//extern const QString DATE_TIME_FORMAT;
 
 //日志的消息队列
 extern moodycamel::ConcurrentQueue<OneLog> g_log_queue;

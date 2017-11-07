@@ -190,19 +190,20 @@ bool AgvNetWork::initClientServer()
 {
     if (false == m_clientIOCP.LoadSocketLib())
     {
-        qyhLog<<"加载Winsock 2.2失败，服务器端无法运行！"<<endll;
+        g_log->log(AGV_LOG_LEVEL_FATAL,"加载Winsock 2.2失败，服务器端无法运行！");
+        return false;
     }
     m_clientIOCP.SetPort(8988);
     m_clientIOCP.setOwner(this);
     if (false == m_clientIOCP.Start(onRecvClientMsg,onDisconnectClient))
     {
-        qyhLog << "Agv iocp服务器启动失败！" << endll;
+        g_log->log(AGV_LOG_LEVEL_FATAL,"iocp服务器启动失败！");
         return false;
     }
 
     //创建消息发送线程
     std::thread(serverSendFunc, this).detach();
-    qyhLog << "server start ok" << endll;
+    g_log->log(AGV_LOG_LEVEL_INFO,"iocp server start ok");
     return true;
 }
 

@@ -16,7 +16,6 @@ SOURCES += main.cpp \
     sql/sqlserver.cpp \
     network/agvnetwork.cpp \
     network/IOCPModel.cpp \
-    log/log.cpp \
     business/agvstation.cpp \
     business/agvline.cpp \
     business/agv.cpp \
@@ -28,8 +27,6 @@ SOURCES += main.cpp \
     business/usermsgprocessor.cpp \
     business/agvpositionpublisher.cpp \
     business/agvstatuspublisher.cpp \
-    business/logpublisher.cpp \
-    business/agvlogpublisher.cpp \
     log/agvlog.cpp \
     log/agvlogprocess.cpp
 
@@ -52,7 +49,6 @@ HEADERS += \
     sql/sqlserver.h \
     network/agvnetwork.h \
     network/IOCPModel.h \
-    log/log.h \
     business/agvstation.h \
     business/agvline.h \
     business/agv.h \
@@ -64,8 +60,6 @@ HEADERS += \
     business/usermsgprocessor.h \
     business/agvpositionpublisher.h \
     business/agvstatuspublisher.h \
-    business/logpublisher.h \
-    business/agvlogpublisher.h \
     log/agvlog.h \
     log/agvlogprocess.h
 

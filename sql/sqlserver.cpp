@@ -1,8 +1,8 @@
 ﻿#include "sqlserver.h"
-#include <QDebug>
 #include <QSqlError>
 #include <QSqlRecord>
 #include <QSqlQuery>
+#include "util/global.h"
 
 SqlServer::SqlServer()
 {
@@ -31,7 +31,7 @@ bool SqlServer::createConnection()
     if(!database.isValid())return false;
     if (!database.open())
     {
-        qDebug() << "Error: Failed to connect database." << database.lastError();
+        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Failed to connect database."+database.lastError().text().toStdString());
         return false;
     }
 
@@ -48,17 +48,18 @@ bool SqlServer::closeConnection()
 //执行sql语句
 bool SqlServer::exec(QString qeurysql,QStringList args)
 {
-    qDebug() << "qeurysql="<<qeurysql;
+    //g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql.toStdString());
+
     QSqlQuery sql_query(database);
     sql_query.prepare(qeurysql);
     for(int i=0;i<args.length();++i){
         sql_query.addBindValue(args[i]);
-        qDebug()<<args.at(i);
+        //g_log->log(AGV_LOG_LEVEL_DEBUG,args.at(i).toStdString());
     }
-    qDebug() << sql_query.lastQuery();
+
     if(!sql_query.exec())
     {
-        qDebug() << "Error: Fail to sql_query.exec()." << sql_query.lastError();
+        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text().toStdString());
         return false;
     }
 
@@ -68,18 +69,18 @@ bool SqlServer::exec(QString qeurysql,QStringList args)
 //查询数据
 QList<QStringList> SqlServer::query(QString qeurysql, QStringList args)
 {
-    qDebug() << "qeurysql="<<qeurysql;
+    //g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql.toStdString());
     QList<QStringList> xx;
     QSqlQuery sql_query(database);
     sql_query.prepare(qeurysql);
     for(int i=0;i<args.length();++i){
-        //qDebug() <<args[i];
         sql_query.addBindValue(args[i]);
+        //g_log->log(AGV_LOG_LEVEL_DEBUG,args.at(i).toStdString());
     }
 
     if(!sql_query.exec())
     {
-        qDebug() << "Error: Fail to sql_query.exec()." << sql_query.lastError();
+        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text().toStdString());
         return xx;
     }
     while(sql_query.next()){

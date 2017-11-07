@@ -18,7 +18,6 @@ struct OneLog{
     QDateTime time;
     AGV_LOG_LEVEL level;
     std::string msg;
-    bool onlyAdminVisible;
 };
 
 class AgvLog : public QObject
@@ -27,7 +26,7 @@ class AgvLog : public QObject
 public:
     explicit AgvLog(QObject *parent = nullptr);
 
-    void AgvLog::log(AGV_LOG_LEVEL level, std::string msg, bool onlyAdminVisible);
+    void log(AGV_LOG_LEVEL level, std::string msg);
 
 signals:
 

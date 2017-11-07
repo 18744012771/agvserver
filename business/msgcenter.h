@@ -5,7 +5,6 @@
 #include <QThread>
 #include "agvpositionpublisher.h"
 #include "agvstatuspublisher.h"
-#include "agvlogpublisher.h"
 
 //这里将会启动一个CPU个数*2的线程，用于处理用户的数据
 //保证并发量和响应时间
@@ -50,7 +49,6 @@ private:
 
     AgvPositionPublisher *positionPublisher;
     AgvStatusPublisher *statusPublisher;
-    AgvLogPublisher *logPublisher;
 
     QByteArray packet(char code_mode,QByteArray content);
 };

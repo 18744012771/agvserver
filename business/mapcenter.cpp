@@ -49,7 +49,10 @@ void MapCenter::addStation(QString s)
             }
         }
     }
-    qDebug() << "g_m_agvstations.length="<<g_m_stations.keys().length();
+    std::stringstream ss;
+    ss << "g_m_agvstations.length="<<g_m_stations.keys().length();
+    g_log->log(AGV_LOG_LEVEL_DEBUG,ss.str());
+
 }
 
 void MapCenter::addLine(QString s)
@@ -81,7 +84,9 @@ void MapCenter::addLine(QString s)
             }
         }
     }
-    qDebug() << "g_m_agvlines.length="<<g_m_lines.size();
+    std::stringstream ss;
+    ss << "g_m_agvlines.length="<<g_m_lines.size();
+    g_log->log(AGV_LOG_LEVEL_DEBUG,ss.str());
 }
 
 void MapCenter::addArc(QString s)
@@ -125,7 +130,9 @@ void MapCenter::addArc(QString s)
             }
         }
     }
-    qDebug() << "g_m_agvlines.length="<<g_m_lines.keys().size();
+    std::stringstream ss;
+    ss << "g_m_agvlines.length="<<g_m_lines.keys().size();
+    g_log->log(AGV_LOG_LEVEL_DEBUG,ss.str());
 }
 
 int MapCenter::getLMR(AgvLine *lastLine,AgvLine *nextLine)
@@ -313,7 +320,7 @@ void MapCenter::create()
 
     ////2.保存地图信息，包括如下内容：
     if(!save()){
-        qDebug() << QStringLiteral("地图保存失败");
+        g_log->log(AGV_LOG_LEVEL_ERROR,"地图保存失败");
     }
     //TODO
     emit mapUpdate();
@@ -345,7 +352,9 @@ bool MapCenter::load()
     for(int i=0;i<result.length();++i){
         QStringList qsl = result.at(i);
         if(qsl.length()!=8){
-            qDebug() << "select error!!!!!!"<<queryStationSql;
+            std::stringstream ss;
+            ss << "select error!!!!!!"<<queryStationSql.toStdString();
+            g_log->log(AGV_LOG_LEVEL_ERROR,ss.str());
             return false;
         }
         AgvStation *station = new AgvStation;
@@ -365,7 +374,9 @@ bool MapCenter::load()
     for(int i=0;i<result.length();++i){
         QStringList qsl = result.at(i);
         if(qsl.length()!=17){
-            qDebug() << "select error!!!!!!"<<squeryLineSql;
+            std::stringstream ss;
+            ss << "select error!!!!!!"<<squeryLineSql.toStdString();
+            g_log->log(AGV_LOG_LEVEL_ERROR,ss.str());
             return false;
         }
         AgvLine *line = new AgvLine;
@@ -406,7 +417,9 @@ bool MapCenter::load()
     for(int i=0;i<result.length();++i){
         QStringList qsl = result.at(i);
         if(qsl.length()!=3){
-            qDebug() << "select error!!!!!!"<<queryLmrSql;
+            std::stringstream ss;
+            ss << "select error!!!!!!"<<queryLmrSql.toStdString();
+            g_log->log(AGV_LOG_LEVEL_ERROR,ss.str());
             return false;
         }
         PATH_LEFT_MIDDLE_RIGHT ll;
@@ -421,7 +434,9 @@ bool MapCenter::load()
     for(int i=0;i<result.length();++i){
         QStringList qsl = result.at(i);
         if(qsl.length()!=2){
-            qDebug() << "select error!!!!!!"<<queryAdjSql;
+            std::stringstream ss;
+            ss << "select error!!!!!!"<<queryAdjSql.toStdString();
+            g_log->log(AGV_LOG_LEVEL_ERROR,ss.str());
             return false;
         }
         QVector<AgvLine*> lines;
@@ -443,25 +458,25 @@ bool MapCenter::save()
 
     bool b = g_sql->exec(deleteStationSql,params);
     if(!b){
-        qDebug()<<"can not clear table agv_station!";
+        g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_station!");
         return false;
     }
     QString deleteLineSql = "delete from agv_line;";
     b = g_sql->exec(deleteLineSql,params);
     if(!b){
-        qDebug()<<"can not clear table agv_line!";
+        g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_line!");
         return false;
     }
     QString deleteLmrSql = "delete from agv_lmr;";
     b = g_sql->exec(deleteLmrSql,params);
     if(!b){
-        qDebug()<<"can not clear table agv_lmr!";
+        g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_lmr!");
         return false;
     }
     QString deleteAdjSql = "delete from agv_adj;";
     b = g_sql->exec(deleteAdjSql,params);
     if(!b){
-        qDebug()<<"can not clear table agv_adj!";
+        g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_adj!");
         return false;
     }
     //插入数据
@@ -472,7 +487,7 @@ bool MapCenter::save()
         params<<QString("%1").arg(s->id())<<QString("%1").arg(s->x())<<QString("%1").arg(s->y())<<QString("%1").arg(s->type())<<s->name()<<QString("%1").arg(s->lineAmount())<<QString("%1").arg(s->rfid());
         if(!g_sql->exec(insertStationSql,params))
         {
-            qDebug() <<" insert into agv_station failed!";
+            g_log->log(AGV_LOG_LEVEL_ERROR," insert into agv_station failed!");
             return false;
         }
     }
@@ -484,7 +499,7 @@ bool MapCenter::save()
         params<<QString("%1").arg(l->id())<<QString("%1").arg(l->startX())<<QString("%1").arg(l->startY())<<QString("%1").arg(l->endX())<<QString("%1").arg(l->endY())<<QString("%1").arg(l->radius())<<QString("%1").arg(l->clockwise())<<QString("%1").arg(l->line())<<QString("%1").arg(l->midX())<<QString("%1").arg(l->midY())<<QString("%1").arg(l->centerX())<<QString("%1").arg(l->centerY())<<QString("%1").arg(l->angle())<<QString("%1").arg(l->length())<<QString("%1").arg(l->startStation())<<QString("%1").arg(l->endStation())<<QString("%1").arg(l->draw());
         if(!g_sql->exec(insertLineSql,params))
         {
-            qDebug() <<" insert into agv_line failed!";
+            g_log->log(AGV_LOG_LEVEL_ERROR," insert into agv_line failed!");
             return false;
         }
     }
@@ -494,7 +509,7 @@ bool MapCenter::save()
         params.clear();
         params<<QString("%1").arg(itr.key().lastLine)<<QString("%1").arg(itr.key().nextLine)<<QString("%1").arg(itr.value());
         if(!g_sql->exec(insertLmrSql,params)){
-            qDebug() << "insert into agv_lmr failed!";
+            g_log->log(AGV_LOG_LEVEL_ERROR,"insert into agv_lmr failed!");
             return false;
         }
     }
@@ -512,29 +527,27 @@ bool MapCenter::save()
             linesStr = linesStr.left(linesStr.length()-1);
         params<<QString("%1").arg(itr.key())<<linesStr;
         if(!g_sql->exec(insertAdjSql,params)){
-            qDebug() << "insert into agv_adj failed!";
+            g_log->log(AGV_LOG_LEVEL_ERROR,"insert into agv_adj failed!");
             return false;
         }
     }
-
-    qDebug() << "...........................................................";
 
     return true;
 }
 
 QList<int> MapCenter::getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect)//最后一个参数是是否可以换个方向
 {
-    qDebug() << "getbestlinepath==>   lastStation="<<lastStation<<"startStation="<<startStation<<"endStation="<<endStation;
+    std::stringstream ss;
+    ss << "getbestlinepath==>   lastStation="<<lastStation<<"startStation="<<startStation<<"endStation="<<endStation;
+    g_log->log(AGV_LOG_LEVEL_TRACE,ss.str());
     distance = distance_infinity;
     int disA=distance_infinity;
     int disB=distance_infinity;
     //先找到小车不掉头的线路
     QList<int> a = getPath(agvId,lastStation,startStation,endStation,disA,false);
-    qDebug() << "disA ="<<disA;
     QList<int> b;
     if(canChangeDirect){//如果可以掉向，那么计算一下掉向的
         b = getPath(agvId,startStation,lastStation,endStation,disB,true);
-        qDebug() << "disB ="<<disB;
         if(disA!=distance_infinity  && disB!=distance_infinity){
             distance = disA<disB?disA:disB;
             if(disA<disB)return a;
