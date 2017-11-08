@@ -218,6 +218,78 @@ int TaskCenter::makeAimTask(int aimStation,int waitType,int waitTime)
     unassignedTasks.append(newtask);
     return newtask->id();
 }
+int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim)
+{
+    AgvTask *newtask = new AgvTask;
+
+    //只有在make task的时候回 insert into agv——task。其他时候，全部都是update的！
+    //这里只知道 任务的状态是未执行，产生时间是现在。直行车辆不知道
+    QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status,task_excuteCar) VALUES (?,?,?);SELECT @@Identity;";
+    QStringList params;
+    params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE)<<QString("%1").arg(agvId);
+
+    QList<QStringList> result = g_sql->query(insertSql,params);
+    if(result.length()<=0||result.at(0).length()<=0)
+    {
+        delete newtask;
+        return -1;
+    }
+    newtask->setId(result.at(0).at(0).toInt());
+    newtask->setExcuteCar(agvId);
+    TaskNode *node_pickup = new TaskNode;
+    node_pickup->aimStation=pickupStation;
+    node_pickup->waitType=waitTypePick;
+    node_pickup->waitTime=waitTimePick;
+    node_pickup->queueNumber=0;
+    node_pickup->status = AGV_TASK_NODE_STATUS_UNDO;
+    insertSql = "INSERT INTO agv_task_node(task_node_status,task_node_queuenumber,task_node_aimStation,task_node_waitType,task_node_waitTime,task_node_taskId) VALUES (?,?,?,?,?,?);SELECT @@Identity;";
+    params.clear();
+    params<<QString("%1").arg(node_pickup->status)<<QString("%1").arg(node_pickup->queueNumber)<<QString("%1").arg(node_pickup->aimStation)<<QString("%1").arg(node_pickup->waitType)<<QString("%1").arg(node_pickup->waitTime)<<QString("%1").arg(newtask->id());
+    result = g_sql->query(insertSql,params);
+    if(result.length()<=0||result.at(0).length()<=0){
+        //删除task
+        QString deleteSql = "delete from agv_task where id = ?;";
+        params.clear();
+        params<<QString("%1").arg(newtask->id());
+        g_sql->exec(deleteSql,params);
+        delete node_pickup;
+        delete newtask;
+        return -2;////!!!!!!!!!!!!!!!!!!!!!!!!!!
+    }
+    node_pickup->id = (result.at(0).at(0).toInt());
+    newtask->taskNodes.append(node_pickup);
+
+    TaskNode *node_aim = new TaskNode;
+    node_aim->aimStation=aimStation;
+    node_aim->waitType=waitTypeAim;
+    node_aim->waitTime=waitTimeAim;
+    node_aim->queueNumber=1;
+    node_aim->status = AGV_TASK_NODE_STATUS_UNDO;
+    insertSql = "INSERT INTO agv_task_node(task_node_status,task_node_queuenumber,task_node_aimStation,task_node_waitType,task_node_waitTime,task_node_taskId) VALUES (?,?,?,?,?,?);SELECT @@Identity;";
+    params.clear();
+    params<<QString("%1").arg(node_aim->status)<<QString("%1").arg(node_aim->queueNumber)<<QString("%1").arg(node_aim->aimStation)<<QString("%1").arg(node_aim->waitType)<<QString("%1").arg(node_aim->waitTime)<<QString("%1").arg(newtask->id());
+    result = g_sql->query(insertSql,params);
+    if(result.length()<=0||result.at(0).length()<=0){
+        //删除task
+        QString deleteSql = "delete from agv_task where id = ?;";
+        params.clear();
+        params<<QString("%1").arg(newtask->id());
+        g_sql->exec(deleteSql,params);
+        //删除第一个节点
+        deleteSql = "delete from agv_task_node where id = ?;";
+        params.clear();
+        params<<QString("%1").arg(node_pickup->id);
+        g_sql->exec(deleteSql,params);
+        delete node_aim;
+        delete newtask;
+        return -3;////!!!!!!!!!!!!!!!!!!!!!!!!!!
+    }
+    node_aim->id = (result.at(0).at(0).toInt());
+    newtask->taskNodes.append(node_aim);
+
+    unassignedTasks.append(newtask);
+    return newtask->id();
+}
 
 ///产生一个任务，这个任务的参数可能有很多，暂时只有一个，就是目的地,返回一个任务的ID。根据这个ID。可以取消任务
 int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim)
@@ -280,7 +352,7 @@ int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick
         //删除第一个节点
         deleteSql = "delete from agv_task_node where id = ?;";
         params.clear();
-        params<<QString("%1").arg(node_pickup->id());
+        params<<QString("%1").arg(node_pickup->id);
         g_sql->exec(deleteSql,params);
         delete node_aim;
         delete newtask;
@@ -516,10 +588,10 @@ int TaskCenter::cancelTask(int taskId)
 
 bool TaskCenter::saveTaskToDatabase(AgvTask *task)
 {
-//    QString insertSql = "insert into agv_task (task_node_produceTime,task_node_doneTime,doTime,excuteCar,status)values(?,?,?,?,?);";
-//    QStringList params;
-//    params<<task->produceTime().toString()<<task->doneTime().toString()<<QString("%1").arg( task->excuteCar())<<QString("%1").arg(task->status());
-//    if(!g_sql->exec(insertSql,params))return false;
+    //    QString insertSql = "insert into agv_task (task_node_produceTime,task_node_doneTime,doTime,excuteCar,status)values(?,?,?,?,?);";
+    //    QStringList params;
+    //    params<<task->produceTime().toString()<<task->doneTime().toString()<<QString("%1").arg( task->excuteCar())<<QString("%1").arg(task->status());
+    //    if(!g_sql->exec(insertSql,params))return false;
     //TODO: 保存路径节点！！！
 
 

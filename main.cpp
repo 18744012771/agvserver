@@ -8,10 +8,6 @@ int main(int argc, char *argv[])
     g_strExeRoot = QCoreApplication::applicationDirPath();
     QDir::setCurrent(g_strExeRoot);
 
-    std::string ss = "我是秦英豪";
-    QString sss = QString::fromLocal8Bit(ss.data());
-    qDebug()<<"sss="<<sss;
-
     //初始化日志
     g_log = new AgvLog();
     g_logProcess = new AgvLogProcess();

@@ -32,10 +32,9 @@ Date:
 
 #pragma once
 
-#include <vector>
-#include <string>
-using std::string;
-using std::vector;
+#include <QList>
+#include <QString>
+
 // winsock 2 的头文件和库
 #include <winsock2.h>
 #include <MSWSock.h>
@@ -52,8 +51,8 @@ using std::vector;
 
 
 
-typedef void(*IOCP_RECV_CALL_BACK)(void *owner,char *s, int len,SOCKET sock,const std::string &fromIp,int fromPort);
-typedef void(*IOCP_DISCONNECT_CALL_BACK)(void *owner,SOCKET sock,const std::string &fromIp,int fromPort);
+typedef void(*IOCP_RECV_CALL_BACK)(void *owner,char *s, int len,SOCKET sock,const QString &fromIp,int fromPort);
+typedef void(*IOCP_DISCONNECT_CALL_BACK)(void *owner,SOCKET sock,const QString &fromIp,int fromPort);
 
 
 // 在完成端口上投递的I/O操作的类型
@@ -104,7 +103,7 @@ typedef struct _PER_SOCKET_CONTEXT
 {  
 	SOCKET      m_Socket;                                  // 每一个客户端连接的Socket
 	SOCKADDR_IN m_ClientAddr;                              // 客户端的地址
-	vector<_PER_IO_CONTEXT*> m_arrayIoContext;             // 客户端网络操作的上下文数据，
+    QList<_PER_IO_CONTEXT*> m_arrayIoContext;             // 客户端网络操作的上下文数据，
 	                                                       // 也就是说对于每一个客户端Socket，是可以在上面同时投递多个IO请求的
 
 	// 初始化
@@ -143,7 +142,7 @@ typedef struct _PER_SOCKET_CONTEXT
 	// 从数组中移除一个指定的IoContext
 	void RemoveContext( _PER_IO_CONTEXT* pContext )
 	{
-		for (vector<_PER_IO_CONTEXT*>::iterator itr = m_arrayIoContext.begin();itr != m_arrayIoContext.end();++itr) 
+        for (QList<_PER_IO_CONTEXT*>::iterator itr = m_arrayIoContext.begin();itr != m_arrayIoContext.end();++itr)
 		{
 			if (pContext == *itr) {
 				delete pContext;
@@ -197,7 +196,7 @@ public:
     void doSend(int socket, const char *buf, int len);
 
 	// 获得本机的IP地址
-	std::string GetLocalIP();
+	QString GetLocalIP();
 protected:
 
 	// 初始化IOCP
@@ -261,7 +260,7 @@ private:
 
 	CRITICAL_SECTION             m_csContextList;               // 用于Worker线程同步的互斥量
 
-	vector<PER_SOCKET_CONTEXT*>  m_arrayClientContext;          // 客户端Socket的Context信息        
+    QList<PER_SOCKET_CONTEXT*>  m_arrayClientContext;          // 客户端Socket的Context信息
 
 	PER_SOCKET_CONTEXT*          m_pListenContext;              // 用于监听的Socket的Context信息
 

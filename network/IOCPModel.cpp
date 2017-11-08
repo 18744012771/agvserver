@@ -1,5 +1,4 @@
-﻿#include <string>
-using std::string;
+﻿#include <QString>
 #include "IOCPModel.h"
 #include "util/global.h"
 
@@ -50,11 +49,8 @@ DWORD WINAPI CIOCPModel::_WorkerThread(LPVOID lpParam)
     THREADPARAMS_WORKER* pParam = (THREADPARAMS_WORKER*)lpParam;
     CIOCPModel* pIOCPModel = (CIOCPModel*)pParam->pIOCPModel;
     int nThreadNo = (int)pParam->nThreadNo;
-    std::stringstream ss_nThreadNo;
-    std::string str_nThreadNo;
-    ss_nThreadNo<<nThreadNo;
-    ss_nThreadNo>>str_nThreadNo;
-    g_log->log(AGV_LOG_LEVEL_INFO,"工作者线程启动，ID: "+str_nThreadNo);
+
+    g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("工作者线程启动，ID: ")+QString("%1").arg(nThreadNo));
 
     OVERLAPPED           *pOverlapped = NULL;
     PER_SOCKET_CONTEXT   *pSocketContext = NULL;
@@ -97,10 +93,8 @@ DWORD WINAPI CIOCPModel::_WorkerThread(LPVOID lpParam)
             // 判断是否有客户端断开了
             if ((0 == dwBytesTransfered) && (RECV_POSTED == pIoContext->m_OpType || SEND_POSTED == pIoContext->m_OpType))
             {
-                //pIOCPModel->_ShowMessage( _T("客户端 %s:%d 断开连接."),inet_ntoa(pSocketContext->m_ClientAddr.sin_addr), ntohs(pSocketContext->m_ClientAddr.sin_port) );
-                std::stringstream ss;
-                ss<<"客户端 "<<inet_ntoa(pSocketContext->m_ClientAddr.sin_addr)<<ntohs(pSocketContext->m_ClientAddr.sin_port)<<"断开连接.";
-                g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+                QString ss = QString(QStringLiteral("客户端 %1:%2 断开连接.")).arg(inet_ntoa(pSocketContext->m_ClientAddr.sin_addr)).arg(ntohs(pSocketContext->m_ClientAddr.sin_port));
+                g_log->log(AGV_LOG_LEVEL_INFO,ss);
                 // 释放掉对应的资源
                 pIOCPModel->_RemoveContext(pSocketContext);
 
@@ -138,7 +132,7 @@ DWORD WINAPI CIOCPModel::_WorkerThread(LPVOID lpParam)
                     break;
                 default:
                     // 不应该执行到这里
-                    g_log->log(AGV_LOG_LEVEL_ERROR,"_WorkThread中的 pIoContext->m_OpType 参数异常.");
+                    g_log->log(AGV_LOG_LEVEL_ERROR,QStringLiteral("_WorkThread中的 pIoContext->m_OpType 参数异常."));
                     break;
                 } //switch
             }//if
@@ -146,10 +140,9 @@ DWORD WINAPI CIOCPModel::_WorkerThread(LPVOID lpParam)
 
     }//while
 
-    std::stringstream ss;
-    ss<<"工作者线程 "<<nThreadNo<<"号退出.";
+    QString ss = QString(QStringLiteral("工作者线程 %1 号退出.")).arg(nThreadNo);
 
-    g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+    g_log->log(AGV_LOG_LEVEL_INFO,ss);
 
     // 释放线程参数
     RELEASE(lpParam);
@@ -167,7 +160,7 @@ bool CIOCPModel::LoadSocketLib()
     // 错误(一般都不可能出现)
     if (NO_ERROR != nResult)
     {
-        g_log->log(AGV_LOG_LEVEL_FATAL,"初始化WinSock 2.2失败 ");
+        g_log->log(AGV_LOG_LEVEL_FATAL,QStringLiteral("初始化WinSock 2.2失败 "));
         return false;
     }
 
@@ -189,26 +182,26 @@ bool CIOCPModel::Start(IOCP_RECV_CALL_BACK _recv_call_back, IOCP_DISCONNECT_CALL
     // 初始化IOCP
     if (false == _InitializeIOCP())
     {
-        g_log->log(AGV_LOG_LEVEL_FATAL,"初始化IOCP失败 ");
+        g_log->log(AGV_LOG_LEVEL_FATAL,QStringLiteral("初始化IOCP失败 "));
         return false;
     }
     else
     {
-        g_log->log(AGV_LOG_LEVEL_INFO,"IOCP初始化完毕");
+        g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("IOCP初始化完毕"));
     }
 
     // 初始化Socket
     if (false == _InitializeListenSocket())
     {
-        g_log->log(AGV_LOG_LEVEL_FATAL,"Listen Socket初始化失败");
+        g_log->log(AGV_LOG_LEVEL_FATAL,QStringLiteral("Listen Socket初始化失败"));
         this->_DeInitialize();
         return false;
     }
     else
     {
-        g_log->log(AGV_LOG_LEVEL_INFO,"Listen Socket初始化完毕");
+        g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("Listen Socket初始化完毕"));
     }
-    g_log->log(AGV_LOG_LEVEL_INFO,"等候连接....");
+    g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("等候连接...."));
 
     return true;
 }
@@ -237,7 +230,7 @@ void CIOCPModel::Stop()
 
         // 释放其他资源
         this->_DeInitialize();
-        g_log->log(AGV_LOG_LEVEL_INFO,"停止监听........");
+        g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("停止监听........"));
     }
 }
 
@@ -251,9 +244,8 @@ bool CIOCPModel::_InitializeIOCP()
 
     if (NULL == m_hIOCompletionPort)
     {
-        std::stringstream ss;
-        ss<<"建立完成端口失败！错误代码:"<<WSAGetLastError();
-        g_log->log(AGV_LOG_LEVEL_FATAL,ss.str());
+        QString ss = QString(QStringLiteral("建立完成端口失败！错误代码:%1")).arg(WSAGetLastError());
+        g_log->log(AGV_LOG_LEVEL_FATAL,ss);
         return false;
     }
 
@@ -273,22 +265,22 @@ bool CIOCPModel::_InitializeIOCP()
         m_phWorkerThreads[i] = ::CreateThread(0, 0, _WorkerThread, (void *)pThreadParams, 0, &nThreadID);
     }
 
-    std::stringstream ss;
-    ss<< "建立 _WorkerThread " << m_nThreads << "个";
-    g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+    QString ss = QString(QStringLiteral("建立 _WorkerThread %1 个")).arg(m_nThreads);
+    g_log->log(AGV_LOG_LEVEL_FATAL,ss);
+
     return true;
 }
 // 获得本机的IP地址
-std::string CIOCPModel::GetLocalIP()
+QString CIOCPModel::GetLocalIP()
 {
-    string strIp;
+    QString strIp;
     // 获得本机主机名
     char hostname[MAX_PATH] = { 0 };
     gethostname(hostname, MAX_PATH);
     struct hostent FAR* lpHostEnt = gethostbyname(hostname);
     if (lpHostEnt == NULL)
     {
-        return "127.0.0.1";
+        return QStringLiteral("127.0.0.1");
     }
 
     // 取得IP地址列表中的第一个为返回的IP(因为一台主机可能会绑定多个IP)
@@ -297,7 +289,7 @@ std::string CIOCPModel::GetLocalIP()
     // 将IP地址转化成字符串形式
     struct in_addr inAddr;
     memmove(&inAddr, lpAddr, 4);
-    strIp = (inet_ntoa(inAddr));
+    strIp = QString(inet_ntoa(inAddr));
 
     return strIp;
 }
@@ -320,30 +312,28 @@ bool CIOCPModel::_InitializeListenSocket()
     m_pListenContext->m_Socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
     if (INVALID_SOCKET == m_pListenContext->m_Socket)
     {
-        std::stringstream ss;
-        ss<< "初始化Socket失败，错误代码:" << WSAGetLastError();
-        g_log->log(AGV_LOG_LEVEL_FATAL,ss.str());
+        QString ss = QString(QStringLiteral("初始化Socket失败，错误代码:%1")).arg(WSAGetLastError());
+        g_log->log(AGV_LOG_LEVEL_FATAL,ss);
 
         return false;
     }
     else
     {
-        g_log->log(AGV_LOG_LEVEL_INFO,"WSASocket() 完成.");
+        g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("WSASocket() 完成."));
     }
 
     // 将Listen Socket绑定至完成端口中
     if (NULL == CreateIoCompletionPort((HANDLE)m_pListenContext->m_Socket, m_hIOCompletionPort, (DWORD)m_pListenContext, 0))
     {
-        std::stringstream ss;
-        ss<< "绑定 Listen Socket至完成端口失败！错误代码"<< WSAGetLastError();
-        g_log->log(AGV_LOG_LEVEL_FATAL,ss.str());
+        QString ss = QString(QStringLiteral("绑定 Listen Socket至完成端口失败！错误代码:%1")).arg(WSAGetLastError());
+        g_log->log(AGV_LOG_LEVEL_FATAL,ss);
 
         RELEASE_SOCKET(m_pListenContext->m_Socket);
         return false;
     }
     else
     {
-        g_log->log(AGV_LOG_LEVEL_INFO,"Listen Socket绑定完成端口 完成.");
+        g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("Listen Socket绑定完成端口 完成."));
     }
 
     // 填充地址信息
@@ -351,34 +341,32 @@ bool CIOCPModel::_InitializeListenSocket()
     ServerAddress.sin_family = AF_INET;
     // 这里可以绑定任何可用的IP地址，或者绑定一个指定的IP地址
     //ServerAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    ServerAddress.sin_addr.s_addr = inet_addr(GetLocalIP().c_str());
+    ServerAddress.sin_addr.s_addr = inet_addr(GetLocalIP().toLocal8Bit().data());
     ServerAddress.sin_port = htons(m_nPort);
 
     // 绑定地址和端口
     if (SOCKET_ERROR == ::bind(m_pListenContext->m_Socket, (struct sockaddr *) &ServerAddress, sizeof(ServerAddress)))
     {
-        std::stringstream ss;
-        ss<< "bind()函数执行错误.code:" << WSAGetLastError();
-        g_log->log(AGV_LOG_LEVEL_FATAL,ss.str());
+        QString ss = QString(QStringLiteral("bind()函数执行错误.错误代码:%1")).arg(WSAGetLastError());
+        g_log->log(AGV_LOG_LEVEL_FATAL,ss);
 
         return false;
     }
     else
     {
-        g_log->log(AGV_LOG_LEVEL_INFO,"bind() 完成.");
+        g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("bind() 完成."));
     }
 
     // 开始进行监听
     if (SOCKET_ERROR == listen(m_pListenContext->m_Socket, SOMAXCONN))
     {
-        std::stringstream ss;
-        ss<< "Listen()函数执行出现错误." << WSAGetLastError();
-        g_log->log(AGV_LOG_LEVEL_FATAL,ss.str());
+        QString ss = QString(QStringLiteral("Listen()函数执行出现错误..错误代码:%1")).arg(WSAGetLastError());
+        g_log->log(AGV_LOG_LEVEL_FATAL,ss);
         return false;
     }
     else
     {
-        g_log->log(AGV_LOG_LEVEL_INFO,"Listen()完成.");
+        g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("Listen()完成."));
     }
 
     // 使用AcceptEx函数，因为这个是属于WinSock2规范之外的微软另外提供的扩展函数
@@ -396,9 +384,8 @@ bool CIOCPModel::_InitializeListenSocket()
                 NULL,
                 NULL))
     {
-        std::stringstream ss;
-        ss<< "WSAIoctl 未能获取AcceptEx函数指针。错误代码:" << WSAGetLastError();
-        g_log->log(AGV_LOG_LEVEL_FATAL,ss.str());
+        QString ss = QString(QStringLiteral("WSAIoctl 未能获取AcceptEx函数指针。.错误代码:%1")).arg(WSAGetLastError());
+        g_log->log(AGV_LOG_LEVEL_FATAL,ss);
         this->_DeInitialize();
         return false;
     }
@@ -415,9 +402,8 @@ bool CIOCPModel::_InitializeListenSocket()
                 NULL,
                 NULL))
     {
-        std::stringstream ss;
-        ss<< "WSAIoctl 未能获取GuidGetAcceptExSockAddrs函数指针。错误代码:" << WSAGetLastError();
-        g_log->log(AGV_LOG_LEVEL_FATAL,ss.str());
+        QString ss = QString(QStringLiteral("WSAIoctl 未能获取GuidGetAcceptExSockAddrs函数指针。错误代码:%1")).arg(WSAGetLastError());
+        g_log->log(AGV_LOG_LEVEL_FATAL,ss);
         this->_DeInitialize();
         return false;
     }
@@ -435,9 +421,8 @@ bool CIOCPModel::_InitializeListenSocket()
             return false;
         }
     }
-    std::stringstream ss;
-    ss<< "投递 " << MAX_POST_ACCEPT << " 个AcceptEx请求完毕";
-    g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+    QString ss = QString(QStringLiteral("投递 %1  个AcceptEx请求完毕")).arg(MAX_POST_ACCEPT);
+    g_log->log(AGV_LOG_LEVEL_INFO,ss);
     return true;
 }
 
@@ -465,7 +450,7 @@ void CIOCPModel::_DeInitialize()
     // 关闭监听Socket
     RELEASE(m_pListenContext);
 
-    g_log->log(AGV_LOG_LEVEL_FATAL,"释放资源完毕.");
+    g_log->log(AGV_LOG_LEVEL_FATAL,QStringLiteral("释放资源完毕."));
 }
 
 //////////////////////////////////////////////////////////////////
@@ -482,9 +467,8 @@ bool CIOCPModel::_PostAccept(PER_IO_CONTEXT* pAcceptIoContext)
     pAcceptIoContext->m_sockAccept = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
     if (INVALID_SOCKET == pAcceptIoContext->m_sockAccept)
     {
-        std::stringstream ss;
-        ss<< "创建用于Accept的Socket失败！错误代码:" << WSAGetLastError();
-        g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+        QString ss = QString(QStringLiteral("创建用于Accept的Socket失败！错误代码: %1")).arg(WSAGetLastError());
+        g_log->log(AGV_LOG_LEVEL_INFO,ss);
         return false;
     }
 
@@ -494,9 +478,8 @@ bool CIOCPModel::_PostAccept(PER_IO_CONTEXT* pAcceptIoContext)
     {
         if (WSA_IO_PENDING != WSAGetLastError())
         {
-            std::stringstream ss;
-            ss<< "投递AcceptEx 请求失败，错误代码:" << WSAGetLastError();
-            g_log->log(AGV_LOG_LEVEL_ERROR,ss.str());
+            QString ss = QString(QStringLiteral("投递AcceptEx 请求失败，错误代码: %1")).arg(WSAGetLastError());
+            g_log->log(AGV_LOG_LEVEL_ERROR,ss);
 
             return false;
         }
@@ -525,9 +508,8 @@ bool CIOCPModel::_DoAccpet(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* p
     // 不但可以取得客户端和本地端的地址信息，还能顺便取出客户端发来的第一组数据，老强大了...
     this->m_lpfnGetAcceptExSockAddrs(pIoContext->m_wsaBuf.buf, pIoContext->m_wsaBuf.len - ((sizeof(SOCKADDR_IN) + 16) * 2),
                                      sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, (LPSOCKADDR*)&LocalAddr, &localLen, (LPSOCKADDR*)&ClientAddr, &remoteLen);
-    std::stringstream ss;
-    ss<< "客户端" << inet_ntoa(ClientAddr->sin_addr) << ":" << ntohs(ClientAddr->sin_port) << "连入" << WSAGetLastError();
-    g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+    QString ss = QString(QStringLiteral("客户端 %1 : %2 连入")).arg(inet_ntoa(ClientAddr->sin_addr)).arg( ntohs(ClientAddr->sin_port));
+    g_log->log(AGV_LOG_LEVEL_INFO,ss);
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     // 2. 这里需要注意，这里传入的这个是ListenSocket上的Context，这个Context我们还需要用于监听下一个连接
     // 所以我还得要将ListenSocket上的Context复制出来一份为新连入的Socket新建一个SocketContext
@@ -588,7 +570,7 @@ bool CIOCPModel::_PostRecv(PER_IO_CONTEXT* pIoContext)
     // 如果返回值错误，并且错误的代码并非是Pending的话，那就说明这个重叠请求失败了
     if ((SOCKET_ERROR == nBytesRecv) && (WSA_IO_PENDING != WSAGetLastError()))
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"投递第一个WSARecv失败！");
+        g_log->log(AGV_LOG_LEVEL_ERROR,QStringLiteral("投递第一个WSARecv失败！"));
         return false;
     }
     return true;
@@ -600,11 +582,13 @@ bool CIOCPModel::_DoRecv(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIo
 {
     // 先把上一次的数据显示出现，然后就重置状态，发出下一个Recv请求
     SOCKADDR_IN* ClientAddr = &pSocketContext->m_ClientAddr;
-    std::string sIp(inet_ntoa(ClientAddr->sin_addr));
+    QString sIp(inet_ntoa(ClientAddr->sin_addr));
     int port = ntohs(ClientAddr->sin_port);
-    std::stringstream ss;
-    ss<< "收到"<< inet_ntoa(ClientAddr->sin_addr) << ":" << ntohs(ClientAddr->sin_port) << "信息："<< pIoContext->m_wsaBuf.buf;
-    g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+
+
+    QString ss = QString(QStringLiteral("收到 %1 : %2 信息：%3")).arg(inet_ntoa(ClientAddr->sin_addr)).arg( ntohs(ClientAddr->sin_port)).arg(pIoContext->m_wsaBuf.buf);
+
+    g_log->log(AGV_LOG_LEVEL_INFO,ss);
 
     if (recv_call_back != NULL) {
         recv_call_back(p_owner, pIoContext->m_wsaBuf.buf, pIoContext->m_wsaBuf.len,pSocketContext->m_Socket,sIp,port);
@@ -624,7 +608,7 @@ bool CIOCPModel::_AssociateWithIOCP(PER_SOCKET_CONTEXT *pContext)
 
     if (NULL == hTemp)
     {
-        g_log->log(AGV_LOG_LEVEL_INFO,"执行CreateIoCompletionPort()出现错误.");
+        g_log->log(AGV_LOG_LEVEL_INFO,QStringLiteral("执行CreateIoCompletionPort()出现错误."));
         return false;
     }
 
@@ -646,7 +630,7 @@ void CIOCPModel::_AddToContextList(PER_SOCKET_CONTEXT *pHandleData)
 void CIOCPModel::_DoSend(char *buf, int len)
 {
     EnterCriticalSection(&m_csContextList);
-    for (vector<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
+    for (QList<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
     {
         ::send((*itr)->m_Socket, buf, len, 0);
     }
@@ -656,7 +640,7 @@ void CIOCPModel::_DoSend(char *buf, int len)
 void CIOCPModel::doSend(int socket,const char *buf,int len)
 {
     EnterCriticalSection(&m_csContextList);
-    for (vector<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
+    for (QList<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
     {
         if((*itr)->m_Socket == socket){
             ::send((*itr)->m_Socket, buf, len, 0);
@@ -672,7 +656,7 @@ void CIOCPModel::_RemoveContext(PER_SOCKET_CONTEXT *pSocketContext)
 {
     EnterCriticalSection(&m_csContextList);
 
-    for (vector<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
+    for (QList<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
     {
         if (pSocketContext == *itr)
         {
@@ -690,7 +674,7 @@ void CIOCPModel::_RemoveContext(PER_SOCKET_CONTEXT *pSocketContext)
 void CIOCPModel::_ClearContextList()
 {
     EnterCriticalSection(&m_csContextList);
-    for (vector<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
+    for (QList<PER_SOCKET_CONTEXT*>::iterator itr = m_arrayClientContext.begin();itr != m_arrayClientContext.end();++itr)
     {
         delete *itr;
     }
@@ -734,10 +718,10 @@ bool CIOCPModel::HandleError(PER_SOCKET_CONTEXT *pContext, const DWORD& dwErr)
         // 确认客户端是否还活着...
         if (!_IsSocketAlive(pContext->m_Socket))
         {
-            g_log->log(AGV_LOG_LEVEL_TRACE,"检测到客户端异常退出！");
+            g_log->log(AGV_LOG_LEVEL_TRACE,QStringLiteral("检测到客户端异常退出！"));
             if (disconnect_call_back != NULL) {
                 SOCKADDR_IN* ClientAddr = &pContext->m_ClientAddr;
-                std::string sIp(inet_ntoa(ClientAddr->sin_addr));
+                QString sIp(inet_ntoa(ClientAddr->sin_addr));
                 int port = ntohs(ClientAddr->sin_port);
                 disconnect_call_back(p_owner,pContext->m_Socket,sIp,port);
             }
@@ -747,7 +731,7 @@ bool CIOCPModel::HandleError(PER_SOCKET_CONTEXT *pContext, const DWORD& dwErr)
         }
         else
         {
-            g_log->log(AGV_LOG_LEVEL_TRACE,"网络操作超时！重试中...");
+            g_log->log(AGV_LOG_LEVEL_TRACE,QStringLiteral("网络操作超时！重试中..."));
             return true;
         }
     }
@@ -755,16 +739,15 @@ bool CIOCPModel::HandleError(PER_SOCKET_CONTEXT *pContext, const DWORD& dwErr)
     // 可能是客户端异常退出了
     else if (ERROR_NETNAME_DELETED == dwErr)
     {
-        g_log->log(AGV_LOG_LEVEL_TRACE,"检测到客户端异常退出！");
+        g_log->log(AGV_LOG_LEVEL_TRACE,QStringLiteral("检测到客户端异常退出！"));
         this->_RemoveContext(pContext);
         return true;
     }
 
     else
     {
-        std::stringstream ss;
-        ss<< "完成端口操作出现错误，线程退出。错误代码：" << (int)dwErr;
-        g_log->log(AGV_LOG_LEVEL_ERROR,"完成端口操作出现错误，线程退出。错误代码：");
+        QString ss = QString(QStringLiteral("完成端口操作出现错误，线程退出。错误代码：%1")).arg((int)dwErr);
+        g_log->log(AGV_LOG_LEVEL_ERROR,ss);
         return false;
     }
 }

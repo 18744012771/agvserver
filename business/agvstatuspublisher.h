@@ -3,7 +3,8 @@
 
 #include <QObject>
 #include <QThread>
-#include <mutex>
+#include <QMap>
+#include <QMutex>
 
 class AgvStatusPublisher : public QThread
 {
@@ -18,8 +19,8 @@ signals:
 
 public slots:
 private:
-    std::map<int,int> subscribers;
-    std::mutex mutex;
+    QMap<int,int> subscribers;
+    QMutex mutex;
     volatile bool isQuit;
 signals:
 

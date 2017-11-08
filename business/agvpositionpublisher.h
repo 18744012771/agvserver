@@ -3,8 +3,9 @@
 
 #include <QObject>
 #include <QThread>
-#include <list>
-#include <mutex>
+#include <QList>
+#include <QMutex>
+
 
 //其实可以将它定义未观察者模式
 class AgvPositionPublisher : public QThread
@@ -20,8 +21,8 @@ signals:
 
 public slots:
 private:
-    std::list<int> subscribers;
-    std::mutex mutex;
+    QList<int> subscribers;
+    QMutex mutex;
     volatile bool isQuit;
 };
 

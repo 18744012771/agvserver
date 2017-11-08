@@ -3,8 +3,8 @@
 
 #include <QObject>
 #include <QThread>
-#include <list>
-#include <mutex>
+#include <QMap>
+#include <QMutex>
 
 
 struct SubNode{
@@ -32,8 +32,8 @@ signals:
 public slots:
 
 private:
-    std::list<std::pair<int,SubNode> > subscribers;//pair<sock,subNode>
-    std::mutex mutex;
+    QMap<int,SubNode> subscribers;
+    QMutex mutex;
     volatile bool isQuit;
 };
 

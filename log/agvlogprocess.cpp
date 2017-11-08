@@ -15,19 +15,14 @@ AgvLogProcess::~AgvLogProcess()
 void AgvLogProcess::addSubscribe(int sock, SubNode node)
 {
     mutex.lock();
-    subscribers.push_back(std::make_pair(sock,node));
+    subscribers.insert(sock,node);
     mutex.unlock();
 }
 
 void AgvLogProcess::removeSubscribe(int sock)
 {
     mutex.lock();
-    for(std::list<std::pair<int,SubNode> >::iterator itr = subscribers.begin();itr!=subscribers.end();++itr){
-        if(itr->first == sock){
-            subscribers.erase(itr);
-            break;
-        }
-    }
+    subscribers.remove(sock);
     mutex.unlock();
 }
 
@@ -47,47 +42,36 @@ void AgvLogProcess::run()
         }
 
         //保存到数据库
-        QString insertSql = "insert into agv_log(level,time,msg)values(?,?,?);";
+        QString insertSql = "insert into agv_log(log_level,log_time,log_msg)values(?,?,?);";
         QStringList params;
-        params<<QString("%1").arg(onelog.level)<<onelog.time.toString(DATE_TIME_FORMAT)<<QString::fromLocal8Bit(onelog.msg.data());
+        params<<QString("%1").arg(onelog.level)<<onelog.time.toString(DATE_TIME_FORMAT)<<onelog.msg;
         if(g_sql)
             g_sql->exec(insertSql,params);
 
         //组装订阅信息
-        std::map<std::string,std::string> responseDatas;
-        std::vector<std::map<std::string,std::string> > responseDatalists;
-        responseDatas.insert(std::make_pair(std::string("type"),std::string("log")));
-        responseDatas.insert(std::make_pair(std::string("todo"),std::string("periodica")));
+        QMap<QString,QString> responseDatas;
+        QList<QMap<QString,QString> > responseDatalists;
+        responseDatas.insert(QString("type"),QString("log"));
+        responseDatas.insert(QString("todo"),QString("periodica"));
         //组织内容
-        std::string str_level;
-        std::stringstream ss_level;
-        ss_level<<onelog.level;
-        ss_level>>str_level;
-
-        std::string str_time;
-        std::stringstream ss_time;
-        ss_time<<onelog.time.toString(DATE_TIME_FORMAT).toStdString();
-        ss_time>>str_time;
+        responseDatas.insert(QString("level"),QString("%1").arg(onelog.level));
+        responseDatas.insert(QString("time"),onelog.time.toString(DATE_TIME_FORMAT));
+        responseDatas.insert(QString("msg"),onelog.msg);
 
 
-        responseDatas.insert(std::make_pair(std::string("level"),str_level));
-        responseDatas.insert(std::make_pair(std::string("time"),str_time));
-        responseDatas.insert(std::make_pair(std::string("msg"),onelog.msg));
-
-
-        std::string xml = getResponseXml(responseDatas,responseDatalists);
+        QString xml = getResponseXml(responseDatas,responseDatalists);
 
         //发送订阅信息
         mutex.lock();
-        for(std::list<std::pair<int,SubNode> >::iterator itr = subscribers.begin();itr!=subscribers.end();++itr)
+        for(QMap<int,SubNode>::iterator itr = subscribers.begin();itr!=subscribers.end();++itr)
         {
-            if(onelog.level==AGV_LOG_LEVEL_TRACE &&!itr->second.trace)continue;
-            if(onelog.level==AGV_LOG_LEVEL_DEBUG &&!itr->second.debug)continue;
-            if(onelog.level==AGV_LOG_LEVEL_INFO &&!itr->second.info)continue;
-            if(onelog.level==AGV_LOG_LEVEL_WARN &&!itr->second.warn)continue;
-            if(onelog.level==AGV_LOG_LEVEL_ERROR &&!itr->second.error)continue;
-            if(onelog.level==AGV_LOG_LEVEL_FATAL &&!itr->second.fatal)continue;
-            g_netWork->sendToOne(itr->first,xml.c_str(),xml.length());
+            if(onelog.level==AGV_LOG_LEVEL_TRACE &&!itr.value().trace)continue;
+            if(onelog.level==AGV_LOG_LEVEL_DEBUG &&!itr.value().debug)continue;
+            if(onelog.level==AGV_LOG_LEVEL_INFO &&!itr.value().info)continue;
+            if(onelog.level==AGV_LOG_LEVEL_WARN &&!itr.value().warn)continue;
+            if(onelog.level==AGV_LOG_LEVEL_ERROR &&!itr.value().error)continue;
+            if(onelog.level==AGV_LOG_LEVEL_FATAL &&!itr.value().fatal)continue;
+            g_netWork->sendToOne(itr.key(),xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
         }
         mutex.unlock();
 

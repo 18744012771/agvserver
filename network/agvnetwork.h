@@ -2,8 +2,7 @@
 #define AGVNETWORK_H
 
 #include <QObject>
-#include <map>
-using std::map;
+#include <QMap>
 #include "IOCPModel.h"
 
 enum agv_msg_type{
@@ -36,13 +35,13 @@ public:
     //void sendToAllClient(char *buf,int len);
 
     //读取的回调函数
-    static void onRecvClientMsg(void *param, char *buf, int len, SOCKET sock, const std::string &sIp, int port);
+    static void onRecvClientMsg(void *param, char *buf, int len, SOCKET sock, const QString &sIp, int port);
 
     //断开连接的回调函数
-    static void onDisconnectClient(void *owner, SOCKET sock, const std::string &sIp, int port);
+    static void onDisconnectClient(void *owner, SOCKET sock, const QString &sIp, int port);
 
     //void recvAgvMsgProcess(char *buf, int len);
-    void recvClientMsgProcess(char *buf, int len, SOCKET sock, const std::string &ip, int port);
+    void recvClientMsgProcess(char *buf, int len, SOCKET sock, const QString &ip, int port);
 
     //发送消息线程
     static void serverSendFunc(void *param);

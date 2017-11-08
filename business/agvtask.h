@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QDateTime>
+#include <QList>
 
 enum{
     AGV_TASK_STATUS_UNEXIST = -3,//不存在
@@ -78,7 +79,7 @@ private:
 
 public:
     //这两个是可以公有访问的.不过一般仅限于task中访问
-    QVector<TaskNode *> taskNodes;
+    QList<TaskNode *> taskNodes;
 
 
     bool isDone();

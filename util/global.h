@@ -3,13 +3,8 @@
 
 #include <QList>
 #include <QMap>
-#include <map>
-#include <string>
-#include <sstream>
-#include <mutex>
-using std::map;
-using std::mutex;
-using std::string;
+#include <QString>
+#include <QMutex>
 
 #include "sql/sql.h"
 #include "log/agvlog.h"
@@ -34,17 +29,16 @@ struct LoginUserInfo
 {
     int id;//ID
     SOCKET sock;//对应的socket
-    std::string password;//密码
-    std::string username;//用户名
+    QString password;//密码
+    QString username;//用户名
     int role;//角色
-    std::string access_tocken;//随机码(安全码)，登录以后，给用户的，之后的所有请求要求带上随机码。
+    QString access_tocken;//随机码(安全码)，登录以后，给用户的，之后的所有请求要求带上随机码。
 };
 
 struct QyhMsgDateItem
 {
-    void *data;//消息内容
-    int size;//消息内容长度
-    std::string ip;//发送方IP
+    QString data;
+    QString ip;//发送方IP
     int port;//发送方端口
     SOCKET sock;
 };
@@ -94,7 +88,7 @@ extern QMap<int,Agv *> g_m_agvs;//车辆
 extern QMap<int,AgvStation *> g_m_stations;//站点
 extern QMap<int,AgvLine *> g_m_lines;//线路
 extern QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_lmr; //左中右
-extern QMap<int,QVector<AgvLine*> > g_m_l_adj;  //从一条线路到另一条线路的关联表
+extern QMap<int,QList<AgvLine*> > g_m_l_adj;  //从一条线路到另一条线路的关联表
 extern QMap<int,int> g_reverseLines;//线路和它的反方向线路的集合。
 
 void QyhSleep(int msec);
@@ -105,16 +99,16 @@ int getRandom(int maxRandom);
 extern moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
 
 //用户消息的缓存区(用于拆包、分包)
-extern std::map<int,std::string> client2serverBuffer;
+extern QMap<int,QString> client2serverBuffer;
 
 ////将结果封装成xml格式(解析-封装 的封装)
-std::string getResponseXml(std::map<std::string,std::string> &responseDatas, std::vector<std::map<std::string,std::string> > &responseDatalists);
+QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,QString> > &responseDatalists);
 
 ////将xml格式转成两个参数模式(解析-封装 的解析)
-bool getRequestParam(const std::string &xmlStr,std::map<std::string,std::string> &params,std::vector<std::map<std::string,std::string> > &datalist);
+bool getRequestParam(const QString &xmlStr,QMap<QString,QString> &params,QList<QMap<QString,QString> > &datalist);
 
 ///登录的客户端的id和它对应的sock
-extern std::list<LoginUserInfo> loginUserIdSock;
+extern QList<LoginUserInfo> loginUserIdSock;
 
 extern const QString DATE_TIME_FORMAT;
 

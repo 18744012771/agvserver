@@ -3,6 +3,7 @@
 
 #include <QList>
 #include <QSqlDatabase>
+#include <QMutex>
 
 class Sql
 {
@@ -29,6 +30,7 @@ public:
 
 private:
     QSqlDatabase database;
+    QMutex mutex;
 };
 
 #endif // SQL_H

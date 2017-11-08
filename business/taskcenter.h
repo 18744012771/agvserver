@@ -18,6 +18,9 @@ public:
     //产生一个取货送货的任务,pickupStation是取货点，aimStation是送货点
     int makePickupTask(int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim);
 
+    //产生一个指定车辆 取货送货的任务,pickupStation是取货点，aimStation是送货点
+    int makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim);
+
     //产生一个直接去到目的地的任务，目的地是aimStation
     int makeAimTask(int aimStation,int waitType,int waitTime);
 

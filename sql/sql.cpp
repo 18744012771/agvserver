@@ -179,7 +179,7 @@ bool Sql::createConnection()
 
     if (!database.open())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Failed to connect database." +database.lastError().text().toStdString());
+        g_log->log(AGV_LOG_LEVEL_ERROR,QString("Error: Failed to connect database.") +database.lastError().text());
         return false;
     }
     return checkTables();
@@ -196,20 +196,21 @@ bool Sql::closeConnection()
 bool Sql::exec(QString exeSql,QStringList args)
 {
     if(!exeSql.contains("agv_log") || !exeSql.contains("insert into"))//防止形成自循环
-        g_log->log(AGV_LOG_LEVEL_DEBUG,"exeSql="+exeSql.toStdString());
-
+        g_log->log(AGV_LOG_LEVEL_DEBUG,"exeSql="+exeSql);
+    mutex.lock();
     QSqlQuery sql_query(database);
     sql_query.prepare(exeSql);
     for(int i=0;i<args.length();++i){
         sql_query.addBindValue(args[i]);
-        //g_log->log(AGV_LOG_LEVEL_DEBUG,args.at(i).toStdString());
     }
 
     if(!sql_query.exec())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text().toStdString());
+        qDebug() << "Error: Fail to sql_query.exec()."<<sql_query.lastError();
+        mutex.unlock();
         return false;
     }
+    mutex.unlock();
 
     return true;
 }
@@ -217,18 +218,19 @@ bool Sql::exec(QString exeSql,QStringList args)
 //查询数据
 QList<QStringList> Sql::query(QString qeurysql, QStringList args)
 {
-    g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql.toStdString());
+    g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql);
     QList<QStringList> xx;
+    mutex.lock();
     QSqlQuery sql_query(database);
     sql_query.prepare(qeurysql);
     for(int i=0;i<args.length();++i){
         sql_query.addBindValue(args[i]);
-        //g_log->log(AGV_LOG_LEVEL_DEBUG,args.at(i).toStdString());
     }
 
     if(!sql_query.exec())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text().toStdString());
+        qDebug() << "Error: Fail to sql_query.exec()."<<sql_query.lastError();
+        mutex.unlock();
         return xx;
     }
     while(sql_query.next()){
@@ -238,7 +240,7 @@ QList<QStringList> Sql::query(QString qeurysql, QStringList args)
             qsl.append(sql_query.value(i).toString());
         xx.append(qsl);
     }
-
+    mutex.unlock();
     return xx;
 }
 

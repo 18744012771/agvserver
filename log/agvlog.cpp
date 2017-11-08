@@ -8,7 +8,7 @@ AgvLog::AgvLog(QObject *parent):QObject(parent)
 
 }
 
-void AgvLog::log(AGV_LOG_LEVEL level, std::string msg)
+void AgvLog::log(AGV_LOG_LEVEL level, QString msg)
 {
     //本身控制台是全部消息都要打印的
     QDateTime now = QDateTime::currentDateTime();
@@ -38,7 +38,7 @@ void AgvLog::log(AGV_LOG_LEVEL level, std::string msg)
         break;
     }
     //1.打印
-    qDebug() <<now.toString(DATE_TIME_FORMAT)<<strLevel<<QString::fromLocal8Bit(msg.c_str());
+    qDebug() <<now.toString(DATE_TIME_FORMAT)<<strLevel<<msg;
 
     //2.入队一个消息
     OneLog onelog;
@@ -46,6 +46,6 @@ void AgvLog::log(AGV_LOG_LEVEL level, std::string msg)
     onelog.time=now;
     onelog.msg = msg;
 
-    //g_log_queue.enqueue(onelog);
+    g_log_queue.enqueue(onelog);
 }
 

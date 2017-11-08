@@ -5,6 +5,14 @@
 #include <QMutex>
 #include "agvline.h"
 
+//地图由四个信息描述
+//基本的绘图信息是
+//agv_line  (线路)
+//agv_station (站点)
+//为了计算最优路径，还定义了两个辅助类  分别是
+//agv_lmr(左中右信息)
+//和agv_adj (这条线路 与 这条线路能到到的其他线路 的对应关系)
+
 class MapCenter : public QObject
 {
     Q_OBJECT
@@ -33,7 +41,7 @@ private:
     void addLine(QString s);
     void addArc(QString s);
     void create();
-    bool save();//保存创建的地图
+    //bool save();//保存创建的地图
 
     QList<int> getPath(int agvId,int lastPoint,int startPoint,int endPoint,int &distance,bool changeDirect);
 

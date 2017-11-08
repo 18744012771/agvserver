@@ -61,7 +61,7 @@ void AgvNetWork::sendToSome(QList<int> ones,char *buf,int len)//发送给某些i
 //}
 
 
-void AgvNetWork::onRecvClientMsg(void *param, char *buf, int len,SOCKET sock,const std::string &sIp,int port)
+void AgvNetWork::onRecvClientMsg(void *param, char *buf, int len,SOCKET sock,const QString &sIp,int port)
 {
     //TODO:
     if (param != NULL)
@@ -70,7 +70,7 @@ void AgvNetWork::onRecvClientMsg(void *param, char *buf, int len,SOCKET sock,con
     }
 }
 
-void AgvNetWork::onDisconnectClient(void *owner, SOCKET sock, const std::string &sIp, int port)
+void AgvNetWork::onDisconnectClient(void *owner, SOCKET sock, const QString &sIp, int port)
 {
     //一个客户端掉线了
     //1.提出所有它订阅的东西
@@ -78,7 +78,7 @@ void AgvNetWork::onDisconnectClient(void *owner, SOCKET sock, const std::string 
     g_msgCenter.removeAgvStatusSubscribe(sock);
     //2.将在线状态修改
     int user_id = -1;
-    for(std::list<LoginUserInfo>::iterator itr = loginUserIdSock.begin();itr!=loginUserIdSock.end();++itr){
+    for(QList<LoginUserInfo>::iterator itr = loginUserIdSock.begin();itr!=loginUserIdSock.end();++itr){
         LoginUserInfo info = *itr;
         if(info.sock == sock){
             user_id = info.id;
@@ -98,40 +98,38 @@ void AgvNetWork::onDisconnectClient(void *owner, SOCKET sock, const std::string 
 }
 
 
-void AgvNetWork::recvClientMsgProcess(char *buf, int len,SOCKET sock,const std::string &ip, int port)
+void AgvNetWork::recvClientMsgProcess(char *buf, int len,SOCKET sock,const QString &ip, int port)
 {
     if(len<=0||buf==NULL)return ;
 
     //数据
-    std::string ss(buf,len);
+    QString ss = QString::fromLocal8Bit(buf,len);
 
     //加入缓冲区
-    if(client2serverBuffer.find(sock)==client2serverBuffer.end()){
-        client2serverBuffer.insert(std::make_pair(sock,ss));
+    if(client2serverBuffer.contains(sock)){
+        client2serverBuffer.insert(sock,ss);
     }else{
         client2serverBuffer[sock] = client2serverBuffer[sock]+ss;
     }
 
     //然后对其进行拆包，把拆出来的包放入队列
     while(true){
-        size_t start = client2serverBuffer[sock].find("<xml>");
-        size_t end = client2serverBuffer[sock].find("</xml>",start);
-        if(start!=std::string::npos&&end!=std::string::npos){
+        int start = client2serverBuffer[sock].indexOf("<xml>");
+        int end = client2serverBuffer[sock].indexOf("</xml>",start);
+        if(start!=-1&&end!=-1){
             //这个是一个包:
-            std::string onPack = client2serverBuffer[sock].substr(start,end-start+6);
+            QString onPack = client2serverBuffer[sock].mid(start,end-start+6);
             if(onPack.length()>0){
                 //进行入队
                 QyhMsgDateItem item;
-                item.data=malloc(onPack.length());
-                memcpy(item.data,onPack.c_str(),onPack.length());
+                item.data= onPack.trimmed();
                 item.ip = ip;
                 item.port = port;
-                item.size=onPack.length();
                 item.sock=sock;
                 g_user_msg_queue.enqueue(item);
             }
             //然后将之前的数据丢弃
-            client2serverBuffer[sock] = client2serverBuffer[sock].substr(end+6);
+            client2serverBuffer[sock] = client2serverBuffer[sock].mid(end+6);
         }else{
             break;
         }

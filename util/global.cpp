@@ -1,7 +1,7 @@
 ﻿#include "global.h"
-#include <sstream>
 #include <QTime>
 #include <QCoreApplication>
+#include <sstream>
 #include "pugixml.hpp"
 
 //全局的一些common变量
@@ -17,7 +17,7 @@ QMap<int,Agv *> g_m_agvs;             //所有车辆们
 QMap<int,AgvStation *> g_m_stations;  //所有的站点(站点+线路 = 地图)
 QMap<int,AgvLine *> g_m_lines;        //所有的线路(站点+线路 = 地图)
 QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_lmr;//用来保存左中右信息，用于通知agv左中右信息
-QMap<int,QVector<AgvLine*> > g_m_l_adj;  //从一条线路到另一条线路的关联表。用来计算可到达的位置
+QMap<int,QList<AgvLine*> > g_m_l_adj;  //从一条线路到另一条线路的关联表。用来计算可到达的位置
 QMap<int,int> g_reverseLines;           //线路和它的反方向线路的集合。
 
 //所有的业务处理
@@ -27,7 +27,7 @@ AgvCenter g_hrgAgvCenter;//车辆管理(车辆载入。车辆保存。车辆增�
 MsgCenter g_msgCenter;   //消息处理中心，对所有的消息进行解析和组装等
 
 ///登录的客户端的信息
-std::list<LoginUserInfo> loginUserIdSock;
+QList<LoginUserInfo> loginUserIdSock;
 
 const QString DATE_TIME_FORMAT = "yyyy-MM-dd hh:mm:ss";//统一时间格式
 
@@ -51,42 +51,42 @@ int getRandom(int maxRandom)
 }
 
 moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
-std::map<int,std::string> client2serverBuffer;
+QMap<int,QString> client2serverBuffer;
 moodycamel::ConcurrentQueue<OneLog> g_log_queue;
 
-std::string getResponseXml(std::map<std::string,std::string> &responseDatas, std::vector<std::map<std::string,std::string> > &responseDatalists)
+QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,QString> > &responseDatalists)
 {
     pugi::xml_document doc;
     pugi::xml_node root  = doc.append_child("xml");
     //type
     pugi::xml_node type  = root.append_child("type");
-    type.text().set(responseDatas.at("type").c_str());
+    type.text().set(responseDatas["type"].toLocal8Bit().data());
 
     //todo
     pugi::xml_node todo  = root.append_child("todo");
-    todo.text().set(responseDatas.at("todo").c_str());
+    todo.text().set(responseDatas["todo"].toLocal8Bit().data());
 
     //queuenumber
     if(responseDatas.find("queuenumber")!=responseDatas.end()){
         pugi::xml_node queuenumber  = root.append_child("queuenumber");
-        queuenumber.text().set(responseDatas.at("queuenumber").c_str());
+        queuenumber.text().set(responseDatas["queuenumber"].toLocal8Bit().data());
     }
 
     //data
     pugi::xml_node data  = root.append_child("data");
-    for (std::map<std::string,std::string>::iterator itr=responseDatas.begin(); itr!=responseDatas.end(); ++itr)
+    for (QMap<QString,QString>::iterator itr=responseDatas.begin(); itr!=responseDatas.end(); ++itr)
     {
-        if(itr->first == "todo"||itr->first=="type"||itr->first=="queuenumber")continue;
-        data.append_child(itr->first.c_str()).text().set(itr->second.c_str());
+        if(itr.key() == "todo"||itr.key()=="type"||itr.key()=="queuenumber")continue;
+        data.append_child(itr.key().toLocal8Bit().data()).text().set(itr.value().toLocal8Bit().data());
     }
 
     //datalist
     if(responseDatalists.size()>0){
         pugi::xml_node datalist  = data.append_child("datalist");
-        for(std::vector<std::map<std::string,std::string> >::iterator itr=responseDatalists.begin();itr!=responseDatalists.end();++itr){
+        for(QList<QMap<QString,QString> >::iterator itr=responseDatalists.begin();itr!=responseDatalists.end();++itr){
             pugi::xml_node list  = datalist.append_child("list");
-            for(std::map<std::string,std::string>::iterator pos = itr->begin();pos!=itr->end();++pos){
-                list.append_child(pos->first.c_str()).text().set(pos->second.c_str());
+            for(QMap<QString,QString>::iterator pos = itr->begin();pos!=itr->end();++pos){
+                list.append_child(pos.key().toLocal8Bit().data()).text().set(pos.value().toLocal8Bit().data());
             }
         }
     }
@@ -94,13 +94,13 @@ std::string getResponseXml(std::map<std::string,std::string> &responseDatas, std
     //封装完成
     std::stringstream result;
     doc.print(result, "", pugi::format_raw);
-    return result.str();
+    return QString::fromStdString(result.str());
 }
 
-bool getRequestParam(const std::string &xmlStr,std::map<std::string,std::string> &params,std::vector<std::map<std::string,std::string> > &datalist)
+bool getRequestParam(const QString &xmlStr,QMap<QString,QString> &params,QList<QMap<QString,QString> > &datalist)
 {
     pugi::xml_document doc;
-    pugi::xml_parse_result parseResult =  doc.load_buffer(xmlStr.c_str(), xmlStr.length());
+    pugi::xml_parse_result parseResult =  doc.load_buffer(xmlStr.toLocal8Bit().data(), xmlStr.length());
     if(parseResult.status != pugi::status_ok){
         g_log->log(AGV_LOG_LEVEL_ERROR,"收到的xml解析错误:"+xmlStr);
         return false;//解析错误，说明xml格式不正确
@@ -110,21 +110,21 @@ bool getRequestParam(const std::string &xmlStr,std::map<std::string,std::string>
     for (pugi::xml_node child: xmlRoot.children())
     {
         if(strcmp(child.name(),"data")!=0){
-            params.insert(std::make_pair(std::string(child.name()),std::string(child.child_value())));
+            params.insert(QString(child.name()),QString(child.child_value()));
         }else{
             for (pugi::xml_node ccchild: child.children())
             {
                 if(strcmp(ccchild.name(),"datalist")!=0){
-                    params.insert(std::make_pair(std::string(ccchild.name()),std::string(ccchild.child_value())));
+                    params.insert(QString(ccchild.name()),QString(ccchild.child_value()));
                 }else{
                     for (pugi::xml_node ccccccchild: ccchild.children())
                     {
-                        std::map<std::string,std::string> datalist_list;
+                        QMap<QString,QString> datalist_list;
                         if(strcmp(ccccccchild.name(),"list")==0){
                             for (pugi::xml_node cccccccccccccccccccchild: ccccccchild.children())
                             {
                                 if(strcmp(ccccccchild.name(),"list")==0){
-                                    datalist_list.insert(std::make_pair(std::string(cccccccccccccccccccchild.name()),std::string(cccccccccccccccccccchild.child_value())));
+                                    datalist_list.insert(QString(cccccccccccccccccccchild.name()),QString(cccccccccccccccccccchild.child_value()));
                                 }
                             }
                         }

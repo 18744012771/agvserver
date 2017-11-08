@@ -31,7 +31,7 @@ bool SqlServer::createConnection()
     if(!database.isValid())return false;
     if (!database.open())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Failed to connect database."+database.lastError().text().toStdString());
+        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Failed to connect database."+database.lastError().text());
         return false;
     }
 
@@ -48,18 +48,15 @@ bool SqlServer::closeConnection()
 //执行sql语句
 bool SqlServer::exec(QString qeurysql,QStringList args)
 {
-    //g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql.toStdString());
-
     QSqlQuery sql_query(database);
     sql_query.prepare(qeurysql);
     for(int i=0;i<args.length();++i){
         sql_query.addBindValue(args[i]);
-        //g_log->log(AGV_LOG_LEVEL_DEBUG,args.at(i).toStdString());
     }
 
     if(!sql_query.exec())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text().toStdString());
+        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text());
         return false;
     }
 
@@ -69,18 +66,16 @@ bool SqlServer::exec(QString qeurysql,QStringList args)
 //查询数据
 QList<QStringList> SqlServer::query(QString qeurysql, QStringList args)
 {
-    //g_log->log(AGV_LOG_LEVEL_DEBUG,"qeurysql="+qeurysql.toStdString());
     QList<QStringList> xx;
     QSqlQuery sql_query(database);
     sql_query.prepare(qeurysql);
     for(int i=0;i<args.length();++i){
         sql_query.addBindValue(args[i]);
-        //g_log->log(AGV_LOG_LEVEL_DEBUG,args.at(i).toStdString());
     }
 
     if(!sql_query.exec())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text().toStdString());
+        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text());
         return xx;
     }
     while(sql_query.next()){

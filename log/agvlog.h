@@ -2,7 +2,7 @@
 #define AGVLOG_H
 
 #include <QObject>
-#include <string>
+#include <QString>
 #include <QDateTime>
 
 typedef enum{
@@ -17,7 +17,7 @@ typedef enum{
 struct OneLog{
     QDateTime time;
     AGV_LOG_LEVEL level;
-    std::string msg;
+    QString msg;
 };
 
 class AgvLog : public QObject
@@ -26,8 +26,7 @@ class AgvLog : public QObject
 public:
     explicit AgvLog(QObject *parent = nullptr);
 
-    void log(AGV_LOG_LEVEL level, std::string msg);
-
+    void log(AGV_LOG_LEVEL level, QString msg);
 signals:
 
 public slots:

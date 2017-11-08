@@ -156,10 +156,8 @@ void Agv::processOneMsg(QByteArray oneMsg)
 
         //设备地址//TODO
         //判断
-        //QString ip = QString("%1.%2.%3.%4").arg(data[29]).arg(data[30]).arg(data[31]).arg(data[32]);
-        std::stringstream ss;
-        ss<<"from agv ip:"<<(int)(data[29])<<(int)(data[30])<<(int)(data[31])<<(int)(data[32]);
-        g_log->log(AGV_LOG_LEVEL_INFO,ss.str());
+        QString ss = QString("from agv ip:%1.%2.%3.%4").arg(data[29]).arg(data[30]).arg(data[31]).arg(data[32]);
+        g_log->log(AGV_LOG_LEVEL_INFO,ss);
 
         //附件状态 U16
     }
@@ -215,11 +213,6 @@ void Agv::updateOdometer(int odometer)
         if(line->line()){
             double theta = atan2(g_m_stations[m_nextStation]->y()-g_m_stations[m_lastStation]->y(),g_m_stations[m_nextStation]->x()-g_m_stations[m_lastStation]->x());
             setRotation(theta*180/M_PI);
-
-            std::stringstream ss;
-            ss<< "m_m_angle-rotation="<<m_m_angle*360/628-rotation();
-            g_log->log(AGV_LOG_LEVEL_DEBUG,ss.str());
-
             setX(g_m_stations[m_lastStation]->x()+odometer*cos(theta));
             setY(g_m_stations[m_lastStation]->y()+odometer*sin(theta));
         }else{
