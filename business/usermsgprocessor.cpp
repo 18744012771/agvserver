@@ -574,7 +574,7 @@ void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QStr
             userinfo.insert(QString("id"),queryresultB.at(i).at(0));
             userinfo.insert(QString("username"),queryresultB.at(i).at(1));
             userinfo.insert(QString("password"),queryresultB.at(i).at(2));
-            userinfo.insert(QString("status"),queryresultB.at(i).at(3));
+            userinfo.insert(QString("signState"),queryresultB.at(i).at(3));
             userinfo.insert(QString("lastSignTime"),queryresultB.at(i).at(4));
             userinfo.insert(QString("createTime"),queryresultB.at(i).at(5));
             userinfo.insert(QString("role"),queryresultB.at(i).at(6));
