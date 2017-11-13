@@ -133,7 +133,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "CREATE TABLE agv_user(id INTEGER PRIMARY KEY AUTO_INCREMENT,user_username text,user_password text,user_realName TEXT,user_lastSignTime datetime,user_signState integer,user_sex bool,user_age int,user_createTime datetime,user_role INTEGER);";
+        QString createSql = "CREATE TABLE agv_user(id INTEGER PRIMARY KEY AUTO_INCREMENT,user_username text,user_password text,user_realname TEXT,user_lastSignTime datetime,user_signState integer,user_sex bool,user_age int,user_createTime datetime,user_role INTEGER);";
         args.clear();
         bool b = exec(createSql,args);
         if(!b)return false;

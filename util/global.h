@@ -37,7 +37,7 @@ struct LoginUserInfo
 
 struct QyhMsgDateItem
 {
-    QString data;
+    std::string data;
     QString ip;//发送方IP
     int port;//发送方端口
     SOCKET sock;
@@ -99,16 +99,16 @@ int getRandom(int maxRandom);
 extern moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
 
 //用户消息的缓存区(用于拆包、分包)
-extern QMap<int,QString> client2serverBuffer;
+extern QMap<int,std::string> client2serverBuffer;
 
 ////将结果封装成xml格式(解析-封装 的封装)
 QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,QString> > &responseDatalists);
 
 ////将xml格式转成两个参数模式(解析-封装 的解析)
-bool getRequestParam(const QString &xmlStr,QMap<QString,QString> &params,QList<QMap<QString,QString> > &datalist);
+bool getRequestParam(const std::string &xmlStr, QMap<QString,QString> &params, QList<QMap<QString,QString> > &datalist);
 
 ///登录的客户端的id和它对应的sock
-extern QList<LoginUserInfo> loginUserIdSock;
+extern QMap<int,LoginUserInfo> loginUserIdSock;
 
 extern const QString DATE_TIME_FORMAT;
 

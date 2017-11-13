@@ -76,7 +76,7 @@ void AgvStatusPublisher::run()
             for(QMap<int,int>::iterator pos = subscribers.begin();pos!=subscribers.end();++pos)
             {
                 if(pos.value() == itr.key())
-                    g_netWork->sendToOne(pos.key(),xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+                    g_netWork->sendToOne(pos.key(),xml.toStdString().c_str(),xml.toStdString().length());
             }
             mutex.unlock();
         }

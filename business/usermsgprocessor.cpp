@@ -23,7 +23,7 @@ void UserMsgProcessor::run()
 
             if(item.data.length()==0)continue;
 
-            g_log->log(AGV_LOG_LEVEL_INFO,"get client msg="+item.data);
+            g_log->log(AGV_LOG_LEVEL_INFO,"get client msg="+QString::fromStdString(item.data));
 
             parseOneMsg(item,item.data);
         }
@@ -46,7 +46,7 @@ void UserMsgProcessor::myquit()
 
 //对接收到的xml消息进行转换
 //这里，采用速度最最快的pluginXml.以保证效率，解析单个xml的时间应该在3ms之内
-void UserMsgProcessor::parseOneMsg(const QyhMsgDateItem &item, const QString &oneMsg)
+void UserMsgProcessor::parseOneMsg(const QyhMsgDateItem &item, const std::string &oneMsg)
 {
     QMap<QString,QString> params;
     QList<QMap<QString,QString> > datalist;
@@ -111,11 +111,10 @@ bool UserMsgProcessor::checkAccessToken(const QyhMsgDateItem &item,QMap<QString,
     ////对access_token判断是否正确
     bool access_token_correct = false;
 
-    for(QList<LoginUserInfo>::iterator itr = loginUserIdSock.begin();itr!=loginUserIdSock.end();++itr){
-        LoginUserInfo info = *itr;
-        if(info.sock == item.sock && info.access_tocken == requestDatas["access_token"]){
+    if(loginUserIdSock.contains(item.sock)){
+        if(loginUserIdSock[item.sock].access_tocken == requestDatas["access_token"]){
             access_token_correct = true;
-            loginUserInfo = info;
+            loginUserInfo = loginUserIdSock[item.sock];
         }
     }
 
@@ -138,7 +137,7 @@ void UserMsgProcessor::responseOneMsg(const QyhMsgDateItem &item, QMap<QString, 
         clientMsgMapProcess(item,requestDatas,datalists);
     }else if(requestDatas["type"] == "agv"){
         clientMsgAgvProcess(item,requestDatas,datalists);
-    }else if(requestDatas["type"] == "agvManagge"){
+    }else if(requestDatas["type"] == "agvManage"){
         clientMsgAgvManageProcess(item,requestDatas,datalists);
     }else if(requestDatas["type"] == "task"){
         clientMsgTaskProcess(item,requestDatas,datalists);
@@ -163,7 +162,7 @@ void UserMsgProcessor::clientMsgUserProcess(const QyhMsgDateItem &item,QMap<QStr
 
         //封装        //发送
         QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
 
         return ;
     }
@@ -172,7 +171,7 @@ void UserMsgProcessor::clientMsgUserProcess(const QyhMsgDateItem &item,QMap<QStr
     /////所有的非登录消息，需要进行，安全验证 随机码
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
         return ;
     }
 
@@ -192,11 +191,14 @@ void UserMsgProcessor::clientMsgUserProcess(const QyhMsgDateItem &item,QMap<QStr
     else if(requestDatas["todo"]=="add"){
         User_Add(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
+    else if(requestDatas["todo"]=="modify"){
+        User_Modify(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
 
     //封装
     QString xml = getResponseXml(responseParams,responseDatalists);
     //发送
-    g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
 }
 
 void UserMsgProcessor::clientMsgMapProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
@@ -211,7 +213,7 @@ void UserMsgProcessor::clientMsgMapProcess(const QyhMsgDateItem &item,QMap<QStri
     /////所有的非登录消息，需要进行，安全验证 随机码
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
     }
 
     /// 创建地图
@@ -241,7 +243,7 @@ void UserMsgProcessor::clientMsgMapProcess(const QyhMsgDateItem &item,QMap<QStri
     //封装
     QString xml = getResponseXml(responseParams,responseDatalists);
     //发送
-    g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
 
 }
 
@@ -257,7 +259,7 @@ void UserMsgProcessor::clientMsgAgvProcess(const QyhMsgDateItem &item,QMap<QStri
     /////所有的非登录消息，需要进行，安全验证 随机码
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
     }
 
     /// 请求控制权
@@ -303,7 +305,7 @@ void UserMsgProcessor::clientMsgAgvProcess(const QyhMsgDateItem &item,QMap<QStri
     //封装
     QString xml = getResponseXml(responseParams,responseDatalists);
     //发送
-    g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
 
 }
 
@@ -319,7 +321,7 @@ void UserMsgProcessor::clientMsgAgvManageProcess(const QyhMsgDateItem &item,QMap
     /////所有的非登录消息，需要进行，安全验证 随机码
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
     }
 
     /// agv列表
@@ -341,7 +343,7 @@ void UserMsgProcessor::clientMsgAgvManageProcess(const QyhMsgDateItem &item,QMap
     //封装
     QString xml = getResponseXml(responseParams,responseDatalists);
     //发送
-    g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
 }
 
 void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
@@ -356,7 +358,7 @@ void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QStr
     /////所有的非登录消息，需要进行，安全验证 随机码
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
     }
 
     /// 创建任务(创建到X点的任务)
@@ -406,7 +408,7 @@ void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QStr
     //封装
     QString xml = getResponseXml(responseParams,responseDatalists);
     //发送
-    g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
 }
 
 void UserMsgProcessor::clientMsgLogProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
@@ -421,7 +423,7 @@ void UserMsgProcessor::clientMsgLogProcess(const QyhMsgDateItem &item,QMap<QStri
     /////所有的非登录消息，需要进行，安全验证 随机码
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
     }
 
     /// 创建任务(创建到X点的任务)
@@ -443,7 +445,7 @@ void UserMsgProcessor::clientMsgLogProcess(const QyhMsgDateItem &item,QMap<QStri
     //封装
     QString xml = getResponseXml(responseParams,responseDatalists);
     //发送
-    g_netWork->sendToOne(item.sock,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
 
 }
 
@@ -486,7 +488,7 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, QMap<QString, QStr
                     loginUserInfo.password = requestDatas["username"];
                     loginUserInfo.username = requestDatas["password"];
                     loginUserInfo.role = queryresult.at(0).at(2).toInt();
-                    loginUserIdSock.push_back(loginUserInfo);
+                    loginUserIdSock.insert(item.sock,loginUserInfo);
 
                     //登录成功
                     responseParams.insert(QString("info"),QString(""));
@@ -558,7 +560,7 @@ void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, QMap<QSt
 void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////////////////////////获取用户列表
     //开始查询用户 只能查看到同等级或者低等级的用户
-    QString querySqlB = "select id,user_username,user_password,user_signState,user_lastSignTime,user_createTime,user_role from agv_user where user_role<=?";
+    QString querySqlB = "select id,user_username,user_password,user_signState,user_lastSignTime,user_createTime,user_role,user_realname,user_age from agv_user where user_role<=?";
     QStringList paramsB;
     paramsB<<QString("%1").arg(loginUserInfo.role);
     QList<QStringList> queryresultB = g_sql->query(querySqlB,paramsB);
@@ -568,7 +570,7 @@ void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QStr
 
     for(int i=0;i<queryresultB.length();++i)
     {
-        if(queryresultB.at(i).length() == 7)
+        if(queryresultB.at(i).length() == 9)
         {
             QMap<QString,QString> userinfo;
             userinfo.insert(QString("id"),queryresultB.at(i).at(0));
@@ -578,6 +580,8 @@ void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QStr
             userinfo.insert(QString("lastSignTime"),queryresultB.at(i).at(4));
             userinfo.insert(QString("createTime"),queryresultB.at(i).at(5));
             userinfo.insert(QString("role"),queryresultB.at(i).at(6));
+            userinfo.insert(QString("realname"),queryresultB.at(i).at(7));
+            userinfo.insert(QString("age"),queryresultB.at(i).at(8));
             responseDatalists.push_back(userinfo);
         }
     }
@@ -598,6 +602,55 @@ void UserMsgProcessor:: User_Delete(const QyhMsgDateItem &item, QMap<QString, QS
         }
     }
 }
+
+void UserMsgProcessor::User_Modify(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    ///////////////////////////////////修改
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password","id",NULL))
+    {
+        QString username = requestDatas["username"];
+        QString password = requestDatas["password"];
+
+        QString updateSql = "update agv_user set user_username=?,user_password=?,";
+        QString updateSqlTail = " where id=?";
+        QStringList params;
+        params.append(username);
+        params.append(password);
+        if(requestDatas.contains("realname")){
+            updateSql +="user_realname=?,";
+            params.append(requestDatas["realname"]);
+        }
+        if(requestDatas.contains("sex")){
+            updateSql +="user_sex=?,";
+            params.append(requestDatas["sex"]);
+        }
+        if(requestDatas.contains("age")){
+            updateSql +="user_age=?,";
+            params.append(requestDatas["age"]);
+        }
+        if(requestDatas.contains("role")){
+            updateSql +="user_role=?,";
+            params.append(requestDatas["role"]);
+        }
+
+        //去掉逗号
+        updateSql = updateSql.left(updateSql.lastIndexOf(","));
+
+        updateSql.append(updateSqlTail);
+        params.append(requestDatas["id"]);
+
+        if(g_sql->exec(updateSql,params)){
+            //成功
+            responseParams.insert(QString("info"),QString(""));
+            responseParams.insert(QString("result"),QString("success"));
+        }else{
+            //失败
+            responseParams.insert(QString("info"),QString("sql update fail"));
+            responseParams.insert(QString("result"),QString("fail"));
+        }
+    }
+
+}
 //添加用户
 void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ///////////////////////////////////添加用户
@@ -608,22 +661,22 @@ void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, QMap<QString, QStri
         QString role = requestDatas["role"];
 
         //查看剩余项目是否存在
-        QString realName="";
+        QString realname="";
         bool sex = true;
         int age=20;
         if(requestDatas.contains("realname")){
-            realName = requestDatas["realname"];
+            realname = requestDatas["realname"];
         }
         if(requestDatas.contains("sex")){
             sex = requestDatas["sex"]=="1";
         }
         if(requestDatas.contains("age")){
-            age = requestDatas["sex"].toInt();
+            age = requestDatas["age"].toInt();
         }
 
         QString addSql = "insert into agv_user(user_username,user_password,user_role,user_realname,user_sex,user_age,user_createTime,user_signState)values(?,?,?,?,?,?,?,?);";
         QStringList params;
-        params<<username<<password<<role<<realName<<QString("%1").arg(sex)<<QString("%1").arg(age)<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(0);
+        params<<username<<password<<role<<realname<<QString("%1").arg(sex)<<QString("%1").arg(age)<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(0);
         if(g_sql->exec(addSql,params)){
             //成功
             responseParams.insert(QString("info"),QString(""));
@@ -998,10 +1051,9 @@ void UserMsgProcessor:: AgvManage_Delete(const QyhMsgDateItem &item, QMap<QStrin
             tempParams<<QString("%1").arg(iAgvId);
             if(g_sql->exec(deleteSql,tempParams)){
                 //从列表中清楚
-                Agv *agv = g_m_agvs[iAgvId];
-                delete agv;
-                agv = NULL;
-                g_m_agvs.remove(iAgvId);
+                if(g_m_agvs.contains(iAgvId)){
+                    g_m_agvs.remove(iAgvId);
+                }
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));
             }else{

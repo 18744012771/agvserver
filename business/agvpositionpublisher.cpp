@@ -64,7 +64,7 @@ void AgvPositionPublisher::run()
         mutex.lock();
         for(QList<int>::iterator itr = subscribers.begin();itr!=subscribers.end();++itr)
         {
-            g_netWork->sendToOne(*itr,xml.toLocal8Bit().data(),xml.toLocal8Bit().length());
+            g_netWork->sendToOne(*itr,xml.toStdString().c_str(),xml.toStdString().length());
         }
         mutex.unlock();
 

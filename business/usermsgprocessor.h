@@ -24,7 +24,7 @@ private:
     volatile bool isQuit;
 
     //对接收到的一条消息进行xml解析
-    void parseOneMsg(const QyhMsgDateItem &item, const QString &oneMsg);
+    void parseOneMsg(const QyhMsgDateItem &item, const std::string &oneMsg);
 
     //对解析后的请求信息，进行处理，并得到相应的回应内容
     void responseOneMsg(const QyhMsgDateItem &item, QMap<QString,QString> requestDatas, QList<QMap<QString,QString> > datalists);
@@ -58,6 +58,8 @@ private:
     void User_Delete(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
     //添加用户
     void User_Add(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
+    //修改用户
+    void User_Modify(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
 
     /////////////////////////////关于地图部分
     //创建地图

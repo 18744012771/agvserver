@@ -27,7 +27,7 @@ AgvCenter g_hrgAgvCenter;//车辆管理(车辆载入。车辆保存。车辆增�
 MsgCenter g_msgCenter;   //消息处理中心，对所有的消息进行解析和组装等
 
 ///登录的客户端的信息
-QList<LoginUserInfo> loginUserIdSock;
+QMap<int,LoginUserInfo> loginUserIdSock;
 
 const QString DATE_TIME_FORMAT = "yyyy-MM-dd hh:mm:ss";//统一时间格式
 
@@ -51,7 +51,7 @@ int getRandom(int maxRandom)
 }
 
 moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
-QMap<int,QString> client2serverBuffer;
+QMap<int,std::string> client2serverBuffer;
 moodycamel::ConcurrentQueue<OneLog> g_log_queue;
 
 QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,QString> > &responseDatalists)
@@ -60,16 +60,16 @@ QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,
     pugi::xml_node root  = doc.append_child("xml");
     //type
     pugi::xml_node type  = root.append_child("type");
-    type.text().set(responseDatas["type"].toLocal8Bit().data());
+    type.text().set(responseDatas["type"].toStdString().c_str());
 
     //todo
     pugi::xml_node todo  = root.append_child("todo");
-    todo.text().set(responseDatas["todo"].toLocal8Bit().data());
+    todo.text().set(responseDatas["todo"].toStdString().c_str());
 
     //queuenumber
     if(responseDatas.find("queuenumber")!=responseDatas.end()){
         pugi::xml_node queuenumber  = root.append_child("queuenumber");
-        queuenumber.text().set(responseDatas["queuenumber"].toLocal8Bit().data());
+        queuenumber.text().set(responseDatas["queuenumber"].toStdString().c_str());
     }
 
     //data
@@ -77,7 +77,7 @@ QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,
     for (QMap<QString,QString>::iterator itr=responseDatas.begin(); itr!=responseDatas.end(); ++itr)
     {
         if(itr.key() == "todo"||itr.key()=="type"||itr.key()=="queuenumber")continue;
-        data.append_child(itr.key().toLocal8Bit().data()).text().set(itr.value().toLocal8Bit().data());
+        data.append_child(itr.key().toStdString().c_str()).text().set(itr.value().toStdString().c_str());
     }
 
     //datalist
@@ -86,7 +86,7 @@ QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,
         for(QList<QMap<QString,QString> >::iterator itr=responseDatalists.begin();itr!=responseDatalists.end();++itr){
             pugi::xml_node list  = datalist.append_child("list");
             for(QMap<QString,QString>::iterator pos = itr->begin();pos!=itr->end();++pos){
-                list.append_child(pos.key().toLocal8Bit().data()).text().set(pos.value().toLocal8Bit().data());
+                list.append_child(pos.key().toStdString().c_str()).text().set(pos.value().toStdString().c_str());
             }
         }
     }
@@ -97,12 +97,12 @@ QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,
     return QString::fromStdString(result.str());
 }
 
-bool getRequestParam(const QString &xmlStr,QMap<QString,QString> &params,QList<QMap<QString,QString> > &datalist)
+bool getRequestParam(const std::string &xmlStr,QMap<QString,QString> &params,QList<QMap<QString,QString> > &datalist)
 {
     pugi::xml_document doc;
-    pugi::xml_parse_result parseResult =  doc.load_buffer(xmlStr.toLocal8Bit().data(), xmlStr.length());
+    pugi::xml_parse_result parseResult =  doc.load_buffer(xmlStr.c_str(), xmlStr.length());
     if(parseResult.status != pugi::status_ok){
-        g_log->log(AGV_LOG_LEVEL_ERROR,"收到的xml解析错误:"+xmlStr);
+        g_log->log(AGV_LOG_LEVEL_ERROR,QStringLiteral("收到的xml解析错误:")+QString::fromStdString(xmlStr));
         return false;//解析错误，说明xml格式不正确
     }
 
