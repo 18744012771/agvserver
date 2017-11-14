@@ -475,7 +475,7 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, QMap<QString, QStr
                 QString updateSql = "update agv_user set user_signState=1,user_lastSignTime= ? where id=? ";
                 params.clear();
                 params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(queryresult.at(0).at(0).toInt());
-                if(!g_sql->exec(updateSql,params)){
+                if(!g_sql->exeSql(updateSql,params)){
                     //登录失败
                     responseParams.insert(QString("info"),QString("update database fail!"));
                     responseParams.insert(QString("result"),QString("fail"));
@@ -518,7 +518,7 @@ void UserMsgProcessor:: User_Logout(const QyhMsgDateItem &item, QMap<QString, QS
         QString updateSql = "update agv_user set user_signState = 0 where id=?";
         QStringList param;
         param<<requestDatas["id"];
-        g_sql->exec(updateSql,param);
+        g_sql->exeSql(updateSql,param);
         responseParams.insert(QString("info"),QString(""));
         responseParams.insert(QString("result"),QString("success"));
     }
@@ -541,7 +541,7 @@ void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, QMap<QSt
                 QString updateSql = "update agv_user set user_password=? where user_username=?";
                 params.clear();
                 params<<requestDatas["newpassword"]<<requestDatas["username"];
-                if(!g_sql->exec(updateSql,params)){
+                if(!g_sql->exeSql(updateSql,params)){
                     responseParams.insert(QString("info"),QString(""));
                     responseParams.insert(QString("result"),QString("success"));
                 }else{
@@ -577,8 +577,12 @@ void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QStr
             userinfo.insert(QString("username"),queryresultB.at(i).at(1));
             userinfo.insert(QString("password"),queryresultB.at(i).at(2));
             userinfo.insert(QString("signState"),queryresultB.at(i).at(3));
-            userinfo.insert(QString("lastSignTime"),queryresultB.at(i).at(4));
-            userinfo.insert(QString("createTime"),queryresultB.at(i).at(5));
+            QString sss = queryresultB.at(i).at(4);
+            sss = sss.replace("T"," ");
+            userinfo.insert(QString("lastSignTime"),sss);
+            sss = queryresultB.at(i).at(5);
+            sss = sss.replace("T"," ");
+            userinfo.insert(QString("createTime"),sss);
             userinfo.insert(QString("role"),queryresultB.at(i).at(6));
             userinfo.insert(QString("realname"),queryresultB.at(i).at(7));
             userinfo.insert(QString("age"),queryresultB.at(i).at(8));
@@ -593,7 +597,7 @@ void UserMsgProcessor:: User_Delete(const QyhMsgDateItem &item, QMap<QString, QS
         QString deleteSql = "delete from agv_user where id=?";
         QStringList params;
         params<<requestDatas["id"];
-        if(!g_sql->exec(deleteSql,params)){
+        if(!g_sql->exeSql(deleteSql,params)){
             responseParams.insert(QString("info"),QString("delete fail for sql fail"));
             responseParams.insert(QString("result"),QString("fail"));
         }else{
@@ -639,7 +643,7 @@ void UserMsgProcessor::User_Modify(const QyhMsgDateItem &item, QMap<QString, QSt
         updateSql.append(updateSqlTail);
         params.append(requestDatas["id"]);
 
-        if(g_sql->exec(updateSql,params)){
+        if(g_sql->exeSql(updateSql,params)){
             //成功
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
@@ -677,7 +681,7 @@ void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, QMap<QString, QStri
         QString addSql = "insert into agv_user(user_username,user_password,user_role,user_realname,user_sex,user_age,user_createTime,user_signState)values(?,?,?,?,?,?,?,?);";
         QStringList params;
         params<<username<<password<<role<<realname<<QString("%1").arg(sex)<<QString("%1").arg(age)<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(0);
-        if(g_sql->exec(addSql,params)){
+        if(g_sql->exeSql(addSql,params)){
             //成功
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
@@ -1011,7 +1015,7 @@ void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, QMap<QString, 
         QString insertSql = "insert into agv_agv (agv_name,agv_ip)values(?,?)";
         QStringList tempParams;
         tempParams<<requestDatas["name"]<<requestDatas["ip"];
-        if(g_sql->exec(insertSql,tempParams)){
+        if(g_sql->exeSql(insertSql,tempParams)){
             int newId;
             QString querySql = "select id from agv_agv where agv_name = ? and agv_ip = ?";
             QList<QStringList> queryresult = g_sql->query(querySql,tempParams);
@@ -1049,7 +1053,7 @@ void UserMsgProcessor:: AgvManage_Delete(const QyhMsgDateItem &item, QMap<QStrin
             QString deleteSql = "delete from agv_agv where id=?";
             QStringList tempParams;
             tempParams<<QString("%1").arg(iAgvId);
-            if(g_sql->exec(deleteSql,tempParams)){
+            if(g_sql->exeSql(deleteSql,tempParams)){
                 //从列表中清楚
                 if(g_m_agvs.contains(iAgvId)){
                     g_m_agvs.remove(iAgvId);
@@ -1080,7 +1084,7 @@ void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, QMap<QStrin
             QString updateSql = "update agv_agv set agv_name=?,set agv_ip=? where id=?";
             QStringList params;
             params<<(requestDatas["name"])<<(requestDatas["ip"])<<(requestDatas["agvid"]);
-            if(g_sql->exec(updateSql,params)){
+            if(g_sql->exeSql(updateSql,params)){
                 agv->setName(requestDatas["name"]);
                 agv->setIp(requestDatas["ip"]);
                 responseParams.insert(QString("info"),QString(""));
@@ -1358,8 +1362,8 @@ void UserMsgProcessor::Task_ListDoneDuring(const QyhMsgDateItem &item, QMap<QStr
         QString querySql = "select id,task_produceTime,task_doneTime,task_doTime,task_excuteCar,task_status from agv_task where task_status = ? and task_doneTime between ? and ?;";
         QStringList params;
         params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
-        QDateTime from = QDateTime::fromString(requestDatas["from"]);
-        QDateTime to = QDateTime::fromString(requestDatas["to"]);
+        QDateTime from = QDateTime::fromString(requestDatas["from"],DATE_TIME_FORMAT);
+        QDateTime to = QDateTime::fromString(requestDatas["to"],DATE_TIME_FORMAT);
         params<<from.toString(DATE_TIME_FORMAT);
         params<<to.toString(DATE_TIME_FORMAT);
 
@@ -1448,20 +1452,20 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
         responseParams.insert(QString("info"),QString(""));
         responseParams.insert(QString("result"),QString("success"));
 
-        bool trace = requestDatas["trace"]=="true";
-        bool debug = requestDatas["debug"]=="true";
-        bool info = requestDatas["info"]=="true";
-        bool warn = requestDatas["warn"]=="true";
-        bool error = requestDatas["error"]=="true";
-        bool fatal = requestDatas["fatal"]=="true";
+        bool trace = requestDatas["trace"]=="1";
+        bool debug = requestDatas["debug"]=="1";
+        bool info = requestDatas["info"]=="1";
+        bool warn = requestDatas["warn"]=="1";
+        bool error = requestDatas["error"]=="1";
+        bool fatal = requestDatas["fatal"]=="1";
 
         bool firstappend = true;
 
         QString querySql = "select log_level,log_time,log_msg from agv_log where log_time between ? and ? ";
 
         QStringList params;
-        QDateTime from = QDateTime::fromString(requestDatas["from"]);
-        QDateTime to = QDateTime::fromString(requestDatas["to"]);
+        QDateTime from = QDateTime::fromString(requestDatas["from"],DATE_TIME_FORMAT);
+        QDateTime to = QDateTime::fromString(requestDatas["to"],DATE_TIME_FORMAT);
         params<<from.toString(DATE_TIME_FORMAT);
         params<<to.toString(DATE_TIME_FORMAT);
 
@@ -1545,7 +1549,10 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
             {
                 QMap<QString,QString> log;
                 log.insert(QString("level"),qsl.at(0));
-                log.insert(QString("time"),qsl.at(1));
+                //这里注意啦！！！查询出来的日期，有可能是带有T的。
+                QString timestr = qsl.at(1);
+                timestr = timestr.replace("T"," ");
+                log.insert(QString("time"),timestr);
                 log.insert(QString("msg"),qsl.at(2));
                 responseDatalists.push_back(log);
             }
@@ -1564,8 +1571,8 @@ void UserMsgProcessor::Log_ListAll(const QyhMsgDateItem &item, QMap<QString, QSt
 
         QString querySql = "select log_level,log_time,log_msg from agv_log where log_time between ? and ?;";
         QStringList params;
-        QDateTime from = QDateTime::fromString(requestDatas["from"]);
-        QDateTime to = QDateTime::fromString(requestDatas["to"]);
+        QDateTime from = QDateTime::fromString(requestDatas["from"],DATE_TIME_FORMAT);
+        QDateTime to = QDateTime::fromString(requestDatas["to"],DATE_TIME_FORMAT);
         params<<from.toString(DATE_TIME_FORMAT);
         params<<to.toString(DATE_TIME_FORMAT);
 
@@ -1594,12 +1601,12 @@ void UserMsgProcessor::Log_Subscribe(const QyhMsgDateItem &item, QMap<QString, Q
         g_logProcess->removeSubscribe(item.sock);//先去掉原来的订阅
         //加入现在的订阅
         SubNode subnode;
-        subnode.trace = requestDatas["trace"] == "true";
-        subnode.debug = requestDatas["debug"] == "true";
-        subnode.info = requestDatas["info"] == "true";
-        subnode.warn = requestDatas["warn"] == "true";
-        subnode.error = requestDatas["error"] == "true";
-        subnode.fatal = requestDatas["fatal"] == "true";
+        subnode.trace = requestDatas["trace"] == "1";
+        subnode.debug = requestDatas["debug"] == "1";
+        subnode.info = requestDatas["info"] == "1";
+        subnode.warn = requestDatas["warn"] == "1";
+        subnode.error = requestDatas["error"] == "1";
+        subnode.fatal = requestDatas["fatal"] == "1";
         g_logProcess->addSubscribe(item.sock,subnode);
     }
 }
@@ -1607,12 +1614,11 @@ void UserMsgProcessor::Log_Subscribe(const QyhMsgDateItem &item, QMap<QString, Q
 //取消订阅日志
 void UserMsgProcessor::Log_CancelSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
 {
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"trace","debug","info","warn","error","fatal",NULL))
-    {
-        responseParams.insert(QString("info"),QString(""));
-        responseParams.insert(QString("result"),QString("success"));
-        g_logProcess->removeSubscribe(item.sock);
-    }
+
+    responseParams.insert(QString("info"),QString(""));
+    responseParams.insert(QString("result"),QString("success"));
+    g_logProcess->removeSubscribe(item.sock);
+
 }
 
 

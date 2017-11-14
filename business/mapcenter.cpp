@@ -24,22 +24,22 @@ void MapCenter::clear()
     QString deleteStationSql = "delete from agv_station;";
     QStringList params;
 
-    bool b = g_sql->exec(deleteStationSql,params);
+    bool b = g_sql->exeSql(deleteStationSql,params);
     if(!b){
         g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_station!");
     }
     QString deleteLineSql = "delete from agv_line;";
-    b = g_sql->exec(deleteLineSql,params);
+    b = g_sql->exeSql(deleteLineSql,params);
     if(!b){
         g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_line!");
     }
     QString deleteLmrSql = "delete from agv_lmr;";
-    b = g_sql->exec(deleteLmrSql,params);
+    b = g_sql->exeSql(deleteLmrSql,params);
     if(!b){
         g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_lmr!");
     }
     QString deleteAdjSql = "delete from agv_adj;";
-    b = g_sql->exec(deleteAdjSql,params);
+    b = g_sql->exeSql(deleteAdjSql,params);
     if(!b){
         g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_adj!");
     }
@@ -164,7 +164,7 @@ void MapCenter::addArc(QString s)
                     aLine->setLine(false);
                     aLine->setDraw((true));
 
-                    aLine->setClockwise((pp.at(0)=="true"));
+                    aLine->setClockwise((pp.at(0)=="1"));
                     aLine->setCenterX((pp.at(1).toInt()));
                     aLine->setCenterY((pp.at(2).toInt()));
                     aLine->setMidX((pp.at(3).toInt()));
@@ -374,7 +374,7 @@ void MapCenter::create()
                 QString updateSql = "update agv_line set line_startStation = ? where id=? ;";
                 QStringList params;
                 params<<QString("%1").arg( station->id())<<QString("%1").arg( line->id());
-                if(!g_sql->exec(updateSql,params)){
+                if(!g_sql->exeSql(updateSql,params)){
                     g_log->log(AGV_LOG_LEVEL_ERROR,"update agv_line set start startion fail!");
                     continue;
                 }
@@ -384,7 +384,7 @@ void MapCenter::create()
                 QString updateSql = "update agv_line set line_endStation = ? where id=? ;";
                 QStringList params;
                 params<<QString("%1").arg(station->id())<<QString("%1").arg(line->id());
-                if(!g_sql->exec(updateSql,params)){
+                if(!g_sql->exeSql(updateSql,params)){
                     g_log->log(AGV_LOG_LEVEL_ERROR,"update agv_line set end startion fail!");
                     continue;
                 }
@@ -396,7 +396,7 @@ void MapCenter::create()
         QString updateSql = "update agv_station set station_lineAmount = ? where id=? ;";
         QStringList params;
         params<<QString("%1").arg(station->lineAmount())<<QString("%1").arg( station->id());
-        g_sql->exec(updateSql,params);
+        g_sql->exeSql(updateSql,params);
     }
 
 
@@ -418,7 +418,7 @@ void MapCenter::create()
                 QString insertSql = "insert into agv_lmr(lmr_lastLine,lmr_nextLine,lmr_lmr) values(?,?,?);";
                 QStringList params;
                 params<<QString("%1").arg(p.lastLine)<<QString("%1").arg(p.nextLine)<<QString("%1").arg(g_m_lmr[p]);
-                g_sql->exec(insertSql,params);
+                g_sql->exeSql(insertSql,params);
             }
         }
     }
@@ -463,7 +463,7 @@ void MapCenter::create()
             AgvLine *l = *pos;
             params.clear();
             params<<QString("%1").arg( itr.key())<<QString("%1").arg(l->id());
-            g_sql->exec(insertSql,params);
+            g_sql->exeSql(insertSql,params);
         }
     }
 
@@ -619,25 +619,25 @@ bool MapCenter::load()
 //    QString deleteStationSql = "delete from agv_station;";
 //    QStringList params;
 
-//    bool b = g_sql->exec(deleteStationSql,params);
+//    bool b = g_sql->exeSql(deleteStationSql,params);
 //    if(!b){
 //        g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_station!");
 //        return false;
 //    }
 //    QString deleteLineSql = "delete from agv_line;";
-//    b = g_sql->exec(deleteLineSql,params);
+//    b = g_sql->exeSql(deleteLineSql,params);
 //    if(!b){
 //        g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_line!");
 //        return false;
 //    }
 //    QString deleteLmrSql = "delete from agv_lmr;";
-//    b = g_sql->exec(deleteLmrSql,params);
+//    b = g_sql->exeSql(deleteLmrSql,params);
 //    if(!b){
 //        g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_lmr!");
 //        return false;
 //    }
 //    QString deleteAdjSql = "delete from agv_adj;";
-//    b = g_sql->exec(deleteAdjSql,params);
+//    b = g_sql->exeSql(deleteAdjSql,params);
 //    if(!b){
 //        g_log->log(AGV_LOG_LEVEL_ERROR,"can not clear table agv_adj!");
 //        return false;
@@ -648,7 +648,7 @@ bool MapCenter::load()
 //        AgvStation *s = itr.value();
 //        params.clear();
 //        params<<QString("%1").arg(s->x())<<QString("%1").arg(s->y())<<QString("%1").arg(s->type())<<s->name()<<QString("%1").arg(s->lineAmount())<<QString("%1").arg(s->rfid());
-//        if(!g_sql->exec(insertStationSql,params))
+//        if(!g_sql->exeSql(insertStationSql,params))
 //        {
 //            g_log->log(AGV_LOG_LEVEL_ERROR," insert into agv_station failed!");
 //            return false;
@@ -660,7 +660,7 @@ bool MapCenter::load()
 //        AgvLine *l = itr.value();
 //        params.clear();
 //        params<<QString("%1").arg(l->id())<<QString("%1").arg(l->startX())<<QString("%1").arg(l->startY())<<QString("%1").arg(l->endX())<<QString("%1").arg(l->endY())<<QString("%1").arg(l->radius())<<QString("%1").arg(l->clockwise())<<QString("%1").arg(l->line())<<QString("%1").arg(l->midX())<<QString("%1").arg(l->midY())<<QString("%1").arg(l->centerX())<<QString("%1").arg(l->centerY())<<QString("%1").arg(l->angle())<<QString("%1").arg(l->length())<<QString("%1").arg(l->startStation())<<QString("%1").arg(l->endStation())<<QString("%1").arg(l->draw());
-//        if(!g_sql->exec(insertLineSql,params))
+//        if(!g_sql->exeSql(insertLineSql,params))
 //        {
 //            g_log->log(AGV_LOG_LEVEL_ERROR," insert into agv_line failed!");
 //            return false;
@@ -671,7 +671,7 @@ bool MapCenter::load()
 //    for(QMap<PATH_LEFT_MIDDLE_RIGHT,int>::iterator itr = g_m_lmr.begin();itr!=g_m_lmr.end();++itr){
 //        params.clear();
 //        params<<QString("%1").arg(itr.key().lastLine)<<QString("%1").arg(itr.key().nextLine)<<QString("%1").arg(itr.value());
-//        if(!g_sql->exec(insertLmrSql,params)){
+//        if(!g_sql->exeSql(insertLmrSql,params)){
 //            g_log->log(AGV_LOG_LEVEL_ERROR,"insert into agv_lmr failed!");
 //            return false;
 //        }
@@ -689,7 +689,7 @@ bool MapCenter::load()
 //        if(linesStr.endsWith(","))
 //            linesStr = linesStr.left(linesStr.length()-1);
 //        params<<QString("%1").arg(itr.key())<<linesStr;
-//        if(!g_sql->exec(insertAdjSql,params)){
+//        if(!g_sql->exeSql(insertAdjSql,params)){
 //            g_log->log(AGV_LOG_LEVEL_ERROR,"insert into agv_adj failed!");
 //            return false;
 //        }

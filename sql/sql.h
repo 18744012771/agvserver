@@ -23,7 +23,7 @@ public:
 
     //执行sql语句
     //原则上，除了id 时间日期 外的其他字段统统text(vchar)
-    bool exec(QString exeSql, QStringList args);
+    bool exeSql(QString exeSql, QStringList args);
 
     //查询数据
     QList<QStringList> query(QString qeurysql, QStringList args);

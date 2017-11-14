@@ -31,7 +31,7 @@ bool SqlServer::createConnection()
     if(!database.isValid())return false;
     if (!database.open())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Failed to connect database."+database.lastError().text());
+        //g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Failed to connect database."+database.lastError().text());
         return false;
     }
 
@@ -46,7 +46,7 @@ bool SqlServer::closeConnection()
 }
 
 //执行sql语句
-bool SqlServer::exec(QString qeurysql,QStringList args)
+bool SqlServer::exeSql(QString qeurysql,QStringList args)
 {
     QSqlQuery sql_query(database);
     sql_query.prepare(qeurysql);
@@ -56,7 +56,7 @@ bool SqlServer::exec(QString qeurysql,QStringList args)
 
     if(!sql_query.exec())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text());
+        //g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text());
         return false;
     }
 
@@ -75,7 +75,7 @@ QList<QStringList> SqlServer::query(QString qeurysql, QStringList args)
 
     if(!sql_query.exec())
     {
-        g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text());
+        //g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text());
         return xx;
     }
     while(sql_query.next()){

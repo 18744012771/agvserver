@@ -251,7 +251,7 @@ int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int
         QString deleteSql = "delete from agv_task where id = ?;";
         params.clear();
         params<<QString("%1").arg(newtask->id());
-        g_sql->exec(deleteSql,params);
+        g_sql->exeSql(deleteSql,params);
         delete node_pickup;
         delete newtask;
         return -2;////!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -274,12 +274,12 @@ int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int
         QString deleteSql = "delete from agv_task where id = ?;";
         params.clear();
         params<<QString("%1").arg(newtask->id());
-        g_sql->exec(deleteSql,params);
+        g_sql->exeSql(deleteSql,params);
         //删除第一个节点
         deleteSql = "delete from agv_task_node where id = ?;";
         params.clear();
         params<<QString("%1").arg(node_pickup->id);
-        g_sql->exec(deleteSql,params);
+        g_sql->exeSql(deleteSql,params);
         delete node_aim;
         delete newtask;
         return -3;////!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -325,7 +325,7 @@ int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick
         QString deleteSql = "delete from agv_task where id = ?;";
         params.clear();
         params<<QString("%1").arg(newtask->id());
-        g_sql->exec(deleteSql,params);
+        g_sql->exeSql(deleteSql,params);
         delete node_pickup;
         delete newtask;
         return -2;////!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -348,12 +348,12 @@ int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick
         QString deleteSql = "delete from agv_task where id = ?;";
         params.clear();
         params<<QString("%1").arg(newtask->id());
-        g_sql->exec(deleteSql,params);
+        g_sql->exeSql(deleteSql,params);
         //删除第一个节点
         deleteSql = "delete from agv_task_node where id = ?;";
         params.clear();
         params<<QString("%1").arg(node_pickup->id);
-        g_sql->exec(deleteSql,params);
+        g_sql->exeSql(deleteSql,params);
         delete node_aim;
         delete newtask;
         return -3;////!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -399,9 +399,9 @@ AgvTask *TaskCenter::queryDoneTask(int taskId)
     //这个任务是存在的
     result = new AgvTask;
     result->setId(queryresult.at(0).at(0).toInt());
-    result->setProduceTime(QDateTime::fromString(queryresult.at(0).at(1)));
-    result->setDoneTime(QDateTime::fromString(queryresult.at(0).at(2)));
-    result->setDoTime(QDateTime::fromString(queryresult.at(0).at(3)));
+    result->setProduceTime(QDateTime::fromString(queryresult.at(0).at(1),DATE_TIME_FORMAT));
+    result->setDoneTime(QDateTime::fromString(queryresult.at(0).at(2),DATE_TIME_FORMAT));
+    result->setDoTime(QDateTime::fromString(queryresult.at(0).at(3),DATE_TIME_FORMAT));
     result->setExcuteCar(queryresult.at(0).at(4).toInt());
     result->setStatus(queryresult.at(0).at(5).toInt());
 
@@ -421,8 +421,8 @@ AgvTask *TaskCenter::queryDoneTask(int taskId)
         n->aimStation = qsl.at(2).toInt();
         n->waitType = qsl.at(3).toInt();
         n->waitTime = qsl.at(4).toInt();
-        n->arriveTime = QDateTime::fromString( qsl.at(5));
-        n->leaveTime = QDateTime::fromString( qsl.at(6));
+        n->arriveTime = QDateTime::fromString( qsl.at(5),DATE_TIME_FORMAT);
+        n->leaveTime = QDateTime::fromString( qsl.at(6),DATE_TIME_FORMAT);
         result->taskNodes.push_back(n);
     }
 
@@ -452,9 +452,9 @@ AgvTask *TaskCenter::queryDoneTask(int taskId)
 //    //这个任务是存在的
 //    result = new AgvTask;
 //    result->setId(queryresult.at(0).at(0).toInt());
-//    result->setProduceTime(QDateTime::fromString(queryresult.at(0).at(1)));
-//    result->setDoneTime(QDateTime::fromString(queryresult.at(0).at(2)));
-//    result->setDoTime(QDateTime::fromString(queryresult.at(0).at(3)));
+//    result->setProduceTime(QDateTime::fromString(queryresult.at(0).at(1),DATE_TIME_FORMAT));
+//    result->setDoneTime(QDateTime::fromString(queryresult.at(0).at(2),DATE_TIME_FORMAT));
+//    result->setDoTime(QDateTime::fromString(queryresult.at(0).at(3),DATE_TIME_FORMAT));
 //    result->setExcuteCar(queryresult.at(0).at(4).toInt());
 //    result->setStatus(queryresult.at(0).at(5).toInt());
 
@@ -474,8 +474,8 @@ AgvTask *TaskCenter::queryDoneTask(int taskId)
 //        n.aimStation = qsl.at(2).toInt();
 //        n.waitType = qsl.at(3).toInt();
 //        n.waitTime = qsl.at(4).toInt();
-//        n.arriveTime = QDateTime::fromString( qsl.at(5));
-//        n.leaveTime = QDateTime::fromString( qsl.at(6));
+//        n.arriveTime = QDateTime::fromString( qsl.at(5),DATE_TIME_FORMAT);
+//        n.leaveTime = QDateTime::fromString( qsl.at(6),DATE_TIME_FORMAT);
 //        if(n.status == 0)//未执行的节点
 //            result->taskNodesTodo.push_back(n);
 //        else if(n.status == 1)//正在执行
@@ -591,7 +591,7 @@ bool TaskCenter::saveTaskToDatabase(AgvTask *task)
     //    QString insertSql = "insert into agv_task (task_node_produceTime,task_node_doneTime,doTime,excuteCar,status)values(?,?,?,?,?);";
     //    QStringList params;
     //    params<<task->produceTime().toString()<<task->doneTime().toString()<<QString("%1").arg( task->excuteCar())<<QString("%1").arg(task->status());
-    //    if(!g_sql->exec(insertSql,params))return false;
+    //    if(!g_sql->exeSql(insertSql,params))return false;
     //TODO: 保存路径节点！！！
 
 

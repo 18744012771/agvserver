@@ -16,7 +16,7 @@ AgvNetWork::~AgvNetWork()
 
 void AgvNetWork::sendToOne(SOCKET sock,const char *buf, int len)//发送给某个id的消息
 {
-    g_log->log(AGV_LOG_LEVEL_INFO,"send client msg="+QString::fromStdString(std::string(buf,len)));
+    //g_log->log(AGV_LOG_LEVEL_INFO,"send client msg="+QString::fromStdString(std::string(buf,len)));
 
     try{
         m_clientIOCP.doSend(sock,buf,len);
@@ -89,7 +89,7 @@ void AgvNetWork::onDisconnectClient(void *owner, SOCKET sock, const QString &sIp
         QString updateSql = "update agv_user set signState = 0 where user_id=?";
         QStringList params;
         params<<QString("%1").arg(user_id);
-        g_sql->exec(updateSql,params);
+        g_sql->exeSql(updateSql,params);
     }
 }
 

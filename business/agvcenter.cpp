@@ -69,13 +69,13 @@ bool AgvCenter::save()//将agv保存到数据库
             QString updateSql = "update agv_agv set agv_name=?,agv_ip=? where id=?";
             params.clear();
             params<<g_m_agvs[selectAgvIds.at(i)]->name()<<g_m_agvs[selectAgvIds.at(i)]->ip()<<QString("%1").arg(g_m_agvs[selectAgvIds.at(i)]->id());
-            if(!g_sql->exec(updateSql,params))
+            if(!g_sql->exeSql(updateSql,params))
                 return false;
         }else{
             //不含有，就删除
             QString deleteSql = "delete from agv_agv where id=?";
             params.clear();params.push_back(QString("%1").arg(selectAgvIds.at(i)));
-            if(g_sql->exec(deleteSql,params)){
+            if(g_sql->exeSql(deleteSql,params)){
                 selectAgvIds.removeAt(i);
                 --i;
             }else{
@@ -91,7 +91,7 @@ bool AgvCenter::save()//将agv保存到数据库
         QString insertSql = "insert into agv_agv(id,agv_name,agv_ip) values(?,?,?)";
         params.clear();
         params<<QString("%1").arg(itr.value()->id())<<itr.value()->name()<<itr.value()->ip();
-        if(!g_sql->exec(insertSql,params))return false;
+        if(!g_sql->exeSql(insertSql,params))return false;
     }
     return true;
 }
