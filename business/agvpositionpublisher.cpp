@@ -17,16 +17,18 @@ AgvPositionPublisher::~AgvPositionPublisher()
 void AgvPositionPublisher::addSubscribe(int subscribe)
 {
     mutex.lock();
-    subscribers.push_back(subscribe);
+    if(!subscribers.contains(subscribe))
+        subscribers.push_back(subscribe);
     mutex.unlock();
 }
 
 void AgvPositionPublisher::removeSubscribe(int subscribe)
 {
     mutex.lock();
-    int index = subscribers.indexOf(subscribe);
-    if(index>=0)
-        subscribers.removeAt(index);
+    subscribers.removeAll(subscribe);
+//    int index = subscribers.indexOf(subscribe);
+//    if(index>=0)
+//        subscribers.removeAt(index);
     mutex.unlock();
 }
 

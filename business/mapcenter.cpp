@@ -501,7 +501,15 @@ bool MapCenter::resetMap(QString stationStr,QString lineStr,QString arcStr)//站
 
 bool MapCenter::load()
 {
-    clear();
+    qDeleteAll(g_m_lines.values());
+    qDeleteAll(g_m_stations.values());
+
+    g_m_stations.clear();
+    g_m_lines.clear();
+    g_m_lmr.clear();
+    g_m_l_adj.clear();
+    g_reverseLines.clear();
+
     /// 算法 线路 QMap<int,AgvLine *> g_m_agvlines;
     /// 算法 站点 QMap<int,AgvStation *> g_m_agvstations
     /// 左中右信息 QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_leftRightMiddle;

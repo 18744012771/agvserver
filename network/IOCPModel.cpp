@@ -718,7 +718,7 @@ bool CIOCPModel::HandleError(PER_SOCKET_CONTEXT *pContext, const DWORD& dwErr)
         // 确认客户端是否还活着...
         if (!_IsSocketAlive(pContext->m_Socket))
         {
-            g_log->log(AGV_LOG_LEVEL_TRACE,QStringLiteral("检测到客户端异常退出！"));
+            g_log->log(AGV_LOG_LEVEL_TRACE,QStringLiteral("检测到客户端异常退出"));
             if (disconnect_call_back != NULL) {
                 SOCKADDR_IN* ClientAddr = &pContext->m_ClientAddr;
                 QString sIp(inet_ntoa(ClientAddr->sin_addr));
@@ -739,7 +739,7 @@ bool CIOCPModel::HandleError(PER_SOCKET_CONTEXT *pContext, const DWORD& dwErr)
     // 可能是客户端异常退出了
     else if (ERROR_NETNAME_DELETED == dwErr)
     {
-        g_log->log(AGV_LOG_LEVEL_TRACE,QStringLiteral("检测到客户端异常退出！"));
+        g_log->log(AGV_LOG_LEVEL_TRACE,QStringLiteral("检测到客户端异常退出"));
         this->_RemoveContext(pContext);
         return true;
     }
