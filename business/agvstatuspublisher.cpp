@@ -81,6 +81,6 @@ void AgvStatusPublisher::run()
             mutex.unlock();
         }
 
-        QyhSleep(50);
+        QyhSleep(100);
     }
 }

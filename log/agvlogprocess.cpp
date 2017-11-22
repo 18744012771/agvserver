@@ -82,6 +82,6 @@ void AgvLogProcess::run()
         }
 
 
-        QyhSleep(10);
+        QyhSleep(50);
     }
 }

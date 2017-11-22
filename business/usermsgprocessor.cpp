@@ -27,7 +27,7 @@ void UserMsgProcessor::run()
 
             parseOneMsg(item,item.data);
         }
-        QyhSleep(50);
+        QyhSleep(100);
     }
 }
 

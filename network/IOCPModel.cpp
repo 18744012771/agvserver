@@ -340,8 +340,8 @@ bool CIOCPModel::_InitializeListenSocket()
     ZeroMemory((char *)&ServerAddress, sizeof(ServerAddress));
     ServerAddress.sin_family = AF_INET;
     // 这里可以绑定任何可用的IP地址，或者绑定一个指定的IP地址
-    //ServerAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    ServerAddress.sin_addr.s_addr = inet_addr(GetLocalIP().toStdString().c_str());
+    ServerAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    //ServerAddress.sin_addr.s_addr = inet_addr(GetLocalIP().toStdString().c_str());
     ServerAddress.sin_port = htons(m_nPort);
 
     // 绑定地址和端口
