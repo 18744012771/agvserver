@@ -1081,7 +1081,7 @@ void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, QMap<QStrin
             responseParams.insert(QString("result"),QString("fail"));
         }else{
             Agv *agv = g_m_agvs[iAgvId];
-            QString updateSql = "update agv_agv set agv_name=?,set agv_ip=? where id=?";
+            QString updateSql = "update agv_agv set agv_name=?,agv_ip=? where id=?";
             QStringList params;
             params<<(requestDatas["name"])<<(requestDatas["ip"])<<(requestDatas["agvid"]);
             if(g_sql->exeSql(updateSql,params)){
