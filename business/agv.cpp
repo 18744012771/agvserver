@@ -208,27 +208,28 @@ void Agv::updateOdometer(int odometer)
     if(m_currentPath.length()<=0)
         return ;
     AgvLine *line =g_m_lines[m_currentPath.at(0)];
-    if(odometer< line->length()*line->rate()){
+    if(odometer< line->length*line->rate){
         //计算位置
-        if(line->line()){
+        if(line->line){
             double theta = atan2(g_m_stations[m_nextStation]->y()-g_m_stations[m_lastStation]->y(),g_m_stations[m_nextStation]->x()-g_m_stations[m_lastStation]->x());
             setRotation(theta*180/M_PI);
             setX(g_m_stations[m_lastStation]->x()+odometer*cos(theta));
             setY(g_m_stations[m_lastStation]->y()+odometer*sin(theta));
         }else{
             //弧线夹角 = 弧长/半径
-            double currentPositionTheta;
-            double theta = odometer/(line->radius()*line->rate());
-            double thetaStart = atan2(line->startY()-line->centerY(),line->startX()-line->centerX());
-            if(line->clockwise()){
-                currentPositionTheta=thetaStart + theta;
-                setRotation(currentPositionTheta*180/M_PI+90);
-            }else{
-                currentPositionTheta=thetaStart-theta;
-                setRotation(currentPositionTheta*180/M_PI-90);
-            }
-            setX(line->centerX()+line->radius()*cos(currentPositionTheta));
-            setX(line->centerY()+line->radius()*sin(currentPositionTheta));
+            //TODO:
+//            double currentPositionTheta;
+//            double theta = odometer/(line->radius()*line->rate);
+//            double thetaStart = atan2(line->startY()-line->centerY(),line->startX()-line->centerX());
+//            if(line->clockwise()){
+//                currentPositionTheta=thetaStart + theta;
+//                setRotation(currentPositionTheta*180/M_PI+90);
+//            }else{
+//                currentPositionTheta=thetaStart-theta;
+//                setRotation(currentPositionTheta*180/M_PI-90);
+//            }
+//            setX(line->centerX()+line->radius()*cos(currentPositionTheta));
+//            setX(line->centerY()+line->radius()*sin(currentPositionTheta));
         }
     }
 }
@@ -250,9 +251,9 @@ void Agv::updateStationOdometer(int station,int odometer)
     //获取path中的下一站
     int nextStationTemp = 0;
     for(int i=0;i<m_currentPath.length();++i){
-        if(g_m_lines[m_currentPath.at(i)]->endStation() == station ){
+        if(g_m_lines[m_currentPath.at(i)]->endStation == station ){
             if(i+1!=m_currentPath.length())
-                nextStationTemp = g_m_lines[m_currentPath.at(i+1)]->endStation();
+                nextStationTemp = g_m_lines[m_currentPath.at(i+1)]->endStation;
             else
                 nextStationTemp = 0;
             break;

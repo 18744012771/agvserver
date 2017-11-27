@@ -328,7 +328,7 @@ QByteArray MsgCenter::taskControlCmd(int agvId, bool changeDirect)
     //然后对接下来的要执行的数量进行预判
     for(int i=0;i<g_m_agvs[agvId]->currentPath().length() && instrct_length <=5;++i){
         AgvLine *line = g_m_lines[g_m_agvs[agvId]->currentPath().at(i)];
-        AgvStation *station = g_m_stations[line->endStation()];
+        AgvStation *station = g_m_stations[line->endStation];
 
         //加入一个命令
         content.append(auto_instruct_forward(station->rfid(),g_m_agvs[agvId]->speed()));

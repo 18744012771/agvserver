@@ -115,7 +115,7 @@ void TaskCenter::unassignedTasksProcess()
             for(int i=0;i<path.length();++i){
                 int reverseLineKey = g_reverseLines[path[i] ];
                 //将这条线路的可用性置为false
-                g_m_lines[reverseLineKey]->setOccuAgv(bestCar->id());
+                g_m_lines[reverseLineKey]->occuAgv=(bestCar->id());
             }
             //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
             bestCar->setStatus(AGV_STATUS_TASKING);
@@ -634,7 +634,7 @@ void TaskCenter::carArriveStation(int car,int station)
     for(int i=0;i<pppath.length();++i)
     {
         int iLine = pppath.at(i);
-        if(g_m_lines[iLine]->endStation() == sstation->id()){
+        if(g_m_lines[iLine]->endStation == sstation->id()){
             findStation = true;
             break;
         }
@@ -656,20 +656,20 @@ void TaskCenter::carArriveStation(int car,int station)
             //将反向的线路置为可用
             int reverseLineKey = g_reverseLines[iLine];
             AgvLine *rLine = g_m_lines[reverseLineKey];
-            rLine->setOccuAgv(car);
+            rLine->occuAgv = (car);
 
             AgvLine *line = g_m_lines[iLine];
             //如果是最后经过的这条线路，退出循环
-            if(line->endStation() == sstation->id())
+            if(line->endStation == sstation->id())
             {
                 break;
             }else{
                 //将经过的站点的占用释放
-                if(g_m_stations[line->startStation()]->occuAgv() == car){
-                    g_m_stations[line->startStation()]->setOccuAgv(0);
+                if(g_m_stations[line->startStation]->occuAgv() == car){
+                    g_m_stations[line->startStation]->setOccuAgv(0);
                 }
-                if(g_m_stations[line->endStation()]->occuAgv() == car){
-                    g_m_stations[line->endStation()]->setOccuAgv(0);
+                if(g_m_stations[line->endStation]->occuAgv() == car){
+                    g_m_stations[line->endStation]->setOccuAgv(0);
                 }
             }
         }

@@ -11,96 +11,70 @@ enum{
     AGV_LINE_COLOR_BLACK,      //已算出路径最小值
 };
 
-class AgvLine : public QObject
+class AgvLine
 {
-    Q_OBJECT
 public:
-    explicit AgvLine(QObject *parent = nullptr);
+    AgvLine():
+        startX(0),
+        startY(0),
+        endX(0),
+        endY(0),
+        line(false),
+        p1x(0),
+        p1y(0),
+        p2x(0),
+        p2y(0),
+        id(0),
+        draw(false),
+        occuAgv(0),
+        length(0),
+        rate(0)
+    {
+    }
+    AgvLine::AgvLine(const AgvLine &b)
+    {
+        startX=b.startX;
+        startY=b.startY;
+        endX=b.endX;
+        endY=b.endY;
+        line=b.line;
+        p1x=b.p1x;
+        p2x=b.p2x;
+        p1y=b.p1y;
+        p2y=b.p2y;
+        id=b.id;
+        draw=b.draw;
+        occuAgv=b.occuAgv;
+        length=b.length;
+        startStation=b.startStation;
+        endStation=b.endStation;
+        rate=b.rate;
+    }
+    bool operator <(const AgvLine &b){
+        return id<b.id;
+    }
 
-    //getter
-    int startX() const {return m_startX;}
-    int startY() const {return m_startY;}
-    int endX() const {return m_endX;}
-    int endY() const {return m_endY;}
-    int radius() const {return m_radius;}
-    bool clockwise() const {return m_clockwise;}
-    bool line() const {return m_line;}
-    int midX() const {return m_midX;}
-    int midY() const {return m_midY;}
-    int centerX() const {return m_centerX;}
-    int centerY() const {return m_centerY;}
-    int angle() const {return m_angle;}
-    int id() const {return m_id;}
-    bool draw() const {return m_draw;}
-    int occuAgv() const {return m_occuAgv;}//占用这个线路的小车
-    int length() const {return m_length;}
-    int startStation() const {return m_startStation;}
-    int endStation() const {return m_endStation;}
-    double rate(){return m_rate;}
+    //直线弧线共有部分
+    int startX;
+    int startY;
+    int endX;
+    int endY;
+    bool line;//true为直线 false为曲线
+    int id;
+    bool draw;
+    int occuAgv;
+    int length;
+    int startStation;
+    int endStation;
+    double rate;
 
-    //setter
-    void setStartX(int newStartX){m_startX=newStartX;emit startXChanged(newStartX);}
-    void setStartY(int newStartY){m_startY=newStartY;emit startYChanged(newStartY);}
-    void setEndX(int newEndX){m_endX=newEndX;emit endXChanged(newEndX);}
-    void setEndY(int newEndY){m_endY=newEndY;emit endYChanged(newEndY);}
-    void setRadius(int newRadius){m_radius=newRadius;emit radiusChanged(newRadius);}
-    void setClockwise(bool newClockwise){m_clockwise=newClockwise;emit clockwiseChanged(newClockwise);}
-    void setLine(bool newLine){m_line=newLine;emit lineChanged(newLine);}
-    void setMidX(int newMidX){m_midX=newMidX;emit midXChanged(newMidX);}
-    void setMidY(int newMidY){m_midY=newMidY;emit midYChanged(newMidY);}
-    void setCenterX(int newCenterX){m_centerX=newCenterX;emit centerXChanged(newCenterX);}
-    void setCenterY(int newCenterY){m_centerY=newCenterY;emit centerYChanged(newCenterY);}
-    void setAngle(int newAngle){m_angle=newAngle;emit angleChanged(newAngle);}
-    void setId(int newId){m_id=newId;emit idChanged(newId);}
-    void setDraw(bool newDraw){m_draw=newDraw;emit drawChanged(newDraw);}
-    void setOccuAgv(int newOccuAgv){m_occuAgv = newOccuAgv;emit occuAgvChanged(newOccuAgv);}
-    void setLength(int newLength){m_length=newLength;emit lengthChanged(newLength);}
-    void setStartStation(int newStartStation){m_startStation=newStartStation;emit startStationChanged(newStartStation);}
-    void setEndStation(int newEndStation){m_endStation=newEndStation;emit endStationChanged(newEndStation);}
-    void setRate(double newRate){m_rate=newRate;emit rateChanged(newRate);}
+    //弧线单独部分
+    //弧线(贝塞尔曲线),三次贝塞尔曲线，共四个点，P0(startx,starty),P1,P2,P3(endX,endY);这里需要额外的两个点坐标P1,P2
+    int p1x;
+    int p1y;
+    int p2x;
+    int p2y;
 
-signals:
-    void startXChanged(int newStartX);
-    void startYChanged(int newStartY);
-    void endXChanged(int newEndX);
-    void endYChanged(int newEndY);
-    void radiusChanged(int newRadius);
-    void clockwiseChanged(bool newClockwise);
-    void lineChanged(bool newLine);
-    void midXChanged(int newMidX);
-    void midYChanged(int newMidY);
-    void centerXChanged(int newCenterX);
-    void centerYChanged(int newCenterY);
-    void angleChanged(int newAngle);
-    void idChanged(int newId);
-    void drawChanged(bool newDraw);
-    void occuAgvChanged(int newOccuAgv);
-    void lengthChanged(int newLength);
-    void startStationChanged(int newKUrtStation);
-    void endStationChanged(int newKUndStation);
-    void rateChanged(double newRate);
-public slots:
-
-private:
-    int m_startX;
-    int m_startY;
-    int m_endX;
-    int m_endY;
-    int m_radius;
-    bool m_clockwise;
-    bool m_line;
-    int m_midX;
-    int m_midY;
-    int m_centerX;
-    int m_centerY;
-    int m_angle;
-    int m_id;
-    bool m_draw;
-    int m_occuAgv;//占用这个线路的小车
-    int m_length;
-    int m_startStation;
-    int m_endStation;
-    double m_rate;//和实际线路的比例
 
 public:
     //计算路径用的
@@ -108,8 +82,11 @@ public:
     int distance;//起点到这条线的终点 的距离
     int color;
 
+
+    //TODO
+    //TODO
     bool operator == (const AgvLine &b){
-        return this->startStation() == b.startStation();// && this->endStation() == b.endStation() && this->length() == b.length();
+        return this->startStation == b.startStation&& this->endStation == b.endStation;
     }
 };
 

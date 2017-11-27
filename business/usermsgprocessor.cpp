@@ -58,8 +58,6 @@ void UserMsgProcessor::parseOneMsg(const QyhMsgDateItem &item, const std::string
     if((itr=params.find("type"))!=params.end()
             &&(itr=params.find("todo"))!=params.end()
             &&(itr=params.find("queuenumber"))!=params.end()){
-        QString ss = "a good msg";
-        g_log->log(AGV_LOG_LEVEL_INFO,ss);
         //接下来对这条消息进行响应
         LARGE_INTEGER start;
         LARGE_INTEGER end ;
@@ -142,7 +140,7 @@ void UserMsgProcessor::responseOneMsg(const QyhMsgDateItem &item, QMap<QString, 
     }else if(requestDatas["type"] == "task"){
         clientMsgTaskProcess(item,requestDatas,datalists);
     }else if(requestDatas["type"] == "log"){
-        clientMsgLogProcess(item,requestDatas,datalists);
+        clientMsgLogProcess(item,requestDatas,datalists);        
     }
 }
 
@@ -214,6 +212,7 @@ void UserMsgProcessor::clientMsgMapProcess(const QyhMsgDateItem &item,QMap<QStri
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
         g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+        return ;
     }
 
     /// 创建地图
@@ -260,6 +259,7 @@ void UserMsgProcessor::clientMsgAgvProcess(const QyhMsgDateItem &item,QMap<QStri
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
         g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+        return ;
     }
 
     /// 请求控制权
@@ -322,6 +322,7 @@ void UserMsgProcessor::clientMsgAgvManageProcess(const QyhMsgDateItem &item,QMap
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
         g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+        return ;
     }
 
     /// agv列表
@@ -359,6 +360,7 @@ void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QStr
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
         g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+        return ;
     }
 
     /// 创建任务(创建到X点的任务)
@@ -424,6 +426,7 @@ void UserMsgProcessor::clientMsgLogProcess(const QyhMsgDateItem &item,QMap<QStri
     if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
         QString xml = getResponseXml(responseParams,responseDatalists);
         g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+        return ;
     }
 
     /// 创建任务(创建到X点的任务)
@@ -730,25 +733,23 @@ void UserMsgProcessor:: Map_LineList(const QyhMsgDateItem &item, QMap<QString, Q
     for(QMap<int,AgvLine *>::iterator itr=g_m_lines.begin();itr!=g_m_lines.end();++itr){
         QMap<QString,QString> list;
 
-        list.insert(QString("startX"),QString("%1").arg(itr.value()->startX()));
-        list.insert(QString("startY"),QString("%1").arg(itr.value()->startY()));
-        list.insert(QString("endX"),QString("%1").arg(itr.value()->endX()));
-        list.insert(QString("endY"),QString("%1").arg(itr.value()->endY()));
-        list.insert(QString("radius"),QString("%1").arg(itr.value()->radius()));
-        list.insert(QString("clockwise"),QString("%1").arg(itr.value()->clockwise()));
-        list.insert(QString("line"),QString("%1").arg(itr.value()->line()));
-        list.insert(QString("midX"),QString("%1").arg(itr.value()->midX()));
-        list.insert(QString("midY"),QString("%1").arg(itr.value()->midY()));
-        list.insert(QString("centerX"),QString("%1").arg(itr.value()->centerX()));
-        list.insert(QString("centerY"),QString("%1").arg(itr.value()->centerY()));
-        list.insert(QString("angle"),QString("%1").arg(itr.value()->angle()));
-        list.insert(QString("id"),QString("%1").arg(itr.value()->id()));
-        list.insert(QString("draw"),QString("%1").arg(itr.value()->draw()));
-        list.insert(QString("length"),QString("%1").arg(itr.value()->length()));
-        list.insert(QString("startStation"),QString("%1").arg(itr.value()->startStation()));
-        list.insert(QString("endStation"),QString("%1").arg(itr.value()->endStation()));
-        list.insert(QString("rate"),QString("%1").arg(itr.value()->rate()));
+        list.insert(QString("startX"),QString("%1").arg(itr.value()->startX));
+        list.insert(QString("startY"),QString("%1").arg(itr.value()->startY));
+        list.insert(QString("endX"),QString("%1").arg(itr.value()->endX));
+        list.insert(QString("endY"),QString("%1").arg(itr.value()->endY));
+        list.insert(QString("line"),QString("%1").arg(itr.value()->line));
+        list.insert(QString("id"),QString("%1").arg(itr.value()->id));
+        list.insert(QString("draw"),QString("%1").arg(itr.value()->draw));
+        list.insert(QString("length"),QString("%1").arg(itr.value()->length));
+        list.insert(QString("startStation"),QString("%1").arg(itr.value()->startStation));
+        list.insert(QString("endStation"),QString("%1").arg(itr.value()->endStation));
+        list.insert(QString("rate"),QString("%1").arg(itr.value()->rate));
+        list.insert(QString("occuAgv"),QString("%1").arg(itr.value()->occuAgv));
 
+        list.insert(QString("p1x"),QString("%1").arg(itr.value()->p1x));
+        list.insert(QString("p1y"),QString("%1").arg(itr.value()->p1y));
+        list.insert(QString("p2x"),QString("%1").arg(itr.value()->p2x));
+        list.insert(QString("p2y"),QString("%1").arg(itr.value()->p2y));
         responseDatalists.push_back(list);
     }
 
