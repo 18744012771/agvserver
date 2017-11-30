@@ -146,7 +146,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTO_INCREMENT,agv_name text,agv_ip text);";
+        QString createSql = "CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTO_INCREMENT,agv_name text);";
         args.clear();
         bool b = exeSql(createSql,args);
         if(!b)return false;

@@ -61,21 +61,21 @@ void MapCenter::addStation(QString s)
                 QStringList pp = ss.split(",");
                 if(pp.length()>=6){
                     AgvStation *aStation = new AgvStation;
-                    aStation->setType((pp.at(0).toInt()));
-                    aStation->setLineAmount((pp.at(1).toInt()));
-                    aStation->setX(pp.at(2).toInt());
-                    aStation->setY(pp.at(3).toInt());
-                    aStation->setName(pp.at(4));
-                    aStation->setRfid(pp.at(5).toInt());
+                    aStation->type = ((pp.at(0).toInt()));
+                    aStation->lineAmount = ((pp.at(1).toInt()));
+                    aStation->x = (pp.at(2).toInt());
+                    aStation->y = (pp.at(3).toInt());
+                    aStation->name = (pp.at(4));
+                    aStation->rfid = (pp.at(5).toInt());
 
                     QString insertSql = "INSERT INTO agv_station (station_x,station_y,station_type,station_name,station_lineAmount,station_rfid) VALUES (?,?,?,?,?,?);SELECT @@Identity;";
                     QStringList params;
-                    params<<QString("%1").arg(aStation->x())<<QString("%1").arg(aStation->y())<<QString("%1").arg(aStation->type())<<aStation->name()<<QString("%1").arg(aStation->lineAmount())<<QString("%1").arg(aStation->rfid());
+                    params<<QString("%1").arg(aStation->x)<<QString("%1").arg(aStation->y)<<QString("%1").arg(aStation->type)<<aStation->name<<QString("%1").arg(aStation->lineAmount)<<QString("%1").arg(aStation->rfid);
                     QList<QStringList> insertResult = g_sql->query(insertSql,params);
                     if(insertResult.length()>0&&insertResult.at(0).length()>0)
                     {
-                        aStation->setId(insertResult.at(0).at(0).toInt());
-                        g_m_stations.insert(aStation->id(),aStation);
+                        aStation->id=(insertResult.at(0).at(0).toInt());
+                        g_m_stations.insert(aStation->id,aStation);
                     }else{
                         g_log->log(AGV_LOG_LEVEL_ERROR,"save agv statiom to database fail!");
                         delete aStation;
@@ -203,6 +203,11 @@ int MapCenter::getLMR(AgvLine *lastLine,AgvLine *nextLine)
 {
     if(lastLine->endStation != nextLine->startStation)return PATH_LMF_NOWAY;
 
+    if(lastLine->id == 18||nextLine->id == 18){
+        qDebug() << "18hao!";
+    }
+
+
     double lastAngle,nextAngle;
 
     if(lastLine->line){
@@ -230,7 +235,7 @@ int MapCenter::getLMR(AgvLine *lastLine,AgvLine *nextLine)
     if(abs(changeAngle)<=20*M_PI/180){
         //角度基本一致
         //如果只有一条线路，那就不算左中右，为了将来的东西防止出问题。如果不只一条线路，并且下一条线路是弧线，则endAngle要重新计算
-        if(!nextLine->line&& g_m_stations[nextLine->startStation]->lineAmount()>4)
+        if(!nextLine->line)
         {
             //这种情况比较多见，怎么优化呢？？回头再说吧
             nextAngle = atan2(nextLine->endY - nextLine->startY,nextLine->endX-nextLine->startX);
@@ -254,7 +259,7 @@ int MapCenter::getLMR(AgvLine *lastLine,AgvLine *nextLine)
     }
 
     //夹角大于80°，认为拐的弧度过大，不能过去
-    if(abs(changeAngle)>=80*M_PI/180){
+    if(abs(changeAngle)>=100*M_PI/180){
         //拐角特别大！
         return PATH_LMF_NOWAY;
     }
@@ -319,27 +324,27 @@ void MapCenter::create()
                 continue;
             }
 
-//            QString insertSql = "INSERT INTO agv_line (line_startX,line_startY,line_endX,line_endY,line_line,line_length,line_draw,line_clockwise,line_centerX,line_centerY,line_midX,line_midY,line_radius,line_angle) VALUES (?,?,?,?,?,?,?);SELECT @@Identity;";
-//            QStringList params;
-//            params<<QString("%1").arg(rLine->startX())<<QString("%1").arg(rLine->startY())
-//                 <<QString("%1").arg(rLine->endX())<<QString("%1").arg(rLine->endY())
-//                <<QString("%1").arg(rLine->line())<<QString("%1").arg(rLine->length())
-//               <<QString("%1").arg(rLine->draw())<<QString("%1").arg(rLine->clockwise())
-//              <<QString("%1").arg(rLine->centerX())<<QString("%1").arg(rLine->centerY())
-//             <<QString("%1").arg(rLine->midX())<<QString("%1").arg(rLine->midY())
-//            <<QString("%1").arg(rLine->radius())<<QString("%1").arg(rLine->angle());
+            //            QString insertSql = "INSERT INTO agv_line (line_startX,line_startY,line_endX,line_endY,line_line,line_length,line_draw,line_clockwise,line_centerX,line_centerY,line_midX,line_midY,line_radius,line_angle) VALUES (?,?,?,?,?,?,?);SELECT @@Identity;";
+            //            QStringList params;
+            //            params<<QString("%1").arg(rLine->startX())<<QString("%1").arg(rLine->startY())
+            //                 <<QString("%1").arg(rLine->endX())<<QString("%1").arg(rLine->endY())
+            //                <<QString("%1").arg(rLine->line())<<QString("%1").arg(rLine->length())
+            //               <<QString("%1").arg(rLine->draw())<<QString("%1").arg(rLine->clockwise())
+            //              <<QString("%1").arg(rLine->centerX())<<QString("%1").arg(rLine->centerY())
+            //             <<QString("%1").arg(rLine->midX())<<QString("%1").arg(rLine->midY())
+            //            <<QString("%1").arg(rLine->radius())<<QString("%1").arg(rLine->angle());
 
-//            QList<QStringList> insertResult = g_sql->query(insertSql,params);
+            //            QList<QStringList> insertResult = g_sql->query(insertSql,params);
 
-//            if(insertResult.length()>0&&insertResult.at(0).length()>0)
-//            {
-//                rLine->setId(insertResult.at(0).at(0).toInt());
-//                reverseLines.insert(rLine->id(),rLine);
-//            }else{
-//                g_log->log(AGV_LOG_LEVEL_ERROR,"save agv line to database fail!");
-//                delete rLine;
-//                continue;
-//            }
+            //            if(insertResult.length()>0&&insertResult.at(0).length()>0)
+            //            {
+            //                rLine->setId(insertResult.at(0).at(0).toInt());
+            //                reverseLines.insert(rLine->id(),rLine);
+            //            }else{
+            //                g_log->log(AGV_LOG_LEVEL_ERROR,"save agv line to database fail!");
+            //                delete rLine;
+            //                continue;
+            //            }
         }else{
             QString insertSql = "INSERT INTO agv_line (line_startX,line_startY,line_endX,line_endY,line_line,line_length,line_draw) VALUES (?,?,?,?,?,?,?);SELECT @@Identity;";
             QStringList params;
@@ -372,38 +377,38 @@ void MapCenter::create()
     //3. 对线路的起点终点进行赋值 对站点的经过线路进行赋值
     for(QMap<int,AgvStation *>::iterator pos = g_m_stations.begin();pos!=g_m_stations.end();++pos){
         AgvStation *station = pos.value();
-        station->setLineAmount(0);
+        station->lineAmount = (0);
         for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr){
             AgvLine *line = itr.value();
 
             //更新线路的起止站点到数据库
-            if(line->startX == station->x() && line->startY == station->y())
+            if(line->startX == station->x && line->startY == station->y)
             {
                 QString updateSql = "update agv_line set line_startStation = ? where id=? ;";
                 QStringList params;
-                params<<QString("%1").arg( station->id())<<QString("%1").arg( line->id);
+                params<<QString("%1").arg( station->id)<<QString("%1").arg( line->id);
                 if(!g_sql->exeSql(updateSql,params)){
                     g_log->log(AGV_LOG_LEVEL_ERROR,"update agv_line set start startion fail!");
                     continue;
                 }
-                line->startStation = (station->id());
-                station->setLineAmount(station->lineAmount()+1);
-            }else if(line->endX == station->x() && line->endY == station->y()){
+                line->startStation = (station->id);
+                station->lineAmount++;
+            }else if(line->endX == station->x && line->endY == station->y){
                 QString updateSql = "update agv_line set line_endStation = ? where id=? ;";
                 QStringList params;
-                params<<QString("%1").arg(station->id())<<QString("%1").arg(line->id);
+                params<<QString("%1").arg(station->id)<<QString("%1").arg(line->id);
                 if(!g_sql->exeSql(updateSql,params)){
                     g_log->log(AGV_LOG_LEVEL_ERROR,"update agv_line set end startion fail!");
                     continue;
                 }
-                line->endStation = (station->id());
+                line->endStation = (station->id);
             }
         }
 
         //更新站点的lineamount到数据库
         QString updateSql = "update agv_station set station_lineAmount = ? where id=? ;";
         QStringList params;
-        params<<QString("%1").arg(station->lineAmount())<<QString("%1").arg( station->id());
+        params<<QString("%1").arg(station->lineAmount)<<QString("%1").arg( station->id);
         g_sql->exeSql(updateSql,params);
     }
 
@@ -535,14 +540,14 @@ bool MapCenter::load()
             return false;
         }
         AgvStation *station = new AgvStation;
-        station->setId(qsl.at(0).toInt());
-        station->setX(qsl.at(1).toInt());
-        station->setY(qsl.at(2).toInt());
-        station->setType(qsl.at(3).toInt());
-        station->setName(qsl.at(4));
-        station->setLineAmount(qsl.at(5).toInt());
-        station->setRfid(qsl.at(6).toInt());
-        g_m_stations.insert(station->id(),station);
+        station->id = (qsl.at(0).toInt());
+        station->x = (qsl.at(1).toInt());
+        station->y = (qsl.at(2).toInt());
+        station->type = (qsl.at(3).toInt());
+        station->name = (qsl.at(4));
+        station->lineAmount = (qsl.at(5).toInt());
+        station->rfid = (qsl.at(6).toInt());
+        g_m_stations.insert(station->id,station);
     }
 
     //lines
@@ -573,66 +578,84 @@ bool MapCenter::load()
         line->p2x=(qsl.at(13).toInt());
         line->p2y=(qsl.at(14).toInt());
 
+        //        ///在这里对station的ID做一个修正。
+        //        for(QMap<int,AgvStation *>::iterator itr = g_m_stations.begin();itr!=g_m_stations.end();++itr){
+        //            if(line->startX == itr.value()->x && line->startY == itr.value()->y){
+        //                line->startStation = itr.key();
+        //            }
+        //            if(line->endX == itr.value()->x && line->endY == itr.value()->y){
+        //                line->endStation = itr.key();
+        //            }
+        //        }
+        //        //执行更新语句
+        //        QString updateStartEndStation = "update agv__line set line_startStation = ?,line_endStation=? where id=?";
+        //        QStringList startEndStationParams;
+        //        startEndStationParams<<QString("%1").arg(line->startStation);
+        //        startEndStationParams<<QString("%1").arg(line->endStation);
+        //        startEndStationParams<<QString("%1").arg(line->id);
+        //        if(!g_sql->exeSql(updateStartEndStation,startEndStationParams)){
+        //            qDebug() << "QYH update start end station fail! id = "<<line->id;
+        //        }
 
-//        {
-//            //////////////////temp将原来的弧线，转换成新的弧线表
-//            ///
-//            ///
-//            if(line->line()){
-//                //插入到新的line表中
-//                QStringList params;
-//                QString insertSql = "insert into agv__line (line_startX,line_startY,line_endX,line_endY,line_length,line_startStation,line_endStation,line_draw,line_rate,line_line)values(?,?,?,?,?,?,?,?,?,?);";
-//                params<<QString("%1").arg(line->startX())
-//                     <<QString("%1").arg(line->startY())
-//                    <<QString("%1").arg(line->endX())
-//                   <<QString("%1").arg(line->endY())
-//                  <<QString("%1").arg(line->length())
-//                 <<QString("%1").arg(line->startStation())
-//                <<QString("%1").arg(line->endStation())
-//                <<QString("%1").arg(line->draw())
-//                <<QString("%1").arg(line->rate())
-//                <<QString("%1").arg(line->line());
-//                bool bb = g_sql->exeSql(insertSql,params);
-//                if(!bb){
-//                    //
-//                    qDebug() <<"line - FAIL!!!!!!!!!!!!!!!!!! insert agv__line!";
-//                }else{
-//                    qDebug() <<"line - FAIL!!!!!!!!!!!!!!!!!! insert agv__line!";
-//                }
-//            }else{
-//                //插入到新的line表中(这是一个arc)
-//                QStringList params;
-//                QString insertSql = "insert into agv__line (line_startX,line_startY,line_endX,line_endY,line_length,line_startStation,line_endStation,line_draw,line_rate,line_line,line_p1x,line_p1y,line_p2x,line_p2y)values(?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
-//                params<<QString("%1").arg(line->startX())
-//                     <<QString("%1").arg(line->startY())
-//                    <<QString("%1").arg(line->endX())
-//                   <<QString("%1").arg(line->endY())
-//                  <<QString("%1").arg(line->length())
-//                 <<QString("%1").arg(line->startStation())
-//                <<QString("%1").arg(line->endStation())
-//                <<QString("%1").arg(line->draw())
-//                <<QString("%1").arg(line->rate())
-//                <<QString("%1").arg(line->line());
+        //        {
+        //            //////////////////temp将原来的弧线，转换成新的弧线表
+        //            ///
+        //            ///
+        //            if(line->line()){
+        //                //插入到新的line表中
+        //                QStringList params;
+        //                QString insertSql = "insert into agv__line (line_startX,line_startY,line_endX,line_endY,line_length,line_startStation,line_endStation,line_draw,line_rate,line_line)values(?,?,?,?,?,?,?,?,?,?);";
+        //                params<<QString("%1").arg(line->startX())
+        //                     <<QString("%1").arg(line->startY())
+        //                    <<QString("%1").arg(line->endX())
+        //                   <<QString("%1").arg(line->endY())
+        //                  <<QString("%1").arg(line->length())
+        //                 <<QString("%1").arg(line->startStation())
+        //                <<QString("%1").arg(line->endStation())
+        //                <<QString("%1").arg(line->draw())
+        //                <<QString("%1").arg(line->rate())
+        //                <<QString("%1").arg(line->line());
+        //                bool bb = g_sql->exeSql(insertSql,params);
+        //                if(!bb){
+        //                    //
+        //                    qDebug() <<"line - FAIL!!!!!!!!!!!!!!!!!! insert agv__line!";
+        //                }else{
+        //                    qDebug() <<"line - FAIL!!!!!!!!!!!!!!!!!! insert agv__line!";
+        //                }
+        //            }else{
+        //                //插入到新的line表中(这是一个arc)
+        //                QStringList params;
+        //                QString insertSql = "insert into agv__line (line_startX,line_startY,line_endX,line_endY,line_length,line_startStation,line_endStation,line_draw,line_rate,line_line,line_p1x,line_p1y,line_p2x,line_p2y)values(?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
+        //                params<<QString("%1").arg(line->startX())
+        //                     <<QString("%1").arg(line->startY())
+        //                    <<QString("%1").arg(line->endX())
+        //                   <<QString("%1").arg(line->endY())
+        //                  <<QString("%1").arg(line->length())
+        //                 <<QString("%1").arg(line->startStation())
+        //                <<QString("%1").arg(line->endStation())
+        //                <<QString("%1").arg(line->draw())
+        //                <<QString("%1").arg(line->rate())
+        //                <<QString("%1").arg(line->line());
 
-//                ////////////////////////////这里是接下来的弧线部分
-//                int p1x = (line->startX()+line->midX())/2;
-//                int p1y = (line->startY()+line->midY())/2;
-//                int p2x = (line->endX()+line->midX())/2;
-//                int p2y = (line->endY()+line->midY())/2;
+        //                ////////////////////////////这里是接下来的弧线部分
+        //                int p1x = (line->startX()+line->midX())/2;
+        //                int p1y = (line->startY()+line->midY())/2;
+        //                int p2x = (line->endX()+line->midX())/2;
+        //                int p2y = (line->endY()+line->midY())/2;
 
-//                params<<QString("%1").arg(p1x)
-//                     <<QString("%1").arg(p1y)
-//                    <<QString("%1").arg(p2x)
-//                   <<QString("%1").arg(p2y);
-//                bool bb =  g_sql->exeSql(insertSql,params);
-//                if(!bb){
-//                    //
-//                    qDebug() <<"arc - FAIL!!!!!!!!!!!!!!!!!! insert agv__line!";
-//                }else{
-//                    qDebug() <<"arc - FAIL!!!!!!!!!!!!!!!!!! insert agv__line!";
-//                }
-//            }
-//        }
+        //                params<<QString("%1").arg(p1x)
+        //                     <<QString("%1").arg(p1y)
+        //                    <<QString("%1").arg(p2x)
+        //                   <<QString("%1").arg(p2y);
+        //                bool bb =  g_sql->exeSql(insertSql,params);
+        //                if(!bb){
+        //                    //
+        //                    qDebug() <<"arc - FAIL!!!!!!!!!!!!!!!!!! insert agv__line!";
+        //                }else{
+        //                    qDebug() <<"arc - FAIL!!!!!!!!!!!!!!!!!! insert agv__line!";
+        //                }
+        //            }
+        //        }
         g_m_lines.insert(line->id,line);
     }
     //反方向线路
@@ -683,8 +706,79 @@ bool MapCenter::load()
             lines.push_back(endLine);
             g_m_l_adj[startLine] = lines;
         }
-
     }
+
+//    /////////////////////////////////////////////////////////////////////////
+//    ///因为数据是之前的导入进来的，缺少adj和lmr数据。所以这里对这个进行一番补充
+//    ///搞定后，请注释掉这段
+//    ///---------------------------------------------------------start--------------------------------------------------------
+//    //4.构建左中右信息 上一线路的key，下一下路的key，然后是 LMRN  L:left,M:middle,R:right,N:noway;就是不通的意思
+//    //对每个站点的所有连线进行匹配
+//    qDebug() << "qyh job start!";
+//    for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr){
+//        AgvLine *a = itr.value();
+//        for(QMap<int,AgvLine *>::iterator pos =  g_m_lines.begin();pos!=g_m_lines.end();++pos){
+//            AgvLine *b = pos.value();
+//            if(a == b)continue;
+//            //a-->station -->b （a线路的终点是b线路的起点。那么计算一下这三个点的左中右信息）
+//            if(a->endStation == b->startStation && a->startStation!=b->endStation){
+//                PATH_LEFT_MIDDLE_RIGHT p;
+//                p.lastLine = a->id;
+//                p.nextLine = b->id;
+//                if(g_m_lmr.keys().contains(p))continue;
+//                g_m_lmr[p]=getLMR(a,b);
+//                //保存到数据库
+//                QString insertSql = "insert into agv_lmr(lmr_lastLine,lmr_nextLine,lmr_lmr) values(?,?,?);";
+//                QStringList params;
+//                params<<QString("%1").arg(p.lastLine)<<QString("%1").arg(p.nextLine)<<QString("%1").arg(g_m_lmr[p]);
+//                g_sql->exeSql(insertSql,params);
+//            }
+//        }
+//    }
+//    //构建adj
+//    for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr){
+//        AgvLine *a = itr.value();
+//        for(QMap<int,AgvLine *>::iterator pos =  g_m_lines.begin();pos!=g_m_lines.end();++pos){
+//            AgvLine *b = pos.value();
+//            if(a == b)continue;
+
+//            PATH_LEFT_MIDDLE_RIGHT p;
+//            p.lastLine = a->id;
+//            p.nextLine = b->id;
+
+//            if(a->endStation == b->startStation && a->startStation != b->endStation){
+//                if(g_m_l_adj.keys().contains(a->id)){
+//                    if(g_m_l_adj[a->id].contains(b))continue;
+
+//                    if(g_m_lmr.keys().contains(p) && g_m_lmr[p] != PATH_LMF_NOWAY){
+//                        g_m_l_adj[a->id].append(b);
+//                    }
+//                }else{
+//                    //插入
+//                    if(g_m_lmr[p] != PATH_LMF_NOWAY){
+//                        QList<AgvLine*> v;
+//                        v.append(b);
+//                        g_m_l_adj[a->id] = v;
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    //将adj保存到数据库
+//    for(QMap<int,QList<AgvLine*> >::iterator itr = g_m_l_adj.begin();itr!=g_m_l_adj.end();++itr){
+//        QList<AgvLine*> lines = itr.value();
+//        QString insertSql = "insert into agv_adj (adj_startLine,adj_endLine) values(?,?)";
+//        QStringList params;
+//        for(QList<AgvLine *>::iterator pos = lines.begin();pos!=lines.end();++pos)
+//        {
+//            AgvLine *l = *pos;
+//            params.clear();
+//            params<<QString("%1").arg( itr.key())<<QString("%1").arg(l->id);
+//            g_sql->exeSql(insertSql,params);
+//        }
+//    }
+//    qDebug() << "qyh job done!";
+//    ///---------------------------------------------------------end--------------------------------------------------------
 
     return true;
 }
@@ -803,6 +897,10 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
     mutex.lock();
     QList<int> result;
     //异常检查
+    //如果上一站是未知的，例如第一次开机！
+    if(lastPoint == 0){
+        lastPoint = startPoint;
+    }
     if(!g_m_stations.keys().contains(lastPoint)){
         mutex.unlock();
         return result;
@@ -820,7 +918,7 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
         //如果反向了
         if(changeDirect && lastPoint!=startPoint)
         {
-            if(g_m_stations[endPoint]->occuAgv()!=0 && g_m_stations[endPoint]->occuAgv()!=agvId)
+            if(g_m_stations[endPoint]->occuAgv!=0 && g_m_stations[endPoint]->occuAgv!=agvId)
             {
                 mutex.unlock();
                 return result;
@@ -872,7 +970,7 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
             //所有线路为白色，距离为未知
             AgvLine *line =itr.value();
             if(line->occuAgv!=0 && line->occuAgv!=agvId)continue;//逆向占用了（而且是被不是当前车辆的车占用了）
-            if(g_m_stations[line->endStation]->occuAgv()!=0 && g_m_stations[line->endStation]->occuAgv()!=agvId)continue;//这条线路的终点被占用了
+            if(g_m_stations[line->endStation]->occuAgv!=0 && g_m_stations[line->endStation]->occuAgv!=agvId)continue;//这条线路的终点被占用了
             if(line->endStation == startPoint){
                 line->distance = 0;
                 line->color = AGV_LINE_COLOR_GRAY;
@@ -890,7 +988,7 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
         for(int i=0;i<g_m_l_adj[tLine].length();++i){
             AgvLine *l = g_m_l_adj[tLine][i];
             if(l->occuAgv!=0 && l->occuAgv!=agvId)continue;//反向被占用，不考虑他了
-            if(g_m_stations[l->endStation]->occuAgv()!=0 && g_m_stations[l->endStation]->occuAgv()!=agvId)continue;//这条线路的终点被占用了
+            if(g_m_stations[l->endStation]->occuAgv!=0 && g_m_stations[l->endStation]->occuAgv!=agvId)continue;//这条线路的终点被占用了
             if(l->color == AGV_LINE_COLOR_BLACK)
             {
                 continue;

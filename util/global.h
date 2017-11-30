@@ -5,6 +5,8 @@
 #include <QMap>
 #include <QString>
 #include <QMutex>
+#include <QDebug>
+#include <QVariant>
 
 #include "sql/sql.h"
 #include "log/agvlog.h"

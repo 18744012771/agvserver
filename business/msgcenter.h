@@ -24,33 +24,21 @@ public:
     explicit MsgCenter(QObject *parent = nullptr);
     ~MsgCenter();
     void init();
+
     bool addAgvPostionSubscribe(int subscribe);
     bool removeAgvPositionSubscribe(int subscribe);
     bool addAgvStatusSubscribe(int subscribe,int agvId);
     bool removeAgvStatusSubscribe(int subscribe,int agvId = 0);
     bool addLogSubscribe(int subscribe,int agvId);
     bool removeLogSubscribe(int subscribe,int agvId = 0);
-    QByteArray taskControlCmd(int agvId,bool changeDirect);
-    bool handControlCmd(int agvId,int agvHandType,int speed);
 signals:
 
 public slots:
 
 private:
-    QByteArray auto_instruct_stop(int rfid,int delay);
-    QByteArray auto_instruct_forward(int rfid,int speed);
-    QByteArray auto_instruct_backward(int rfid,int speed);
-    QByteArray auto_instruct_turnleft(int rfid,int speed);
-    QByteArray auto_instruct_turnright(int rfid,int speed);
-    QByteArray auto_instruct_mp3_left(int rfid,int mp3Id);
-    QByteArray auto_instruct_mp3_right(int rfid, int mp3Id);
-    QByteArray auto_instruct_mp3_volume(int rfid, int volume);
-    QByteArray auto_instruct_wait();
-
     AgvPositionPublisher *positionPublisher;
     AgvStatusPublisher *statusPublisher;
 
-    QByteArray packet(char code_mode,QByteArray content);
 };
 
 #endif // MSGCENTER_H

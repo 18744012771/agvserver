@@ -44,9 +44,6 @@ public:
     void recvClientMsgProcess(char *buf, int len, SOCKET sock, const QString &ip, int port);
 
     //发送消息线程
-    static void serverSendFunc(void *param);
-    void serverSendProcess();
-
     bool initServer();
 signals:
 
@@ -56,12 +53,6 @@ private:
     //CIOCPModel m_agvIOCP;
     CIOCPModel m_clientIOCP;
     volatile bool isQuit;
-
-    //初始化
-    //bool initAgvServer();
-    bool initClientServer();
-    //map<int,int> agv_id_and_sockets;
-    //map<int,int> client_id_and_sockets;
 };
 
 #endif // AGVNETWORK_H

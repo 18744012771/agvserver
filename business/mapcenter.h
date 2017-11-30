@@ -27,7 +27,7 @@ public:
     bool load();
 
     //获取最优路径
-    QList<int> getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect);//最后一个参数是是否可以换个方向
+    QList<int> getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect = false);//最后一个参数是是否可以换个方向
 
 signals:
     void mapUpdate();//地图更新了,通知前端的所有显示界面，更新地图

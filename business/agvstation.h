@@ -1,7 +1,7 @@
 ﻿#ifndef AGVSTATION_H
 #define AGVSTATION_H
 
-#include <QObject>
+#include <QString>
 
 //去掉了虚站点!所有站点都是RFID点
 enum AGV_STATION_TYPE{
@@ -11,51 +11,49 @@ enum AGV_STATION_TYPE{
 
 
 
-class AgvStation : public QObject
+class AgvStation
 {
-    Q_OBJECT
 public:
-    explicit AgvStation(QObject *parent = nullptr);
+    AgvStation():
+        x(0),
+        y(0),
+        type(0),
+        name(""),
+        lineAmount(0),
+        id(0),
+        rfid(0),
+        occuAgv(0)
+    {
+    }
 
-    //getter
-    int x(){return  m_x;}
-    int y(){return  m_y;}
-    int type(){return  m_type;}
-    QString name(){return  m_name;}
-    int lineAmount(){return  m_lineAmount;}
-    int id(){return  m_id;}
-    int rfid(){return  m_rfid;}
-    int occuAgv(){return m_occuAgv;}
+    AgvStation::AgvStation(const AgvStation &b)
+    {
+        x=b.x;
+        y=b.y;
+        type=b.type;
+        name=b.name;
+        lineAmount=b.lineAmount;
+        id=b.id;
+        rfid=b.rfid;
+        occuAgv=b.occuAgv;
+    }
 
-    //setter
-    void setX(int newX){m_x=newX;emit xChanged(newX);}
-    void setY(int newY){m_y=newY;emit yChanged(newY);}
-    void setType(int newType){m_type=newType;emit typeChanged(newType);}
-    void setName(QString newName){m_name=newName;emit nameChanged(newName);}
-    void setLineAmount(int newLineAmount){m_lineAmount=newLineAmount;emit lineAmountChanged(newLineAmount);}
-    void setId(int newId){m_id=newId;emit idChanged(newId);}
-    void setRfid(int newRfid){m_rfid=newRfid;emit rfidChanged(newRfid);}
-    void setOccuAgv(int newOccuAgv){m_occuAgv=newOccuAgv;emit occuAgvChanged(newOccuAgv);}
-signals:
-    void xChanged(int newX);
-    void yChanged(int newY);
-    void typeChanged(int newType);
-    void nameChanged(QString newName);
-    void lineAmountChanged(int newLineAmount);
-    void idChanged(int newId);
-    void rfidChanged(int newRfid);
-    void occuAgvChanged(int newOccuAgv);
-public slots:
+    bool operator <(const AgvStation &b){
+        return id<b.id;
+    }
 
-private:
-    int m_x;
-    int m_y;
-    int m_type;
-    QString m_name;
-    int m_lineAmount;
-    int m_id;
-    int m_rfid;
-    int m_occuAgv;
+    int x;
+    int y;
+    int type;
+    QString name;
+    int lineAmount;
+    int id;
+    int rfid;
+    int occuAgv;
+
+    bool operator == (const AgvStation &b){
+        return this->id == b.id;
+    }
 };
 
 #endif // AGVSTATION_H

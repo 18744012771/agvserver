@@ -48,12 +48,12 @@ void TaskCenter::unassignedTasksProcess()
         int tempDis = distance_infinity;
         if(ttask->excuteCar()>0){//固定车辆去执行该任务
             Agv *excutecar = g_m_agvs[ttask->excuteCar()];
-            if(excutecar->status()!=AGV_STATUS_IDLE)continue;
+            if(excutecar->status!=AGV_STATUS_IDLE)continue;
             QList<int> result;
-            if(excutecar->nowStation()>0){
-                result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nowStation(), ttask->nextTodoNode()->aimStation,tempDis,true);
+            if(excutecar->nowStation>0){
+                result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nowStation, ttask->nextTodoNode()->aimStation,tempDis,false);
             }else{
-                result = g_agvMapCenter.getBestPath(excutecar->id(),excutecar->lastStation(),excutecar->nextStation(), ttask->nextTodoNode()->aimStation,tempDis,true);
+                result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nextStation, ttask->nextTodoNode()->aimStation,tempDis,false);
             }
             if(result.length()>0&&tempDis!=distance_infinity){
                 bestCar = excutecar;
@@ -70,10 +70,10 @@ void TaskCenter::unassignedTasksProcess()
             {
                 Agv *agv = *ppos;
                 QList<int> result;
-                if(agv->nowStation()>0){
-                    result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nowStation(), ttask->nextTodoNode()->aimStation,tempDis,true);
+                if(agv->nowStation>0){
+                    result = g_agvMapCenter.getBestPath(agv->id,agv->lastStation,agv->nowStation, ttask->nextTodoNode()->aimStation,tempDis,false);
                 }else{
-                    result = g_agvMapCenter.getBestPath(agv->id(),agv->lastStation(),agv->nextStation(), ttask->nextTodoNode()->aimStation,tempDis,true);
+                    result = g_agvMapCenter.getBestPath(agv->id,agv->lastStation,agv->nextStation, ttask->nextTodoNode()->aimStation,tempDis,false);
                 }
                 if(result.length()>0&&tempDis!=distance_infinity)
                 {
@@ -94,44 +94,42 @@ void TaskCenter::unassignedTasksProcess()
             //TODO:!!!要求一下操作可以回滚，因为车辆可能不接受该任务！！！！！！！！！！！！！！
 
             //将终点，占领
-            g_m_stations[ttask->nextTodoNode()->aimStation]->setOccuAgv(bestCar->id());//TODO:(什么时候释放呢？？)。重点来了
+            g_m_stations[ttask->nextTodoNode()->aimStation]->occuAgv = (bestCar->id);//TODO:(什么时候释放呢？？)。重点来了
             //将起点，释放//TODO:这里释放起点其实是不合适的，应该在小车启动的时候，释放这个位置,虽然这里就差几行
-            if(g_m_stations[bestCar->nowStation()]->occuAgv() == bestCar->id())g_m_stations[bestCar->nowStation()]->setOccuAgv(0);
+            if(g_m_stations[bestCar->nowStation]->occuAgv == bestCar->id)g_m_stations[bestCar->nowStation]->occuAgv = (0);
 
             //对任务属性进行赋值
             ttask->setDoTime(QDateTime::currentDateTime());
             ttask->setStatus(AGV_TASK_STATUS_EXCUTING);
-            ttask->setExcuteCar(bestCar->id());
+            ttask->setExcuteCar(bestCar->id);
             //TODO:对任务节点进行赋值
             //更新上一个节点的离开时间
             if(ttask->lastDoneNode()){
                 /////////ttask->lastDoneNode()->status = AGV_TASK_NODE_STATUS_DONE;
                 ttask->lastDoneNode()->leaveTime = QDateTime::currentDateTime();
             }
-            //将未执行的节点，设置为正在执行
-            ttask->nextTodoNode()->status = AGV_TASK_NODE_STATUS_DOING;
 
             //对线路属性进行赋值         //4.把线路的反方向线路定为不可用
             for(int i=0;i<path.length();++i){
                 int reverseLineKey = g_reverseLines[path[i] ];
                 //将这条线路的可用性置为false
-                g_m_lines[reverseLineKey]->occuAgv=(bestCar->id());
+                g_m_lines[reverseLineKey]->occuAgv=(bestCar->id);
             }
             //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
-            bestCar->setStatus(AGV_STATUS_TASKING);
-            bestCar->setTask(ttask->id());
-            bestCar->setCurrentPath(path);
+            bestCar->status = (AGV_STATUS_TASKING);
+            bestCar->task = (ttask->id());
+            bestCar->currentPath = (path);
             //将任务移动到正在执行的任务//6.把这个任务定为doing。
             unassignedTasks.removeAt(mmm);
             mmm--;
             doingTasks.append(ttask);
 
             //TODO:要看返回的结果的！！！！！！ 如果失败了，要回滚上述所有操作！
-            g_hrgAgvCenter.agvStartTask(bestCar->id(),path);
+            g_hrgAgvCenter.agvStartTask(bestCar->id,path);
 
             //如果成功了，那么 将node设置为doing
-            TaskNode *node =  ttask->nextTodoNode();
-            node->status = 1 ;
+            //将未执行的节点，设置为正在执行
+            ttask->nextTodoNode()->status = AGV_TASK_NODE_STATUS_DOING;
         }
     }
 }
@@ -143,9 +141,10 @@ int TaskCenter::makeAgvAimTask(int agvKey,int aimStation,int waitType,int waitTi
     //只有在make task的时候回 insert into agv——task。其他时候，全部都是update的！
     //这里只知道 任务的状态是未执行，产生时间是现在。直行车辆不知道
     AgvTask *newtask = new AgvTask;
+    newtask->setProduceTime(QDateTime::currentDateTime());
     QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status,task_excuteCar) VALUES (?,?,?);SELECT @@Identity;";
     QStringList params;
-    params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE)<<QString("%1").arg(agvKey);
+    params<<newtask->produceTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE)<<QString("%1").arg(agvKey);
     QList<QStringList> result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0)
     {
@@ -153,7 +152,7 @@ int TaskCenter::makeAgvAimTask(int agvKey,int aimStation,int waitType,int waitTi
         return -1;
     }
     newtask->setId(result.at(0).at(0).toInt());
-
+    newtask->setExcuteCar(agvKey);
 
     TaskNode *node = new TaskNode;
     node->aimStation=aimStation;
@@ -184,9 +183,10 @@ int TaskCenter::makeAimTask(int aimStation,int waitType,int waitTime)
     //只有在make task的时候回 insert into agv——task。其他时候，全部都是update的！
     //这里只知道 任务的状态是未执行，产生时间是现在。直行车辆不知道
     AgvTask *newtask = new AgvTask;
+    newtask->setProduceTime(QDateTime::currentDateTime());
     QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status) VALUES (?,?);SELECT @@Identity;";
     QStringList params;
-    params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE);
+    params<<newtask->produceTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE);
     QList<QStringList> result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0)
     {
@@ -221,12 +221,12 @@ int TaskCenter::makeAimTask(int aimStation,int waitType,int waitTime)
 int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim)
 {
     AgvTask *newtask = new AgvTask;
-
+    newtask->setProduceTime(QDateTime::currentDateTime());
     //只有在make task的时候回 insert into agv——task。其他时候，全部都是update的！
     //这里只知道 任务的状态是未执行，产生时间是现在。直行车辆不知道
     QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status,task_excuteCar) VALUES (?,?,?);SELECT @@Identity;";
     QStringList params;
-    params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE)<<QString("%1").arg(agvId);
+    params<<newtask->produceTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE)<<QString("%1").arg(agvId);
 
     QList<QStringList> result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0)
@@ -295,12 +295,12 @@ int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int
 int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim)
 {
     AgvTask *newtask = new AgvTask;
-
+    newtask->setProduceTime(QDateTime::currentDateTime());
     //只有在make task的时候回 insert into agv——task。其他时候，全部都是update的！
     //这里只知道 任务的状态是未执行，产生时间是现在。直行车辆不知道
     QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status) VALUES (?,?);SELECT @@Identity;";
     QStringList params;
-    params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE);
+    params<<newtask->produceTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE);
 
     QList<QStringList> result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0)
@@ -574,10 +574,10 @@ int TaskCenter::cancelTask(int taskId)
             //saveTaskToDatabase(task);
             //设置小车路径为空
             QList<int> nullPath;
-            g_m_agvs[task->excuteCar()]->setTask(0);
-            g_m_agvs[task->excuteCar()]->setCurrentPath(nullPath);
-            if(g_m_agvs[task->excuteCar()]->status() == AGV_STATUS_TASKING)
-                g_m_agvs[task->excuteCar()]->setStatus(AGV_STATUS_IDLE);
+            g_m_agvs[task->excuteCar()]->task = (0);
+            g_m_agvs[task->excuteCar()]->currentPath = (nullPath);
+            if(g_m_agvs[task->excuteCar()]->status == AGV_STATUS_TASKING)
+                g_m_agvs[task->excuteCar()]->status = (AGV_STATUS_IDLE);
             //释放
             delete task;
             return 2;
@@ -601,14 +601,14 @@ bool TaskCenter::saveTaskToDatabase(AgvTask *task)
 void TaskCenter::carArriveStation(int car,int station)
 {
     //小车
+    if(!g_m_agvs.contains(car))return ;
     Agv *agv = g_m_agvs[car];
-    if(agv==NULL){return ;}
     //达到的站点
     AgvStation *sstation = g_m_stations[station];
     if(sstation==NULL){return ;}
 
     //小车是手动模式，那么就不管了
-    if(agv->mode() == AGV_MODE_HAND){
+    if(agv->mode == AGV_MODE_HAND){
         return ;
     }
 
@@ -616,7 +616,7 @@ void TaskCenter::carArriveStation(int car,int station)
     AgvTask *ttask = NULL;
     for(QList<AgvTask *>::iterator itr= doingTasks.begin();itr!=doingTasks.end();++itr){
         AgvTask *taskTemp = *itr;
-        if(taskTemp->id() == agv->task())
+        if(taskTemp->id() == agv->task)
         {
             ttask = taskTemp;
             break;
@@ -627,14 +627,14 @@ void TaskCenter::carArriveStation(int car,int station)
     if(ttask==NULL){return ;}
 
     //置线路位,更新道路占用的问题
-    QList<int> pppath = agv->currentPath();//当前任务的线路
+    QList<int> pppath = agv->currentPath;//当前任务的线路
 
     //1.该站点是否在线路上
     bool findStation = false;
     for(int i=0;i<pppath.length();++i)
     {
         int iLine = pppath.at(i);
-        if(g_m_lines[iLine]->endStation == sstation->id()){
+        if(g_m_lines[iLine]->endStation == sstation->id){
             findStation = true;
             break;
         }
@@ -651,37 +651,37 @@ void TaskCenter::carArriveStation(int car,int station)
 
             //删除经过的线路//记得后边更新到agv的path里边
             pppath.erase(itr);
-            agv->setCurrentPath(pppath);
+            agv->currentPath = (pppath);
 
             //将反向的线路置为可用
             int reverseLineKey = g_reverseLines[iLine];
             AgvLine *rLine = g_m_lines[reverseLineKey];
-            rLine->occuAgv = (car);
+            rLine->occuAgv = (0);
 
             AgvLine *line = g_m_lines[iLine];
             //如果是最后经过的这条线路，退出循环
-            if(line->endStation == sstation->id())
+            if(line->endStation == sstation->id)
             {
                 break;
             }else{
                 //将经过的站点的占用释放
-                if(g_m_stations[line->startStation]->occuAgv() == car){
-                    g_m_stations[line->startStation]->setOccuAgv(0);
+                if(g_m_stations[line->startStation]->occuAgv == car){
+                    g_m_stations[line->startStation]->occuAgv = (0);
                 }
-                if(g_m_stations[line->endStation]->occuAgv() == car){
-                    g_m_stations[line->endStation]->setOccuAgv(0);
+                if(g_m_stations[line->endStation]->occuAgv == car){
+                    g_m_stations[line->endStation]->occuAgv = (0);
                 }
             }
         }
 
         //更新path后,将小车的任务内容进行更新
         //如果达到终点
-        if(agv->currentPath().length() == 0){
+        if(agv->currentPath.length() == 0){
             //到达当前 task_node的 目的地，设置当前任务节点的到达时间
             ttask->currentDoingNode()->arriveTime=QDateTime::currentDateTime();
         }
         //更新发给小车的内容
-        g_msgCenter.taskControlCmd(car,false);
+        g_hrgAgvCenter.taskControlCmd(car,false);
     }
 }
 

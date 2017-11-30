@@ -716,12 +716,12 @@ void UserMsgProcessor::Map_StationList(const QyhMsgDateItem &item, QMap<QString,
     for(QMap<int,AgvStation *>::iterator itr=g_m_stations.begin();itr!=g_m_stations.end();++itr){
         QMap<QString,QString> list;
 
-        list.insert(QString("x"),QString("%1").arg(itr.value()->x()));
-        list.insert(QString("y"),QString("%1").arg(itr.value()->y()));
-        list.insert(QString("type"),QString("%1").arg(itr.value()->type()));
-        list.insert(QString("name"),QString("%1").arg(itr.value()->name()));
-        list.insert(QString("id"),QString("%1").arg(itr.value()->id()));
-        list.insert(QString("rfid"),QString("%1").arg(itr.value()->rfid()));
+        list.insert(QString("x"),QString("%1").arg(itr.value()->x));
+        list.insert(QString("y"),QString("%1").arg(itr.value()->y));
+        list.insert(QString("type"),QString("%1").arg(itr.value()->type));
+        list.insert(QString("name"),QString("%1").arg(itr.value()->name));
+        list.insert(QString("id"),QString("%1").arg(itr.value()->id));
+        list.insert(QString("rfid"),QString("%1").arg(itr.value()->rfid));
 
         responseDatalists.push_back(list);
     }
@@ -860,7 +860,7 @@ void UserMsgProcessor:: Agv_Forward(const QyhMsgDateItem &item, QMap<QString, QS
             if(agv->currentHandUser == loginUserInfo.id){
                 //OK
                 //下发指令
-                g_msgCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_FORWARD,iSpeed);
+                g_hrgAgvCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_FORWARD,iSpeed);
             }else{
                 //这辆车并不受你控制
                 responseParams.insert(QString("info"),QString("agv is not under your control"));
@@ -887,7 +887,7 @@ void UserMsgProcessor:: Agv_Backward(const QyhMsgDateItem &item, QMap<QString, Q
             if(agv->currentHandUser == loginUserInfo.id){
                 //OK
                 //下发指令
-                g_msgCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_BACKWARD,iSpeed);
+                g_hrgAgvCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_BACKWARD,iSpeed);
             }else{
                 //这辆车并不受你控制
                 responseParams.insert(QString("info"),QString("agv is not in your hand"));
@@ -913,7 +913,7 @@ void UserMsgProcessor:: Agv_Turnleft(const QyhMsgDateItem &item, QMap<QString, Q
             if(agv->currentHandUser == loginUserInfo.id){
                 //OK
                 //下发指令
-                g_msgCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_TURNLEFT,iSpeed);
+                g_hrgAgvCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_TURNLEFT,iSpeed);
             }else{
                 //这辆车并不受你控制
                 responseParams.insert(QString("info"),QString("agv is not in your hand"));
@@ -939,7 +939,7 @@ void UserMsgProcessor:: Agv_Turnright(const QyhMsgDateItem &item, QMap<QString, 
             if(agv->currentHandUser == loginUserInfo.id){
                 //OK
                 //下发指令
-                g_msgCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_TURNRIGHT,iSpeed);
+                g_hrgAgvCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_TURNRIGHT,iSpeed);
             }else{
                 //这辆车并不受你控制
                 responseParams.insert(QString("info"),QString("agv is not in your hand"));
@@ -1002,9 +1002,8 @@ void UserMsgProcessor:: AgvManage_List(const QyhMsgDateItem &item, QMap<QString,
         QMap<QString,QString> list;
         Agv *agv = itr.value();
 
-        list.insert(QString("id"),QString("%1").arg(agv->id()));
-        list.insert(QString("name"),QString("%1").arg(agv->name()));
-        list.insert(QString("ip"),QString("%1").arg(agv->ip()));
+        list.insert(QString("id"),QString("%1").arg(agv->id));
+        list.insert(QString("name"),QString("%1").arg(agv->name));
 
         responseDatalists.push_back(list);
     }
@@ -1013,20 +1012,21 @@ void UserMsgProcessor:: AgvManage_List(const QyhMsgDateItem &item, QMap<QString,
 void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
     //要求name和ip
     if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip",NULL)){
-        QString insertSql = "insert into agv_agv (agv_name,agv_ip)values(?,?)";
+        //TODO //TODO
+        QString insertSql = "insert into agv_agv (agv_name)values(?)";
         QStringList tempParams;
         tempParams<<requestDatas["name"]<<requestDatas["ip"];
         if(g_sql->exeSql(insertSql,tempParams)){
             int newId;
-            QString querySql = "select id from agv_agv where agv_name = ? and agv_ip = ?";
+            QString querySql = "select id from agv_agv where agv_name = ? ";
             QList<QStringList> queryresult = g_sql->query(querySql,tempParams);
             if(queryresult.length()>0 &&queryresult.at(0).length()>0)
             {
                 newId = queryresult.at(0).at(0).toInt();
                 Agv *agv = new Agv;
-                agv->setId(newId);
-                agv->setName(requestDatas["name"]);
-                agv->setIp(requestDatas["ip"]);
+                agv->id = (newId);
+                agv->name = (requestDatas["name"]);
+                //agv->setIp(requestDatas["ip"]);
                 g_m_agvs.insert(newId,agv);
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));
@@ -1086,8 +1086,8 @@ void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, QMap<QStrin
             QStringList params;
             params<<(requestDatas["name"])<<(requestDatas["ip"])<<(requestDatas["agvid"]);
             if(g_sql->exeSql(updateSql,params)){
-                agv->setName(requestDatas["name"]);
-                agv->setIp(requestDatas["ip"]);
+                agv->name = (requestDatas["name"]);
+                //agv->setIp(requestDatas["ip"]);
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));
             }else{
@@ -1107,7 +1107,7 @@ void UserMsgProcessor::Task_CreateToX(const QyhMsgDateItem &item, QMap<QString, 
         int iX = requestDatas["x"].toInt();
 
         //确保站点存在
-        int waitTypeX = AGV_TASK_WAIT_TYPE_NOWAIT;
+        int waitTypeX = AGV_TASK_WAIT_TYPE_TIME;
         int watiTimeX = 30;
 
         //判断是否设置了等待时间和等待时长
@@ -1132,7 +1132,7 @@ void UserMsgProcessor::Task_CreateAgvToX(const QyhMsgDateItem &item, QMap<QStrin
         int iX = requestDatas["x"].toInt();
         int iAgvid = requestDatas["agvid"].toInt();
         //确保站点存在
-        int waitTypeX = AGV_TASK_WAIT_TYPE_NOWAIT;
+        int waitTypeX = AGV_TASK_WAIT_TYPE_TIME;
         int watiTimeX = 30;
 
         //判断是否设置了等待时间和等待时长
@@ -1159,9 +1159,9 @@ void UserMsgProcessor::Task_CreateYToX(const QyhMsgDateItem &item, QMap<QString,
         int iX = requestDatas["x"].toInt();
         int iY = requestDatas["y"].toInt();
 
-        int waitTypeX = AGV_TASK_WAIT_TYPE_NOWAIT;
+        int waitTypeX = AGV_TASK_WAIT_TYPE_TIME;
         int watiTimeX = 30;
-        int waitTypeY = AGV_TASK_WAIT_TYPE_NOWAIT;
+        int waitTypeY = AGV_TASK_WAIT_TYPE_TIME;
         int watiTimeY = 30;
 
         //判断是否设置了等待时间和等待时长

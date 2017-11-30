@@ -82,9 +82,6 @@ public:
     int distance;//起点到这条线的终点 的距离
     int color;
 
-
-    //TODO
-    //TODO
     bool operator == (const AgvLine &b){
         return this->startStation == b.startStation&& this->endStation == b.endStation;
     }

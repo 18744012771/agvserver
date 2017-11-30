@@ -740,6 +740,12 @@ bool CIOCPModel::HandleError(PER_SOCKET_CONTEXT *pContext, const DWORD& dwErr)
     else if (ERROR_NETNAME_DELETED == dwErr)
     {
         g_log->log(AGV_LOG_LEVEL_TRACE,QStringLiteral("检测到客户端异常退出"));
+        if (disconnect_call_back != NULL) {
+            SOCKADDR_IN* ClientAddr = &pContext->m_ClientAddr;
+            QString sIp(inet_ntoa(ClientAddr->sin_addr));
+            int port = ntohs(ClientAddr->sin_port);
+            disconnect_call_back(p_owner,pContext->m_Socket,sIp,port);
+        }
         this->_RemoveContext(pContext);
         return true;
     }

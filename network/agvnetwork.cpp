@@ -10,14 +10,11 @@ AgvNetWork::AgvNetWork(QObject *parent) : QObject(parent),isQuit(false)
 AgvNetWork::~AgvNetWork()
 {
     isQuit = true;
-    //m_agvIOCP.Stop();
     m_clientIOCP.Stop();
 }
 
 void AgvNetWork::sendToOne(SOCKET sock,const char *buf, int len)//发送给某个id的消息
 {
-    //g_log->log(AGV_LOG_LEVEL_INFO,"send client msg="+QString::fromStdString(std::string(buf,len)));
-
     try{
         m_clientIOCP.doSend(sock,buf,len);
     }catch(const std::out_of_range& oor){
@@ -27,7 +24,6 @@ void AgvNetWork::sendToOne(SOCKET sock,const char *buf, int len)//发送给某�
 
 void AgvNetWork::sendToAll(char *buf,int len)//发送给所有的人的信息
 {
-    //m_agvIOCP._DoSend(buf,len);
     m_clientIOCP._DoSend(buf,len);
 }
 
@@ -38,25 +34,6 @@ void AgvNetWork::sendToSome(QList<int> ones,char *buf,int len)//发送给某些i
         sendToOne(id,buf,len);
     }
 }
-
-//void AgvNetWork::sendToAllAgv(char *buf,int len)
-//{
-//    //m_agvIOCP._DoSend(buf,len);
-//}
-
-//void AgvNetWork::sendToAllClient(char *buf,int len)
-//{
-//    m_clientIOCP._DoSend(buf,len);
-//}
-
-//void AgvNetWork::onRecvAgvMsg(void *param,char *buf, int len)
-//{
-//    //TODO:
-//    if (param != NULL) {
-//        ((AgvNetWork *)param)->recvAgvMsgProcess(buf, len);
-//    }
-//}
-
 
 void AgvNetWork::onRecvClientMsg(void *param, char *buf, int len,SOCKET sock,const QString &sIp,int port)
 {
@@ -132,55 +109,7 @@ void AgvNetWork::recvClientMsgProcess(char *buf, int len,SOCKET sock,const QStri
     }
 }
 
-
-void AgvNetWork::serverSendFunc(void *param)
-{
-    AgvNetWork *pThis = (AgvNetWork*)param;
-    pThis->serverSendProcess();
-}
-void AgvNetWork::serverSendProcess()
-{
-    while (!isQuit) {
-        //        QyhDataItem item;
-        //        if (interfaceSendQueue.try_dequeue(item))
-        //        {
-        //            //TODO:
-        //            if (item.size > 0 ){
-        //                m_IOCP._DoSend((char *)item.data, item.size);
-        //                qyhLog << "send client===>" << (char *)item.data<<endll;
-        //            }
-        //            free(item.data);
-        //        }
-        //        else {
-        //            qyhSleepMs(300);
-        //        }
-    }
-}
-
 bool AgvNetWork::initServer()
-{
-    //if(!initAgvServer())return false;
-    return initClientServer();
-}
-
-//bool AgvNetWork::initAgvServer()
-//{
-//    if (false == m_agvIOCP.LoadSocketLib())
-//    {
-//        qyhLog<<"加载Winsock 2.2失败，服务器端无法运行！"<<endll;
-//    }
-//    m_agvIOCP.SetPort(8989);
-//    m_agvIOCP.setOwner(this);
-//    if (false == m_agvIOCP.Start(onRecvAgvMsg))
-//    {
-//        qyhLog << "Agv iocp服务器启动失败！" << endll;
-//        return false;
-//    }
-
-//    return true;
-//}
-
-bool AgvNetWork::initClientServer()
 {
     if (false == m_clientIOCP.LoadSocketLib())
     {
@@ -195,8 +124,6 @@ bool AgvNetWork::initClientServer()
         return false;
     }
 
-    //创建消息发送线程
-    std::thread(serverSendFunc, this).detach();
     g_log->log(AGV_LOG_LEVEL_INFO,"iocp server start ok");
     return true;
 }

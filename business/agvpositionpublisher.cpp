@@ -52,11 +52,11 @@ void AgvPositionPublisher::run()
         {
             ///<id,x,y,rotation,status>
             QMap<QString,QString> mm;
-            mm.insert(QString("x"),QString("%1").arg(itr.value()->x()));
-            mm.insert(QString("y"),QString("%1").arg(itr.value()->y()));
-            mm.insert(QString("id"),QString("%1").arg(itr.value()->id()));
-            mm.insert(QString("rotation"),QString("%1").arg(itr.value()->rotation()));
-            mm.insert(QString("status"),QString("%1").arg(itr.value()->status()));
+            mm.insert(QString("x"),QString("%1").arg(itr.value()->x));
+            mm.insert(QString("y"),QString("%1").arg(itr.value()->y));
+            mm.insert(QString("id"),QString("%1").arg(itr.value()->id));
+            mm.insert(QString("rotation"),QString("%1").arg(itr.value()->rotation));
+            mm.insert(QString("status"),QString("%1").arg(itr.value()->status));
 
             responseDatalists.push_back(mm);
         }

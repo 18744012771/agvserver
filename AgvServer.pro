@@ -1,4 +1,4 @@
-QT += core sql network
+QT += core sql
 QT -= gui
 
 CONFIG += c++11
@@ -71,5 +71,13 @@ CONFIG(debug, debug|release) {
     LIBS += D:\thirdparty\pugixml\staticlib\Debug\pugixml.lib
 } else {
     LIBS += D:\thirdparty\pugixml\staticlib\Release\pugixml.lib
+}
+
+#QyhTcpLib
+INCLUDEPATH += D:\thirdparty\QyhTcpLib\include
+CONFIG(debug, debug|release) {
+    LIBS += D:\thirdparty\QyhTcpLib\lib\Debug\QyhTcpLib.lib
+} else {
+    LIBS += D:\thirdparty\QyhTcpLib\lib\Release\QyhTcpLib.lib
 }
 
