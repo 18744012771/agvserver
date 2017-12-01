@@ -58,6 +58,8 @@ public:
     void setDoTime( QDateTime newDoTime){m_doTime=newDoTime;emit doTimeChanged(newDoTime);}
     void setExcuteCar( int newExcuteCar){m_excuteCar=newExcuteCar;emit excuteCarChanged(newExcuteCar);}
     void setStatus(int newStatus){m_status=newStatus;emit statusChanged(newStatus);}
+
+    QList<TaskNode *> taskNodes;
 signals:
     //change signal
     void idChanged(int newid);
@@ -79,17 +81,12 @@ private:
 
 public:
     //这两个是可以公有访问的.不过一般仅限于task中访问
-    QList<TaskNode *> taskNodes;
 
+    int nextTodoIndex;
+    int lastDoneIndex;
+    int currentDoingIndex;
 
     bool isDone();
-
-    TaskNode *nextTodoNode();
-
-    TaskNode *lastDoneNode();
-
-    TaskNode *currentDoingNode();
-    //OK 完成了
 
     //为了给node进行排序，
     int nodeAmount;

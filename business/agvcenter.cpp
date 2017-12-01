@@ -47,7 +47,7 @@ QList<Agv *> AgvCenter::getIdleAgvs()
     QList<Agv *> result;
     for(QMap<int,Agv *>::iterator itr =g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
     {
-        if(itr.value()->status == AGV_STATUS_IDLE){
+        if(itr.value()->myStatus == AGV_STATUS_IDLE){
             result.push_back(itr.value());
         }
     }

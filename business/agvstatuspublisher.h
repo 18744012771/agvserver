@@ -12,14 +12,14 @@ class AgvStatusPublisher : public QThread
 public:
     explicit AgvStatusPublisher(QObject *parent = nullptr);
     ~AgvStatusPublisher();
-    void addSubscribe(int subscribe, int agvid);
-    void removeSubscribe(int subscribe, int agvid = 0);
+    void addSubscribe(int subscribe);
+    void removeSubscribe(int subscribe);
     void run();
 signals:
 
 public slots:
 private:
-    QMap<int,int> subscribers;
+    QList<int> subscribers;
     QMutex mutex;
     volatile bool isQuit;
 signals:

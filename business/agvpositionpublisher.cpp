@@ -55,8 +55,9 @@ void AgvPositionPublisher::run()
             mm.insert(QString("x"),QString("%1").arg(itr.value()->x));
             mm.insert(QString("y"),QString("%1").arg(itr.value()->y));
             mm.insert(QString("id"),QString("%1").arg(itr.value()->id));
+            mm.insert(QString("name"),QString("%1").arg(itr.value()->name));
             mm.insert(QString("rotation"),QString("%1").arg(itr.value()->rotation));
-            mm.insert(QString("status"),QString("%1").arg(itr.value()->status));
+            mm.insert(QString("status"),QString("%1").arg(itr.value()->myStatus));
 
             responseDatalists.push_back(mm);
         }

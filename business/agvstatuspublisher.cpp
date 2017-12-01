@@ -13,19 +13,21 @@ AgvStatusPublisher::~AgvStatusPublisher()
     isQuit = true;
 }
 
-void AgvStatusPublisher::addSubscribe(int subscribe,int agvid)
+void AgvStatusPublisher::addSubscribe(int subscribe)
 {
     mutex.lock();
-    subscribers.insert(subscribe,agvid);
+    if(!subscribers.contains(subscribe))
+        subscribers.append(subscribe);
     mutex.unlock();
 }
 
-void AgvStatusPublisher::removeSubscribe(int subscribe,int agvid)
+void AgvStatusPublisher::removeSubscribe(int subscribe)
 {
     mutex.lock();
-    for(QMap<int,int>::iterator itr = subscribers.begin();itr!=subscribers.end();++itr){
-        if(itr.key()==subscribe && (agvid==0 || itr.value() == agvid)){
+    for(QList<int>::iterator itr = subscribers.begin();itr!=subscribers.end();++itr){
+        if(*itr == subscribe){
             subscribers.erase(itr);
+            break;
         }
     }
     mutex.unlock();
@@ -35,52 +37,52 @@ void AgvStatusPublisher::run()
 {
     while(!isQuit)
     {
-        if(subscribers.size()==0||g_m_agvs.size()==0){
+        if(subscribers.length()==0||g_m_agvs.size()==0){
             QyhSleep(400);
             continue;
         }
 
+        //组装订阅信息
+        QMap<QString,QString> responseDatas;
+        QList<QMap<QString,QString> > responseDatalists;
+
+        responseDatas.insert(QString("type"),QString("agv"));
+        responseDatas.insert(QString("todo"),QString("periodica"));
+
         for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
         {
-            //组装订阅信息
-            QMap<QString,QString> responseDatas;
-            QList<QMap<QString,QString> > responseDatalists;
-
-            responseDatas.insert(QString("type"),QString("agv"));
-            responseDatas.insert(QString("todo"),QString("periodica"));
-
-            responseDatas.insert(QString("id"),QString("%1").arg(itr.value()->id));
-            responseDatas.insert(QString("speed"),QString("%1").arg(itr.value()->speed));
-            responseDatas.insert(QString("turnSpeed"),QString("%1").arg(itr.value()->turnSpeed));
-            responseDatas.insert(QString("cpu"),QString("%1").arg(itr.value()->cpu));
-            responseDatas.insert(QString("status"),QString("%1").arg(itr.value()->status));
-            responseDatas.insert(QString("leftMotorStatus"),QString("%1").arg(itr.value()->leftMotorStatus));
-            responseDatas.insert(QString("rightMotorStatus"),QString("%1").arg(itr.value()->rightMotorStatus));
-            responseDatas.insert(QString("systemVoltage"),QString("%1").arg(itr.value()->systemVoltage));
-            responseDatas.insert(QString("systemCurrent"),QString("%1").arg(itr.value()->systemCurrent));
-            responseDatas.insert(QString("positionMagneticStripe"),QString("%1").arg(itr.value()->positionMagneticStripe));
-            responseDatas.insert(QString("frontObstruct"),QString("%1").arg(itr.value()->frontObstruct));
-            responseDatas.insert(QString("backObstruct"),QString("%1").arg(itr.value()->backObstruct));
-            responseDatas.insert(QString("currentOrder"),QString("%1").arg(itr.value()->currentOrder));
-            responseDatas.insert(QString("currentQueueNumber"),QString("%1").arg(itr.value()->currentQueueNumber));
-
-            responseDatas.insert(QString("mileage"),QString("%1").arg(itr.value()->mileage));
-            responseDatas.insert(QString("rad"),QString("%1").arg(itr.value()->rad));
-            responseDatas.insert(QString("currentRfid"),QString("%1").arg(itr.value()->currentRfid));
-
-            QString xml = getResponseXml(responseDatas,responseDatalists);
-
-            //发送订阅信息
-            mutex.lock();
-            //这个保存的是map< socket,agvId >
-            for(QMap<int,int>::iterator pos = subscribers.begin();pos!=subscribers.end();++pos)
-            {
-                if(pos.value() == itr.key())
-                    g_netWork->sendToOne(pos.key(),xml.toStdString().c_str(),xml.toStdString().length());
-            }
-            mutex.unlock();
+            QMap<QString,QString> responseData;
+            responseData.insert(QString("id"),QString("%1").arg(itr.value()->id));
+            responseData.insert(QString("speed"),QString("%1").arg(itr.value()->speed));
+            responseData.insert(QString("turnSpeed"),QString("%1").arg(itr.value()->turnSpeed));
+            responseData.insert(QString("cpu"),QString("%1").arg(itr.value()->cpu));
+            responseData.insert(QString("status"),QString("%1").arg(itr.value()->status));
+            responseData.insert(QString("leftMotorStatus"),QString("%1").arg(itr.value()->leftMotorStatus));
+            responseData.insert(QString("rightMotorStatus"),QString("%1").arg(itr.value()->rightMotorStatus));
+            responseData.insert(QString("systemVoltage"),QString("%1").arg(itr.value()->systemVoltage));
+            responseData.insert(QString("systemCurrent"),QString("%1").arg(itr.value()->systemCurrent));
+            responseData.insert(QString("positionMagneticStripe"),QString("%1").arg(itr.value()->positionMagneticStripe));
+            responseData.insert(QString("frontObstruct"),QString("%1").arg(itr.value()->frontObstruct));
+            responseData.insert(QString("backObstruct"),QString("%1").arg(itr.value()->backObstruct));
+            responseData.insert(QString("currentOrder"),QString("%1").arg(itr.value()->currentOrder));
+            responseData.insert(QString("currentQueueNumber"),QString("%1").arg(itr.value()->currentQueueNumber));
+            responseData.insert(QString("mileage"),QString("%1").arg(itr.value()->mileage));
+            responseData.insert(QString("rad"),QString("%1").arg(itr.value()->rad));
+            responseData.insert(QString("currentRfid"),QString("%1").arg(itr.value()->currentRfid));
+            responseDatalists.append(responseData);
         }
 
-        QyhSleep(100);
+        QString xml = getResponseXml(responseDatas,responseDatalists);
+
+        //发送订阅信息
+        mutex.lock();
+        for(QList<int>::iterator itr = subscribers.begin();itr!=subscribers.end();++itr)
+        {
+                g_netWork->sendToOne(*itr,xml.toStdString().c_str(),xml.toStdString().length());
+        }
+        mutex.unlock();
+
+
+        QyhSleep(500);
     }
 }

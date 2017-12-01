@@ -140,7 +140,7 @@ void UserMsgProcessor::responseOneMsg(const QyhMsgDateItem &item, QMap<QString, 
     }else if(requestDatas["type"] == "task"){
         clientMsgTaskProcess(item,requestDatas,datalists);
     }else if(requestDatas["type"] == "log"){
-        clientMsgLogProcess(item,requestDatas,datalists);        
+        clientMsgLogProcess(item,requestDatas,datalists);
     }
 }
 
@@ -952,45 +952,22 @@ void UserMsgProcessor:: Agv_Turnright(const QyhMsgDateItem &item, QMap<QString, 
 void UserMsgProcessor:: Agv_Light(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){}
 //小车状态订阅
 void UserMsgProcessor:: Agv_StatusSubscribte(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    ////订阅id未agvid的小车的状态信息
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
-        int iAgvId = requestDatas["agvid"].toInt();
+    //OK
+    //下发指令
+    g_msgCenter.addAgvStatusSubscribe(item.sock);
+    responseParams.insert(QString("info"),QString(""));
+    responseParams.insert(QString("result"),QString("success"));
 
-        if(!g_m_agvs.contains(iAgvId)){
-            //不存在这辆车
-            responseParams.insert(QString("info"),QString("not found agv with id:")+requestDatas["agvid"]);
-            responseParams.insert(QString("result"),QString("fail"));
-        }else
-        {
-            //OK
-            //下发指令
-            g_msgCenter.addAgvStatusSubscribe(item.sock,iAgvId);
-            responseParams.insert(QString("info"),QString(""));
-            responseParams.insert(QString("result"),QString("success"));
-
-        }
-    }
 }
 
 //取消小车状态订阅
-void UserMsgProcessor:: Agv_CancelStatusSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    ////订阅id未agvid的小车的状态信息
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
-        int iAgvId = requestDatas["agvid"].toInt();
-
-        if(!g_m_agvs.contains(iAgvId)){
-            //不存在这辆车
-            responseParams.insert(QString("info"),QString("not found agv with id:")+requestDatas["agvid"]);
-            responseParams.insert(QString("result"),QString("fail"));
-        }else
-        {
-            //OK
-            //下发指令
-            g_msgCenter.removeAgvStatusSubscribe(item.sock,iAgvId);
-            responseParams.insert(QString("info"),QString(""));
-            responseParams.insert(QString("result"),QString("success"));
-        }
-    }
+void UserMsgProcessor:: Agv_CancelStatusSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    //OK
+    //下发指令
+    g_msgCenter.removeAgvStatusSubscribe(item.sock);
+    responseParams.insert(QString("info"),QString(""));
+    responseParams.insert(QString("result"),QString("success"));
 }
 
 /////////////////////////////////车辆管理部分
@@ -1178,7 +1155,7 @@ void UserMsgProcessor::Task_CreateYToX(const QyhMsgDateItem &item, QMap<QString,
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station y"));
         }else{
-            int id = g_taskCenter.makePickupTask(iY,iX,waitTypeX,watiTimeX,waitTypeY,watiTimeY);
+            int id = g_taskCenter.makePickupTask(iX,iY,waitTypeX,watiTimeX,waitTypeY,watiTimeY);
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("id"),QString("%1").arg(id));
@@ -1215,7 +1192,7 @@ void UserMsgProcessor::Task_CreateAgvYToX(const QyhMsgDateItem &item, QMap<QStri
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found agv"));
         }else{
-            int id = g_taskCenter.makeAgvPickupTask(agvId,iY,iX,waitTypeX,watiTimeX,waitTypeY,watiTimeY);
+            int id = g_taskCenter.makeAgvPickupTask(agvId,iX,iY,waitTypeX,watiTimeX,waitTypeY,watiTimeY);
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("id"),QString("%1").arg(id));

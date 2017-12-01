@@ -27,8 +27,8 @@ public:
 
     bool addAgvPostionSubscribe(int subscribe);
     bool removeAgvPositionSubscribe(int subscribe);
-    bool addAgvStatusSubscribe(int subscribe,int agvId);
-    bool removeAgvStatusSubscribe(int subscribe,int agvId = 0);
+    bool addAgvStatusSubscribe(int subscribe);
+    bool removeAgvStatusSubscribe(int subscribe);
     bool addLogSubscribe(int subscribe,int agvId);
     bool removeLogSubscribe(int subscribe,int agvId = 0);
 signals:

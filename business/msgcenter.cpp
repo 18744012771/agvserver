@@ -57,17 +57,17 @@ bool MsgCenter::removeAgvPositionSubscribe(int subscribe)
     return true;
 }
 
-bool MsgCenter::addAgvStatusSubscribe(int subscribe, int agvId)
+bool MsgCenter::addAgvStatusSubscribe(int subscribe)
 {
     if(!statusPublisher)return false;
-    statusPublisher->addSubscribe(subscribe,agvId);
+    statusPublisher->addSubscribe(subscribe);
     return true;
 }
 
-bool MsgCenter::removeAgvStatusSubscribe(int subscribe,int agvId)
+bool MsgCenter::removeAgvStatusSubscribe(int subscribe)
 {
     if(!statusPublisher)return false;
-    statusPublisher->removeSubscribe(subscribe,agvId);
+    statusPublisher->removeSubscribe(subscribe);
     return true;
 }
 

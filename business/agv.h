@@ -29,6 +29,7 @@ public:
         name(""),
         x(0),
         y(0),
+        myStatus(0),
         rotation(0),
         mileage(0),
         rad(0),
@@ -76,6 +77,8 @@ public:
     int y;
     int rotation;
 
+    int myStatus;//标记空闲、执行任务、返回充电、充电中、电量低等
+
     //UPLOAD INFO
     int mileage;
     int rad;
@@ -83,7 +86,7 @@ public:
     int speed;
     int turnSpeed;
     int cpu;
-    int status;
+    int status;         //标记小车上报数据
     int leftMotorStatus;
     int rightMotorStatus;
     int systemVoltage;
