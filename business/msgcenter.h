@@ -5,6 +5,7 @@
 #include <QThread>
 #include "agvpositionpublisher.h"
 #include "agvstatuspublisher.h"
+#include "agvtaskpublisher.h"
 
 //这里将会启动一个CPU个数*2的线程，用于处理用户的数据
 //保证并发量和响应时间
@@ -31,6 +32,8 @@ public:
     bool removeAgvStatusSubscribe(int subscribe);
     bool addLogSubscribe(int subscribe,int agvId);
     bool removeLogSubscribe(int subscribe,int agvId = 0);
+    bool addAgvTaskSubscribe(int subscribe);
+    bool removeAgvTaskSubscribe(int subscribe);
 signals:
 
 public slots:
@@ -38,6 +41,7 @@ public slots:
 private:
     AgvPositionPublisher *positionPublisher;
     AgvStatusPublisher *statusPublisher;
+    AgvTaskPublisher *taskPublisher;
 
 };
 

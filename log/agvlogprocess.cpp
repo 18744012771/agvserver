@@ -15,7 +15,11 @@ AgvLogProcess::~AgvLogProcess()
 void AgvLogProcess::addSubscribe(int sock, SubNode node)
 {
     mutex.lock();
-    subscribers.insert(sock,node);
+    if(subscribers.contains(sock)){
+        subscribers[sock] = node;
+    }else{
+        subscribers.insert(sock,node);
+    }
     mutex.unlock();
 }
 

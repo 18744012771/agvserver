@@ -363,8 +363,16 @@ void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QStr
         return ;
     }
 
+    if(requestDatas["todo"]=="subscribe"){
+        Task_Subscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+
+    else if(requestDatas["todo"]=="cancelSubscribe"){
+        Task_CancelSubscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+
     /// 创建任务(创建到X点的任务)
-    if(requestDatas["todo"]=="toX"){
+    else if(requestDatas["todo"]=="toX"){
         Task_CreateToX(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     /// 创建任务(创建指定车辆到X点的任务)
@@ -1077,6 +1085,34 @@ void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, QMap<QStrin
 
 
 ////////////////////////////////任务部分
+
+//订阅任务状态信息（简单显示）
+void UserMsgProcessor::Task_Subscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    //将sock加入到车辆位置订阅者丢列中
+    if(g_msgCenter.addAgvTaskSubscribe(item.sock)){
+        responseParams.insert(QString("info"),QString(""));
+        responseParams.insert(QString("result"),QString("success"));
+    }else{
+        responseParams.insert(QString("info"),QString("unknow error"));
+        responseParams.insert(QString("result"),QString("fail"));
+    }
+}
+
+
+//取消任务状态信息订阅
+void UserMsgProcessor::Task_CancelSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    //将sock加入到车辆位置订阅者丢列中
+    if(g_msgCenter.removeAgvTaskSubscribe(item.sock)){
+        responseParams.insert(QString("info"),QString(""));
+        responseParams.insert(QString("result"),QString("success"));
+    }else{
+        responseParams.insert(QString("info"),QString("unknow error"));
+        responseParams.insert(QString("result"),QString("fail"));
+    }
+}
+
 //创建任务(创建到X点的任务)
 void UserMsgProcessor::Task_CreateToX(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"x",NULL)){

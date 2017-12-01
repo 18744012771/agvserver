@@ -109,6 +109,11 @@ private:
     void AgvManage_Modify(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
 
     ////////////////////////////////任务部分
+    //订阅任务状态信息（简单显示）
+    void Task_Subscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
+    //取消任务状态信息订阅
+    void Task_CancelSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
+
     //创建任务(创建到X点的任务)
     void Task_CreateToX(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
     //创建任务(创建指定车辆到X点的任务)

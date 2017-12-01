@@ -714,11 +714,20 @@ void TaskCenter::doingTaskProcess()
     //对完成装货的车辆进行轮训，看是否启动了去往目的地
     //检查任务到达目标点位后，等待时间或者信号是否得到。
     //如果得到了，那就表示完成，退出正在执行的队列，如果是pickup完成了，放入todoAim队列中
+    static int duration  = 0;//每隔5秒任务进行一次重发.
+    bool resent = false;
+    if(++duration >5){
+        duration = 0;
+        resent = true;
+    }
     for(int i=0;i<doingTasks.length();++i){
         AgvTask* task = doingTasks.at(i);
         if(task->currentDoingIndex!=-1 &&task->currentDoingIndex<task->taskNodes.length())
         {
             TaskNode *doingNode = task->taskNodes[task->currentDoingIndex];
+            if(resent){
+                g_hrgAgvCenter.taskControlCmd(task->excuteCar(),false);
+            }
             //判断这个节点任务是否到达
             if(doingNode->arriveTime.isValid())
             {

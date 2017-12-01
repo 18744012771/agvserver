@@ -24,12 +24,7 @@ void AgvStatusPublisher::addSubscribe(int subscribe)
 void AgvStatusPublisher::removeSubscribe(int subscribe)
 {
     mutex.lock();
-    for(QList<int>::iterator itr = subscribers.begin();itr!=subscribers.end();++itr){
-        if(*itr == subscribe){
-            subscribers.erase(itr);
-            break;
-        }
-    }
+    subscribers.removeAll(subscribe);
     mutex.unlock();
 }
 

@@ -29,7 +29,8 @@ SOURCES += main.cpp \
     business/agvstatuspublisher.cpp \
     log/agvlog.cpp \
     log/agvlogprocess.cpp \
-    business/bezierarc.cpp
+    business/bezierarc.cpp \
+    business/agvtaskpublisher.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -63,7 +64,8 @@ HEADERS += \
     business/agvstatuspublisher.h \
     log/agvlog.h \
     log/agvlogprocess.h \
-    business/bezierarc.h
+    business/bezierarc.h \
+    business/agvtaskpublisher.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include

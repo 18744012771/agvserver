@@ -8,7 +8,8 @@
 
 MsgCenter::MsgCenter(QObject *parent) : QObject(parent),
     positionPublisher(NULL),
-    statusPublisher(NULL)
+    statusPublisher(NULL),
+    taskPublisher(NULL)
 {
 
 }
@@ -35,6 +36,14 @@ void MsgCenter::init()
     }
     positionPublisher = new AgvPositionPublisher(this);
     positionPublisher->start();
+
+    if(taskPublisher){
+        delete taskPublisher;
+        taskPublisher = NULL;
+    }
+    taskPublisher = new AgvTaskPublisher(this);
+    taskPublisher->start();
+
 }
 
 MsgCenter::~MsgCenter()
@@ -71,3 +80,16 @@ bool MsgCenter::removeAgvStatusSubscribe(int subscribe)
     return true;
 }
 
+bool MsgCenter::addAgvTaskSubscribe(int subscribe)
+{
+    if(!taskPublisher)return false;
+    taskPublisher->addSubscribe(subscribe);
+    return true;
+}
+
+bool MsgCenter::removeAgvTaskSubscribe(int subscribe)
+{
+    if(!taskPublisher)return false;
+    taskPublisher->removeSubscribe(subscribe);
+    return true;
+}
