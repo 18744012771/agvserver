@@ -3,26 +3,19 @@
 
 #include <QString>
 
-//去掉了虚站点!所有站点都是RFID点
-enum AGV_STATION_TYPE{
-    AGV_STATION_TYPE_RFID = 1,//RFID站点
-    AGV_STATION_TYPE_REAL//真实站点，它其实也是RFID点
-};
-
-
-
 class AgvStation
 {
 public:
     AgvStation():
         x(0),
         y(0),
-        type(0),
         name(""),
-        lineAmount(0),
         id(0),
         rfid(0),
-        occuAgv(0)
+        occuAgv(0),
+        color_r(255),
+        color_g(0),
+        color_b(0)
     {
     }
 
@@ -30,30 +23,35 @@ public:
     {
         x=b.x;
         y=b.y;
-        type=b.type;
         name=b.name;
-        lineAmount=b.lineAmount;
         id=b.id;
         rfid=b.rfid;
         occuAgv=b.occuAgv;
+        color_r = b.color_r;
+        color_g = b.color_g;
+        color_b = b.color_b;
     }
 
     bool operator <(const AgvStation &b){
         return id<b.id;
     }
 
-    int x;
-    int y;
-    int type;
+    double x;
+    double y;
     QString name;
-    int lineAmount;
     int id;
     int rfid;
-    int occuAgv;
+
+    int color_r;
+    int color_g;
+    int color_b;
 
     bool operator == (const AgvStation &b){
         return this->id == b.id;
     }
+
+    ////用于计算线路的，不存库
+    int occuAgv;
 };
 
 #endif // AGVSTATION_H

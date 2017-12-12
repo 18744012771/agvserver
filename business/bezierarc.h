@@ -8,7 +8,7 @@ class BezierArc
 public:
     BezierArc();
 
-    static double BezierArcLength(QPoint p1, QPoint p2, QPoint p3, QPoint p4);
+    static double BezierArcLength(QPointF p1, QPointF p2, QPointF p3, QPointF p4);
 private:
     static double Simpson (
             double (*f)(double),

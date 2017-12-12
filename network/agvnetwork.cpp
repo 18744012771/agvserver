@@ -63,9 +63,9 @@ void AgvNetWork::onDisconnectClient(void *owner, SOCKET sock, const QString &sIp
 
     //设置用户的在线状态
     if(user_id>0){
-        QString updateSql = "update agv_user set signState = 0 where user_id=?";
-        QStringList params;
-        params<<QString("%1").arg(user_id);
+        QString updateSql = "update agv_user set signState = 0 where id=?";
+        QList<QVariant> params;
+        params<<user_id;
         g_sql->exeSql(updateSql,params);
     }
 }

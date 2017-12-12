@@ -2,6 +2,7 @@
 #define SQL_H
 
 #include <QList>
+#include <QVariant>
 #include <QSqlDatabase>
 #include <QMutex>
 
@@ -23,10 +24,10 @@ public:
 
     //执行sql语句
     //原则上，除了id 时间日期 外的其他字段统统text(vchar)
-    bool exeSql(QString exeSql, QStringList args);
+    bool exeSql(QString exeSql, QList<QVariant> args);
 
     //查询数据
-    QList<QStringList> query(QString qeurysql, QStringList args);
+    QList<QList<QVariant>> query(QString qeurysql, QList<QVariant> args);
 
 private:
     QSqlDatabase database;

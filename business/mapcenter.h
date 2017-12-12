@@ -21,7 +21,7 @@ public:
     //对外接口
 
     //1.创建地图
-    bool resetMap(QString stationStr,QString lineStr,QString arcStr);//站点、直线、弧线
+    bool resetMap(QString stationStr,QString lineStr,QString arcStr,QString imagestr);//站点、直线、弧线
 
     //2.从数据库中载入地图
     bool load();

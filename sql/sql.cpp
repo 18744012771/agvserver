@@ -21,7 +21,7 @@ bool Sql::checkTables()
     //sqlite
     //QString querySql = "SELECT COUNT(*) FROM sqlite_master where type='table' and name=?";
 
-    QStringList args;
+    QList<QVariant> args;
     //检查表如下：
     /// 1.agv_stations
     /// 2.agv_lines
@@ -33,8 +33,8 @@ bool Sql::checkTables()
 
     args.clear();
     args<<"agv_station";
-    QList<QStringList> qsl = query(querySql,args);
-    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0]=="1"){
+    QList<QList<QVariant> >  qsl = query(querySql,args);
+    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0].toString()=="1"){
         //存在了
     }else{
         //不存在.创建
@@ -124,8 +124,6 @@ bool Sql::checkTables()
         if(!b)return false;
     }
 
-
-
     args.clear();
     args<<"agv_user";
     qsl = query(querySql,args);
@@ -193,7 +191,7 @@ bool Sql::closeConnection()
 }
 
 //执行sql语句
-bool Sql::exeSql(QString esql,QStringList args)
+bool Sql::exeSql(QString esql, QList<QVariant> args)
 {
     if(!esql.contains("agv_log") && !esql.contains("insert into"))//防止形成自循环
         g_log->log(AGV_LOG_LEVEL_DEBUG,"exeSql="+esql);
@@ -216,9 +214,9 @@ bool Sql::exeSql(QString esql,QStringList args)
 }
 
 //查询数据
-QList<QStringList> Sql::query(QString qeurysql, QStringList args)
+QList<QList<QVariant> > Sql::query(QString qeurysql, QList<QVariant> args)
 {
-    QList<QStringList> xx;
+    QList<QList<QVariant> > xx;
     if(qeurysql.contains("@@Identity")){
         QString insertSql = qeurysql.split(";").at(0);
         QString querySqlNew = qeurysql.split(";").at(1);
@@ -248,9 +246,9 @@ QList<QStringList> Sql::query(QString qeurysql, QStringList args)
         }
         while(sql_query.next()){
             int columnNum=sql_query.record().count();
-            QStringList qsl;
+            QList<QVariant> qsl;
             for(int i=0;i<columnNum;++i)
-                qsl.append(sql_query.value(i).toString());
+                qsl.append(sql_query.value(i));
             xx.append(qsl);
         }
         mutex.unlock();
@@ -269,9 +267,9 @@ QList<QStringList> Sql::query(QString qeurysql, QStringList args)
         }
         while(sql_query.next()){
             int columnNum=sql_query.record().count();
-            QStringList qsl;
+            QList<QVariant> qsl;
             for(int i=0;i<columnNum;++i)
-                qsl.append(sql_query.value(i).toString());
+                qsl.append(sql_query.value(i));
             xx.append(qsl);
         }
         mutex.unlock();

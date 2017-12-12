@@ -147,9 +147,9 @@ int TaskCenter::makeAgvAimTask(int agvKey,int aimStation,int waitType,int waitTi
     AgvTask *newtask = new AgvTask;
     newtask->setProduceTime(QDateTime::currentDateTime());
     QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status,task_excuteCar) VALUES (?,?,?);SELECT @@Identity;";
-    QStringList params;
-    params<<newtask->produceTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE)<<QString("%1").arg(agvKey);
-    QList<QStringList> result = g_sql->query(insertSql,params);
+    QList<QVariant> params;
+    params<<newtask->produceTime()<<AGV_TASK_STATUS_UNEXCUTE<<agvKey;
+    QList<QList<QVariant> > result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0)
     {
         delete newtask;
@@ -189,9 +189,9 @@ int TaskCenter::makeAimTask(int aimStation,int waitType,int waitTime)
     AgvTask *newtask = new AgvTask;
     newtask->setProduceTime(QDateTime::currentDateTime());
     QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status) VALUES (?,?);SELECT @@Identity;";
-    QStringList params;
-    params<<newtask->produceTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE);
-    QList<QStringList> result = g_sql->query(insertSql,params);
+    QList<QVariant> params;
+    params<<newtask->produceTime()<<AGV_TASK_STATUS_UNEXCUTE;
+    QList< QList<QVariant> > result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0)
     {
         delete newtask;
@@ -208,7 +208,7 @@ int TaskCenter::makeAimTask(int aimStation,int waitType,int waitTime)
     node->status = AGV_TASK_NODE_STATUS_UNDO;
     insertSql = "INSERT INTO agv_task_node(task_node_status,task_node_queuenumber,task_node_aimStation,task_node_waitType,task_node_waitTime,task_node_taskId) VALUES (?,?,?,?,?,?);SELECT @@Identity;";
     params.clear();
-    params<<QString("%1").arg(node->status)<<QString("%1").arg(node->queueNumber)<<QString("%1").arg(node->aimStation)<<QString("%1").arg(node->waitType)<<QString("%1").arg(node->waitTime)<<QString("%1").arg(newtask->id());
+    params<<node->status<<node->queueNumber<<node->aimStation<<node->waitType<<node->waitTime<<newtask->id();
     result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0){
         delete node;
@@ -229,10 +229,10 @@ int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int
     //只有在make task的时候回 insert into agv——task。其他时候，全部都是update的！
     //这里只知道 任务的状态是未执行，产生时间是现在。直行车辆不知道
     QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status,task_excuteCar) VALUES (?,?,?);SELECT @@Identity;";
-    QStringList params;
-    params<<newtask->produceTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE)<<QString("%1").arg(agvId);
+    QList<QVariant> params;
+    params<<newtask->produceTime()<<AGV_TASK_STATUS_UNEXCUTE<<agvId;
 
-    QList<QStringList> result = g_sql->query(insertSql,params);
+    QList<QList<QVariant> > result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0)
     {
         delete newtask;
@@ -248,7 +248,7 @@ int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int
     node_pickup->status = AGV_TASK_NODE_STATUS_UNDO;
     insertSql = "INSERT INTO agv_task_node(task_node_status,task_node_queuenumber,task_node_aimStation,task_node_waitType,task_node_waitTime,task_node_taskId) VALUES (?,?,?,?,?,?);SELECT @@Identity;";
     params.clear();
-    params<<QString("%1").arg(node_pickup->status)<<QString("%1").arg(node_pickup->queueNumber)<<QString("%1").arg(node_pickup->aimStation)<<QString("%1").arg(node_pickup->waitType)<<QString("%1").arg(node_pickup->waitTime)<<QString("%1").arg(newtask->id());
+    params<<node_pickup->status<<node_pickup->queueNumber<<node_pickup->aimStation<<node_pickup->waitType<<node_pickup->waitTime<<newtask->id();
     result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0){
         //删除task
@@ -303,10 +303,10 @@ int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick
     //只有在make task的时候回 insert into agv——task。其他时候，全部都是update的！
     //这里只知道 任务的状态是未执行，产生时间是现在。直行车辆不知道
     QString insertSql = "INSERT INTO agv_task (task_produceTime,task_status) VALUES (?,?);SELECT @@Identity;";
-    QStringList params;
-    params<<newtask->produceTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(AGV_TASK_STATUS_UNEXCUTE);
+    QList<QVariant> params;
+    params<<newtask->produceTime()<<AGV_TASK_STATUS_UNEXCUTE;
 
-    QList<QStringList> result = g_sql->query(insertSql,params);
+    QList<QList<QVariant> > result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0)
     {
         delete newtask;
@@ -322,13 +322,13 @@ int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick
     node_pickup->status = AGV_TASK_NODE_STATUS_UNDO;
     insertSql = "INSERT INTO agv_task_node(task_node_status,task_node_queuenumber,task_node_aimStation,task_node_waitType,task_node_waitTime,task_node_taskId) VALUES (?,?,?,?,?,?);SELECT @@Identity;";
     params.clear();
-    params<<QString("%1").arg(node_pickup->status)<<QString("%1").arg(node_pickup->queueNumber)<<QString("%1").arg(node_pickup->aimStation)<<QString("%1").arg(node_pickup->waitType)<<QString("%1").arg(node_pickup->waitTime)<<QString("%1").arg(newtask->id());
+    params<<node_pickup->status<<node_pickup->queueNumber<<node_pickup->aimStation<<node_pickup->waitType<<node_pickup->waitTime<<newtask->id();
     result = g_sql->query(insertSql,params);
     if(result.length()<=0||result.at(0).length()<=0){
         //删除task
         QString deleteSql = "delete from agv_task where id = ?;";
         params.clear();
-        params<<QString("%1").arg(newtask->id());
+        params<<newtask->id();
         g_sql->exeSql(deleteSql,params);
         delete node_pickup;
         delete newtask;
@@ -395,17 +395,17 @@ AgvTask *TaskCenter::queryDoneTask(int taskId)
     //查找已完成的任务
     AgvTask *result = NULL;
     QString querySql = "select id,task_produceTime,task_doneTime,task_doTime,task_excuteCar,task_status from agv_task where id= ?";
-    QStringList param;
-    param.append(QString("%1").arg(taskId));
-    QList<QStringList> queryresult = g_sql->query(querySql,param);
+    QList<QVariant> param;
+    param.append(taskId);
+    QList<QList<QVariant>> queryresult = g_sql->query(querySql,param);
     if(queryresult.length()==0 ||queryresult.at(0).length()!=6)
         return result;
     //这个任务是存在的
     result = new AgvTask;
     result->setId(queryresult.at(0).at(0).toInt());
-    result->setProduceTime(QDateTime::fromString(queryresult.at(0).at(1),DATE_TIME_FORMAT));
-    result->setDoneTime(QDateTime::fromString(queryresult.at(0).at(2),DATE_TIME_FORMAT));
-    result->setDoTime(QDateTime::fromString(queryresult.at(0).at(3),DATE_TIME_FORMAT));
+    result->setProduceTime(queryresult.at(0).at(1).toDateTime());
+    result->setDoneTime(queryresult.at(0).at(2).toDateTime());
+    result->setDoTime(queryresult.at(0).at(3).toDateTime());
     result->setExcuteCar(queryresult.at(0).at(4).toInt());
     result->setStatus(queryresult.at(0).at(5).toInt());
 
@@ -417,7 +417,7 @@ AgvTask *TaskCenter::queryDoneTask(int taskId)
 
     for(int i=0;i<queryresult.length();++i)
     {
-        QStringList qsl = queryresult.at(i);
+        QList<QVariant> qsl = queryresult.at(i);
         if(qsl.length()!=7)continue;
         TaskNode *n = new TaskNode;
         n->status = qsl.at(0).toInt();
@@ -425,8 +425,8 @@ AgvTask *TaskCenter::queryDoneTask(int taskId)
         n->aimStation = qsl.at(2).toInt();
         n->waitType = qsl.at(3).toInt();
         n->waitTime = qsl.at(4).toInt();
-        n->arriveTime = QDateTime::fromString( qsl.at(5),DATE_TIME_FORMAT);
-        n->leaveTime = QDateTime::fromString( qsl.at(6),DATE_TIME_FORMAT);
+        n->arriveTime = qsl.at(5).toDateTime();
+        n->leaveTime = qsl.at(6).toDateTime();
         result->taskNodes.push_back(n);
     }
 
@@ -508,9 +508,9 @@ int TaskCenter::queryTaskStatus(int taskId)
     }
     //查找已完成的任务
     QString querySql = "select task_status from agv_task where id= ?";
-    QStringList param;
-    param.append(QString("%1").arg(taskId));
-    QList<QStringList> queryresult = g_sql->query(querySql,param);
+    QList<QVariant> param;
+    param.append(taskId);
+    QList<QList<QVariant> > queryresult = g_sql->query(querySql,param);
     if(queryresult.length()==0 ||queryresult.at(0).length()==0)
         return AGV_TASK_STATUS_UNEXIST;
     return queryresult.at(0).at(0).toInt();
@@ -533,9 +533,9 @@ int TaskCenter::queryTaskCar(int taskId)
     }
     //查找已完成的任务
     QString querySql = "select task_excuteCar from agv_task where id= ?";
-    QStringList param;
-    param.append(QString("%1").arg(taskId));
-    QList<QStringList> queryresult = g_sql->query(querySql,param);
+    QList<QVariant> param;
+    param.append(taskId);
+    QList<QList<QVariant> > queryresult = g_sql->query(querySql,param);
     if(queryresult.length()==0 ||queryresult.at(0).length()==0)
         return 0;
     return queryresult.at(0).at(0).toInt();

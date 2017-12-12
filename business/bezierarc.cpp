@@ -18,9 +18,9 @@ BezierArc::BezierArc()
 {
 
 }
-double BezierArc::BezierArcLength(QPoint p1, QPoint p2, QPoint p3, QPoint p4)
+double BezierArc::BezierArcLength(QPointF p1, QPointF p2, QPointF p3, QPointF p4)
 {
-    QPoint k1, k2, k3, k4;
+    QPointF k1, k2, k3, k4;
 
     k1 = -p1 + 3*(p2 - p3) + p4;
     k2 = 3*(p1 + p3) - 6*p2;

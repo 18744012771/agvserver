@@ -15,10 +15,6 @@ class AgvLine
 {
 public:
     AgvLine():
-        startX(0),
-        startY(0),
-        endX(0),
-        endY(0),
         line(false),
         p1x(0),
         p1y(0),
@@ -28,15 +24,14 @@ public:
         draw(false),
         occuAgv(0),
         length(0),
-        rate(0)
+        rate(0),
+        color_r(0),
+        color_g(255),
+        color_b(0)
     {
     }
     AgvLine::AgvLine(const AgvLine &b)
     {
-        startX=b.startX;
-        startY=b.startY;
-        endX=b.endX;
-        endY=b.endY;
         line=b.line;
         p1x=b.p1x;
         p2x=b.p2x;
@@ -49,21 +44,20 @@ public:
         startStation=b.startStation;
         endStation=b.endStation;
         rate=b.rate;
+        color_r = b.color_r;
+        color_g = b.color_g;
+        color_b = b.color_b;
     }
     bool operator <(const AgvLine &b){
         return id<b.id;
     }
 
     //直线弧线共有部分
-    int startX;
-    int startY;
-    int endX;
-    int endY;
     bool line;//true为直线 false为曲线
     int id;
     bool draw;
     int occuAgv;
-    int length;
+    double length;
     int startStation;
     int endStation;
     double rate;
@@ -74,8 +68,11 @@ public:
     int p1y;
     int p2x;
     int p2y;
-
-
+    //这条线路的颜色RGB，显示用的
+    int color_r;
+    int color_g;
+    int color_b;
+    ////////////////////////////下面这部分是计算路径用的
 public:
     //计算路径用的
     int father;

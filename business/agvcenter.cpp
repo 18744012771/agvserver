@@ -402,25 +402,29 @@ void AgvCenter::updateOdometer(Agv *agv, int odometer)
                 t=1.0;
             }
             //计算坐标
-            agv->x = (line->startX*(1-t)*(1-t)*(1-t)
+            double startX = g_m_stations[line->startStation]->x;
+            double startY = g_m_stations[line->startStation]->y;
+            double endX = g_m_stations[line->endStation]->x;
+            double endY = g_m_stations[line->endStation]->y;
+            agv->x = (startX*(1-t)*(1-t)*(1-t)
                       +3*line->p1x*t*(1-t)*(1-t)
                       +3*line->p2x*t*t*(1-t)
-                      +line->endX*t*t*t);
+                      +endX*t*t*t);
 
-            agv->y = (line->startY*(1-t)*(1-t)*(1-t)
+            agv->y = (startY*(1-t)*(1-t)*(1-t)
                       +3*line->p1y*t*(1-t)*(1-t)
                       +3*line->p2y*t*t*(1-t)
-                      +line->endY*t*t*t);
+                      +endY*t*t*t);
 
-            double X = line->startX * 3 * (1 - t)*(1 - t) * (-1) +
+            double X = startX * 3 * (1 - t)*(1 - t) * (-1) +
                     3 * line->p1x * ((1 - t) * (1 - t) + t * 2 * (1 - t) * (-1)) +
                     3 * line->p2x * (2 * t * (1 - t) + t * t * (-1)) +
-                    line->endX * 3 * t *t;
+                    endX * 3 * t *t;
 
-            double Y =  line->startY * 3 * (1 - t)*(1 - t) * (-1) +
+            double Y =  startY * 3 * (1 - t)*(1 - t) * (-1) +
                     3 *line->p1y * ((1 - t) *(1 - t) + t * 2 * (1 - t) * (-1)) +
                     3 * line->p2y * (2 * t * (1 - t) + t * t * (-1)) +
-                    line->endY * 3 * t *t;
+                    endY * 3 * t *t;
 
             agv->rotation = (atan2(Y, X) * 180 / M_PI);
         }
@@ -462,14 +466,14 @@ void AgvCenter::updateStationOdometer(Agv *agv, int station, int odometer)
 bool AgvCenter::load()//从数据库载入所有的agv
 {
     QString querySql = "select id,agv_name from agv_agv";
-    QStringList params;
-    QList<QStringList> result = g_sql->query(querySql,params);
+    QList<QVariant> params;
+    QList<QList<QVariant> > result = g_sql->query(querySql,params);
     for(int i=0;i<result.length();++i){
-        QStringList qsl = result.at(i);
+        QList<QVariant> qsl = result.at(i);
         if(qsl.length() == 2){
             Agv *agv = new Agv;
             agv->id=(qsl.at(0).toInt());
-            agv->name=(qsl.at(1));
+            agv->name=(qsl.at(1).toString());
             g_m_agvs.insert(agv->id,agv);
         }
     }
@@ -480,11 +484,11 @@ bool AgvCenter::save()//将agv保存到数据库
 {
     //查询所有的，
     QList<int> selectAgvIds;
-    QStringList params;
+    QList<QVariant> params;
     QString querySql = "select id from agv_agv";
-    QList<QStringList> queryResult = g_sql->query(querySql,params);
+    QList<QList<QVariant>> queryResult = g_sql->query(querySql,params);
     for(int i=0;i<queryResult.length();++i){
-        QStringList qsl = queryResult.at(i);
+        QList<QVariant> qsl = queryResult.at(i);
         if(qsl.length()==1){
             int id = qsl.at(0).toInt();
             selectAgvIds.push_back(id);

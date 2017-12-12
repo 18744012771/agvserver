@@ -469,9 +469,9 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, QMap<QString, QStr
     if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password",NULL)){//要求包含用户名和密码
         //是否可以重复登录呢？？ //我觉得应该 不可以，那就添加
         QString querySqlA = "select id,user_password,user_role,user_signState from agv_user where user_username=?";
-        QStringList params;
+        QList<QVariant> params;
         params<<requestDatas["username"];
-        QList<QStringList> queryresult = g_sql->query(querySqlA,params);
+        QList<QList<QVariant> > queryresult = g_sql->query(querySqlA,params);
         if(queryresult.length()==0){
             responseParams.insert(QString("info"),QString("not exist:username"));
             responseParams.insert(QString("result"),QString("fail"));
@@ -485,7 +485,7 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, QMap<QString, QStr
                 //设置登录状态和登录时间
                 QString updateSql = "update agv_user set user_signState=1,user_lastSignTime= ? where id=? ";
                 params.clear();
-                params<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(queryresult.at(0).at(0).toInt());
+                params<<QDateTime::currentDateTime()<<queryresult.at(0).at(0).toInt();
                 if(!g_sql->exeSql(updateSql,params)){
                     //登录失败
                     responseParams.insert(QString("info"),QString("update database fail!"));
@@ -504,8 +504,8 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, QMap<QString, QStr
                     //登录成功
                     responseParams.insert(QString("info"),QString(""));
                     responseParams.insert(QString("result"),QString("success"));
-                    responseParams.insert(QString("role"),queryresult.at(0).at(2));
-                    responseParams.insert(QString("id"),queryresult.at(0).at(0));
+                    responseParams.insert(QString("role"),queryresult.at(0).at(2).toString());
+                    responseParams.insert(QString("id"),queryresult.at(0).at(0).toString());
                     responseParams.insert(QString("access_token"),loginUserInfo.access_tocken);
                 }
                 //}
@@ -527,7 +527,7 @@ void UserMsgProcessor:: User_Logout(const QyhMsgDateItem &item, QMap<QString, QS
         g_msgCenter.removeAgvStatusSubscribe(item.sock);
         //设置它的数据库中的状态
         QString updateSql = "update agv_user set user_signState = 0 where id=?";
-        QStringList param;
+        QList<QVariant> param;
         param<<requestDatas["id"];
         g_sql->exeSql(updateSql,param);
         responseParams.insert(QString("info"),QString(""));
@@ -540,14 +540,14 @@ void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, QMap<QSt
     ///////////////////修改密码
     if(checkParamExistAndNotNull(requestDatas,responseParams,"username","oldpassword","newpassword",NULL)){
         QString querySqlA = "select user_password from agv_user where user_username=?";
-        QStringList params;
+        QList<QVariant> params;
         params<<requestDatas["username"];
-        QList<QStringList> queryresult = g_sql->query(querySqlA,params);
+        QList<QList<QVariant> > queryresult = g_sql->query(querySqlA,params);
         if(queryresult.length()==0){
             responseParams.insert(QString("info"),QString("not exist:username."));
             responseParams.insert(QString("result"),QString("fail"));
         }else{
-            if(queryresult.at(0).at(0)==requestDatas["oldpassword"]){
+            if(queryresult.at(0).at(0).toString()==requestDatas["oldpassword"]){
                 /////TODO:设置新的密码
                 QString updateSql = "update agv_user set user_password=? where user_username=?";
                 params.clear();
@@ -572,9 +572,9 @@ void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QStr
     ////////////////////////获取用户列表
     //开始查询用户 只能查看到同等级或者低等级的用户
     QString querySqlB = "select id,user_username,user_password,user_signState,user_lastSignTime,user_createTime,user_role,user_realname,user_age from agv_user where user_role<=?";
-    QStringList paramsB;
-    paramsB<<QString("%1").arg(loginUserInfo.role);
-    QList<QStringList> queryresultB = g_sql->query(querySqlB,paramsB);
+    QList<QVariant> paramsB;
+    paramsB<<loginUserInfo.role;
+    QList<QList<QVariant> > queryresultB = g_sql->query(querySqlB,paramsB);
 
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
@@ -584,19 +584,19 @@ void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QStr
         if(queryresultB.at(i).length() == 9)
         {
             QMap<QString,QString> userinfo;
-            userinfo.insert(QString("id"),queryresultB.at(i).at(0));
-            userinfo.insert(QString("username"),queryresultB.at(i).at(1));
-            userinfo.insert(QString("password"),queryresultB.at(i).at(2));
-            userinfo.insert(QString("signState"),queryresultB.at(i).at(3));
-            QString sss = queryresultB.at(i).at(4);
+            userinfo.insert(QString("id"),queryresultB.at(i).at(0).toString());
+            userinfo.insert(QString("username"),queryresultB.at(i).at(1).toString());
+            userinfo.insert(QString("password"),queryresultB.at(i).at(2).toString());
+            userinfo.insert(QString("signState"),queryresultB.at(i).at(3).toString());
+            QString sss = queryresultB.at(i).at(4).toString();
             sss = sss.replace("T"," ");
             userinfo.insert(QString("lastSignTime"),sss);
-            sss = queryresultB.at(i).at(5);
+            sss = queryresultB.at(i).at(5).toString();
             sss = sss.replace("T"," ");
             userinfo.insert(QString("createTime"),sss);
-            userinfo.insert(QString("role"),queryresultB.at(i).at(6));
-            userinfo.insert(QString("realname"),queryresultB.at(i).at(7));
-            userinfo.insert(QString("age"),queryresultB.at(i).at(8));
+            userinfo.insert(QString("role"),queryresultB.at(i).at(6).toString());
+            userinfo.insert(QString("realname"),queryresultB.at(i).at(7).toString());
+            userinfo.insert(QString("age"),queryresultB.at(i).at(8).toString());
             responseDatalists.push_back(userinfo);
         }
     }
@@ -606,7 +606,7 @@ void UserMsgProcessor:: User_Delete(const QyhMsgDateItem &item, QMap<QString, QS
     ////////////////////////////////删除用户
     if(checkParamExistAndNotNull(requestDatas,responseParams,"id",NULL)){
         QString deleteSql = "delete from agv_user where id=?";
-        QStringList params;
+        QList<QVariant> params;
         params<<requestDatas["id"];
         if(!g_sql->exeSql(deleteSql,params)){
             responseParams.insert(QString("info"),QString("delete fail for sql fail"));
@@ -628,7 +628,7 @@ void UserMsgProcessor::User_Modify(const QyhMsgDateItem &item, QMap<QString, QSt
 
         QString updateSql = "update agv_user set user_username=?,user_password=?,";
         QString updateSqlTail = " where id=?";
-        QStringList params;
+        QList<QVariant> params;
         params.append(username);
         params.append(password);
         if(requestDatas.contains("realname")){
@@ -690,8 +690,8 @@ void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, QMap<QString, QStri
         }
 
         QString addSql = "insert into agv_user(user_username,user_password,user_role,user_realname,user_sex,user_age,user_createTime,user_signState)values(?,?,?,?,?,?,?,?);";
-        QStringList params;
-        params<<username<<password<<role<<realname<<QString("%1").arg(sex)<<QString("%1").arg(age)<<QDateTime::currentDateTime().toString(DATE_TIME_FORMAT)<<QString("%1").arg(0);
+        QList<QVariant> params;
+        params<<username<<password<<role<<realname<<sex<<age<<QDateTime::currentDateTime()<<0;
         if(g_sql->exeSql(addSql,params)){
             //成功
             responseParams.insert(QString("info"),QString(""));
@@ -713,7 +713,7 @@ void UserMsgProcessor::Map_Create(const QyhMsgDateItem &item, QMap<QString, QStr
     {
         responseParams.insert(QString("info"),QString(""));
         responseParams.insert(QString("result"),QString("success"));
-        g_agvMapCenter.resetMap(requestDatas["station"],requestDatas["line"],requestDatas["arc"]);
+        g_agvMapCenter.resetMap(requestDatas["station"],requestDatas["line"],requestDatas["arc"],requestDatas["image"]);
     }
 }
 
@@ -726,10 +726,12 @@ void UserMsgProcessor::Map_StationList(const QyhMsgDateItem &item, QMap<QString,
 
         list.insert(QString("x"),QString("%1").arg(itr.value()->x));
         list.insert(QString("y"),QString("%1").arg(itr.value()->y));
-        list.insert(QString("type"),QString("%1").arg(itr.value()->type));
         list.insert(QString("name"),QString("%1").arg(itr.value()->name));
         list.insert(QString("id"),QString("%1").arg(itr.value()->id));
         list.insert(QString("rfid"),QString("%1").arg(itr.value()->rfid));
+        list.insert(QString("color_r"),QString("%1").arg(itr.value()->color_r));
+        list.insert(QString("color_g"),QString("%1").arg(itr.value()->color_g));
+        list.insert(QString("color_b"),QString("%1").arg(itr.value()->color_b));
 
         responseDatalists.push_back(list);
     }
@@ -741,16 +743,15 @@ void UserMsgProcessor:: Map_LineList(const QyhMsgDateItem &item, QMap<QString, Q
     for(QMap<int,AgvLine *>::iterator itr=g_m_lines.begin();itr!=g_m_lines.end();++itr){
         QMap<QString,QString> list;
 
-        list.insert(QString("startX"),QString("%1").arg(itr.value()->startX));
-        list.insert(QString("startY"),QString("%1").arg(itr.value()->startY));
-        list.insert(QString("endX"),QString("%1").arg(itr.value()->endX));
-        list.insert(QString("endY"),QString("%1").arg(itr.value()->endY));
+        list.insert(QString("startStation"),QString("%1").arg(itr.value()->startStation));
+        list.insert(QString("endStation"),QString("%1").arg(itr.value()->endStation));
+        list.insert(QString("color_r"),QString("%1").arg(itr.value()->color_r));
+        list.insert(QString("color_g"),QString("%1").arg(itr.value()->color_g));
+        list.insert(QString("color_b"),QString("%1").arg(itr.value()->color_b));
         list.insert(QString("line"),QString("%1").arg(itr.value()->line));
         list.insert(QString("id"),QString("%1").arg(itr.value()->id));
         list.insert(QString("draw"),QString("%1").arg(itr.value()->draw));
         list.insert(QString("length"),QString("%1").arg(itr.value()->length));
-        list.insert(QString("startStation"),QString("%1").arg(itr.value()->startStation));
-        list.insert(QString("endStation"),QString("%1").arg(itr.value()->endStation));
         list.insert(QString("rate"),QString("%1").arg(itr.value()->rate));
         list.insert(QString("occuAgv"),QString("%1").arg(itr.value()->occuAgv));
 
@@ -999,12 +1000,12 @@ void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, QMap<QString, 
     if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip",NULL)){
         //TODO //TODO
         QString insertSql = "insert into agv_agv (agv_name)values(?)";
-        QStringList tempParams;
+        QList<QVariant> tempParams;
         tempParams<<requestDatas["name"]<<requestDatas["ip"];
         if(g_sql->exeSql(insertSql,tempParams)){
             int newId;
             QString querySql = "select id from agv_agv where agv_name = ? ";
-            QList<QStringList> queryresult = g_sql->query(querySql,tempParams);
+            QList<QList<QVariant>> queryresult = g_sql->query(querySql,tempParams);
             if(queryresult.length()>0 &&queryresult.at(0).length()>0)
             {
                 newId = queryresult.at(0).at(0).toInt();
@@ -1015,7 +1016,7 @@ void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, QMap<QString, 
                 g_m_agvs.insert(newId,agv);
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));
-                responseParams.insert(QString("id"),queryresult.at(0).at(0));
+                responseParams.insert(QString("id"),queryresult.at(0).at(0).toString());
             }else{
                 responseParams.insert(QString("info"),QString("sql insert fail"));
                 responseParams.insert(QString("result"),QString("fail"));
@@ -1037,9 +1038,10 @@ void UserMsgProcessor:: AgvManage_Delete(const QyhMsgDateItem &item, QMap<QStrin
         if(g_m_agvs.contains(iAgvId)){
             //从数据库中清除
             QString deleteSql = "delete from agv_agv where id=?";
-            QStringList tempParams;
-            tempParams<<QString("%1").arg(iAgvId);
-            if(g_sql->exeSql(deleteSql,tempParams)){
+            QList<QVariant> tempParams;
+            tempParams<<iAgvId;
+            if(g_sql->exeSql(deleteSql,tempParams))
+            {
                 //从列表中清楚
                 if(g_m_agvs.contains(iAgvId)){
                     g_m_agvs.remove(iAgvId);
@@ -1068,7 +1070,7 @@ void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, QMap<QStrin
         }else{
             Agv *agv = g_m_agvs[iAgvId];
             QString updateSql = "update agv_agv set agv_name=?,agv_ip=? where id=?";
-            QStringList params;
+            QList<QVariant> params;
             params<<(requestDatas["name"])<<(requestDatas["ip"])<<(requestDatas["agvid"]);
             if(g_sql->exeSql(updateSql,params)){
                 agv->name = (requestDatas["name"]);
@@ -1307,29 +1309,29 @@ void UserMsgProcessor::Task_ListDoneToday(const QyhMsgDateItem &item, QMap<QStri
     QString querySql = "select id,task_produceTime,task_doneTime,task_doTime,task_excuteCar,task_status from agv_task where task_status = ? and task_doneTime between ? and ?;";
     QDate today = QDate::currentDate();
     QDate tomorrow = today.addDays(1);
-    QStringList params;
-    params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
+    QList<QVariant> params;
+    params<<AGV_TASK_STATUS_DONE;
 
     QDateTime to(tomorrow);
     QDateTime from(today);
 
-    params<<from.toString(DATE_TIME_FORMAT);
-    params<<to.toString(DATE_TIME_FORMAT);
+    params<<from;
+    params<<to;
 
-    QList<QStringList> result = g_sql->query(querySql,params);
+    QList<QList<QVariant> > result = g_sql->query(querySql,params);
 
     for(int i=0;i<result.length();++i)
     {
-        QStringList qsl = result.at(i);
+        QList<QVariant> qsl = result.at(i);
         if(qsl.length() == 6)
         {
             QMap<QString,QString> task;
-            task.insert(QString("id"),qsl.at(0));
-            task.insert(QString("produceTime"),qsl.at(1));
-            task.insert(QString("doneTime"),qsl.at(2));
-            task.insert(QString("doTime"),qsl.at(3));
-            task.insert(QString("excuteCar"),qsl.at(4));
-            task.insert(QString("status"),qsl.at(5));
+            task.insert(QString("id"),qsl.at(0).toString());
+            task.insert(QString("produceTime"),qsl.at(1).toDateTime().toString(DATE_TIME_FORMAT));
+            task.insert(QString("doneTime"),qsl.at(2).toDateTime().toString(DATE_TIME_FORMAT));
+            task.insert(QString("doTime"),qsl.at(3).toDateTime().toString(DATE_TIME_FORMAT));
+            task.insert(QString("excuteCar"),qsl.at(4).toString());
+            task.insert(QString("status"),qsl.at(5).toString());
             responseDatalists.push_back(task);
         }
     }
@@ -1343,23 +1345,23 @@ void UserMsgProcessor::Task_ListDoneAll(const QyhMsgDateItem &item, QMap<QString
 
     QString querySql = "select id,task_produceTime,task_doneTime,task_doTime,task_excuteCar,task_status from agv_task where task_status = ? ";
 
-    QStringList params;
-    params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
+    QList<QVariant> params;
+    params<<AGV_TASK_STATUS_DONE;
 
-    QList<QStringList> result = g_sql->query(querySql,params);
+    QList<QList<QVariant> > result = g_sql->query(querySql,params);
 
     for(int i=0;i<result.length();++i)
     {
-        QStringList qsl = result.at(i);
+        QList<QVariant> qsl = result.at(i);
         if(qsl.length() == 6)
         {
             QMap<QString,QString> task;
-            task.insert(QString("id"),qsl.at(0));
-            task.insert(QString("produceTime"),qsl.at(1));
-            task.insert(QString("doneTime"),qsl.at(2));
-            task.insert(QString("doTime"),qsl.at(3));
-            task.insert(QString("excuteCar"),qsl.at(4));
-            task.insert(QString("status"),qsl.at(5));
+            task.insert(QString("id"),qsl.at(0).toString());
+            task.insert(QString("produceTime"),qsl.at(1).toDateTime().toString(DATE_TIME_FORMAT));
+            task.insert(QString("doneTime"),qsl.at(2).toDateTime().toString(DATE_TIME_FORMAT));
+            task.insert(QString("doTime"),qsl.at(3).toDateTime().toString(DATE_TIME_FORMAT));
+            task.insert(QString("excuteCar"),qsl.at(4).toString());
+            task.insert(QString("status"),qsl.at(5).toString());
             responseDatalists.push_back(task);
         }
     }
@@ -1374,26 +1376,26 @@ void UserMsgProcessor::Task_ListDoneDuring(const QyhMsgDateItem &item, QMap<QStr
         responseParams.insert(QString("result"),QString("success"));
 
         QString querySql = "select id,task_produceTime,task_doneTime,task_doTime,task_excuteCar,task_status from agv_task where task_status = ? and task_doneTime between ? and ?;";
-        QStringList params;
-        params<<QString("%1").arg(AGV_TASK_STATUS_DONE);
-        QDateTime from = QDateTime::fromString(requestDatas["from"],DATE_TIME_FORMAT);
-        QDateTime to = QDateTime::fromString(requestDatas["to"],DATE_TIME_FORMAT);
-        params<<from.toString(DATE_TIME_FORMAT);
-        params<<to.toString(DATE_TIME_FORMAT);
+        QList<QVariant> params;
+        params<<AGV_TASK_STATUS_DONE;
+        QDateTime from = QDateTime::fromString(requestDatas["from"]);
+        QDateTime to = QDateTime::fromString(requestDatas["to"]);
+        params<<from;
+        params<<to;
 
-        QList<QStringList> result = g_sql->query(querySql,params);
+        QList<QList<QVariant> > result = g_sql->query(querySql,params);
 
         for(int i=0;i<result.length();++i){
-            QStringList qsl = result.at(i);
+            QList<QVariant> qsl = result.at(i);
             if(qsl.length() == 6)
             {
                 QMap<QString,QString> task;
-                task.insert(QString("id"),qsl.at(0));
-                task.insert(QString("produceTime"),qsl.at(1));
-                task.insert(QString("doneTime"),qsl.at(2));
-                task.insert(QString("doTime"),qsl.at(3));
-                task.insert(QString("excuteCar"),qsl.at(4));
-                task.insert(QString("status"),qsl.at(5));
+                task.insert(QString("id"),qsl.at(0).toString());
+                task.insert(QString("produceTime"),qsl.at(1).toDateTime().toString(DATE_TIME_FORMAT));
+                task.insert(QString("doneTime"),qsl.at(2).toDateTime().toString(DATE_TIME_FORMAT));
+                task.insert(QString("doTime"),qsl.at(3).toDateTime().toString(DATE_TIME_FORMAT));
+                task.insert(QString("excuteCar"),qsl.at(4).toString());
+                task.insert(QString("status"),qsl.at(5).toString());
                 responseDatalists.push_back(task);
             }
         }
@@ -1477,11 +1479,11 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
 
         QString querySql = "select log_level,log_time,log_msg from agv_log where log_time between ? and ? ";
 
-        QStringList params;
+        QList<QVariant> params;
         QDateTime from = QDateTime::fromString(requestDatas["from"],DATE_TIME_FORMAT);
         QDateTime to = QDateTime::fromString(requestDatas["to"],DATE_TIME_FORMAT);
-        params<<from.toString(DATE_TIME_FORMAT);
-        params<<to.toString(DATE_TIME_FORMAT);
+        params<<from;
+        params<<to;
 
         if(!trace&&!debug&&!info&&!warn&&!error&&!fatal){
 
@@ -1494,7 +1496,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                params<<AGV_LOG_LEVEL_TRACE;
                 firstappend = false;
             }
 
@@ -1505,7 +1507,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                params<<AGV_LOG_LEVEL_TRACE;
                 firstappend = false;
             }
 
@@ -1516,7 +1518,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                params<<AGV_LOG_LEVEL_TRACE;
                 firstappend = false;
             }
 
@@ -1527,7 +1529,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                params<<AGV_LOG_LEVEL_TRACE;
                 firstappend = false;
             }
 
@@ -1538,7 +1540,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                params<<AGV_LOG_LEVEL_TRACE;
                 firstappend = false;
             }
 
@@ -1549,25 +1551,25 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<QString("%1").arg(AGV_LOG_LEVEL_TRACE);
+                params<<AGV_LOG_LEVEL_TRACE;
                 firstappend = false;
             }
             querySql += ");";
         }
 
-        QList<QStringList> result = g_sql->query(querySql,params);
+        QList<QList<QVariant> > result = g_sql->query(querySql,params);
 
         for(int i=0;i<result.length();++i){
-            QStringList qsl = result.at(i);
+            QList<QVariant> qsl = result.at(i);
             if(qsl.length() == 3)
             {
                 QMap<QString,QString> log;
-                log.insert(QString("level"),qsl.at(0));
+                log.insert(QString("level"),qsl.at(0).toString());
                 //这里注意啦！！！查询出来的日期，有可能是带有T的。
-                QString timestr = qsl.at(1);
+                QString timestr = qsl.at(1).toDateTime().toString(DATE_TIME_FORMAT);
                 timestr = timestr.replace("T"," ");
                 log.insert(QString("time"),timestr);
-                log.insert(QString("msg"),qsl.at(2));
+                log.insert(QString("msg"),qsl.at(2).toString());
                 responseDatalists.push_back(log);
             }
         }
@@ -1584,22 +1586,22 @@ void UserMsgProcessor::Log_ListAll(const QyhMsgDateItem &item, QMap<QString, QSt
         responseParams.insert(QString("result"),QString("success"));
 
         QString querySql = "select log_level,log_time,log_msg from agv_log where log_time between ? and ?;";
-        QStringList params;
+        QList<QVariant> params;
         QDateTime from = QDateTime::fromString(requestDatas["from"],DATE_TIME_FORMAT);
         QDateTime to = QDateTime::fromString(requestDatas["to"],DATE_TIME_FORMAT);
-        params<<from.toString(DATE_TIME_FORMAT);
-        params<<to.toString(DATE_TIME_FORMAT);
+        params<<from;
+        params<<to;
 
-        QList<QStringList> result = g_sql->query(querySql,params);
+        QList<QList<QVariant> > result = g_sql->query(querySql,params);
 
         for(int i=0;i<result.length();++i){
-            QStringList qsl = result.at(i);
+            QList<QVariant> qsl = result.at(i);
             if(qsl.length() == 3)
             {
                 QMap<QString,QString> log;
-                log.insert(QString("level"),qsl.at(0));
-                log.insert(QString("time"),qsl.at(1));
-                log.insert(QString("msg"),qsl.at(2));
+                log.insert(QString("level"),qsl.at(0).toString());
+                log.insert(QString("time"),qsl.at(1).toDateTime().toString(DATE_TIME_FORMAT));
+                log.insert(QString("msg"),qsl.at(2).toString());
                 responseDatalists.push_back(log);
             }
         }

@@ -47,10 +47,10 @@ void AgvLogProcess::run()
 
         //保存到数据库
         QString insertSql = "insert into agv_log(log_level,log_time,log_msg)values(?,?,?);SELECT @@Identity;";
-        QStringList params;
-        params<<QString("%1").arg(onelog.level)<<onelog.time.toString(DATE_TIME_FORMAT)<<onelog.msg;
+        QList<QVariant> params;
+        params<<onelog.level<<onelog.time<<onelog.msg;
 
-        QList<QStringList> result;
+        QList<QList<QVariant> > result;
 
         if(g_sql)
              result =  g_sql->query(insertSql,params);
