@@ -66,7 +66,7 @@ void FileTransferServer::onRead(const char *data,int len,QyhTcp::CLIENT_NODE nod
         {
             //写入数据
             itr->data.append(data,len);
-            if(itr->data.length()>itr->length)
+            if(itr->data.length()>=itr->length)
             {
                 //接收数据完成
                 emit onUploadFinish(itr->client_ip,itr->client_port,itr->name,itr->data);
