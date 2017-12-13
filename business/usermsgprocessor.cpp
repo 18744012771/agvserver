@@ -239,6 +239,16 @@ void UserMsgProcessor::clientMsgMapProcess(const QyhMsgDateItem &item,QMap<QStri
         Map_AgvPositionCancelSubscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
 
+    /// 获取背景图片
+    if(requestDatas["todo"]=="getImage"){
+        Map_GetImage(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+
+    /// 设置背景图片
+    else if(requestDatas["todo"]=="setImage"){
+        Map_SetImage(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+
     //封装
     QString xml = getResponseXml(responseParams,responseDatalists);
     //发送
@@ -785,8 +795,39 @@ void UserMsgProcessor:: Map_AgvPositionCancelSubscribe(const QyhMsgDateItem &ite
         responseParams.insert(QString("info"),QString("unknow error"));
         responseParams.insert(QString("result"),QString("fail"));
     }
-
 }
+
+//获取地图背景
+void UserMsgProcessor::Map_GetImage(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"ip","port",NULL))
+    {
+        int file_length = 0;
+        QString file_name = g_msgCenter.downloadFile(requestDatas["ip"].toStdString(),requestDatas["port"].toInt(),file_length);
+        if(file_name.length()>0 && file_length>0){
+            responseParams.insert(QString("result"),QString("success"));
+            responseParams.insert(QString("info"),QString(""));
+            responseParams.insert(QString("file_name"),file_name);
+            responseParams.insert(QString("file_length"),QString("%1").arg(file_length));
+        }else{
+            responseParams.insert(QString("result"),QString("fail"));
+            responseParams.insert(QString("info"),QString("no background image"));
+        }
+    }
+}
+
+//设置地图背景
+void UserMsgProcessor::Map_SetImage(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+{
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"ip","port","file_name","file_length",NULL))
+    {
+        g_msgCenter.uploadFile(requestDatas["ip"].toStdString(),requestDatas["port"].toInt(),requestDatas["file_name"],requestDatas["file_length"].toInt());
+        responseParams.insert(QString("result"),QString("success"));
+        responseParams.insert(QString("info"),QString(""));
+    }
+}
+
+
 
 /////////////////////////////关于手控部分
 //请求小车控制权

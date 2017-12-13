@@ -6,7 +6,7 @@
 #include "agvpositionpublisher.h"
 #include "agvstatuspublisher.h"
 #include "agvtaskpublisher.h"
-
+#include "fileuploadserver.h"
 //这里将会启动一个CPU个数*2的线程，用于处理用户的数据
 //保证并发量和响应时间
 
@@ -34,15 +34,21 @@ public:
     bool removeLogSubscribe(int subscribe,int agvId = 0);
     bool addAgvTaskSubscribe(int subscribe);
     bool removeAgvTaskSubscribe(int subscribe);
+
+    //上传文件，其功能主要用于设置背景图片
+    void uploadFile(std::string _ip, int _port, QString _filename, int _length);
+
+    QString downloadFile(std::string _ip, int _port, int &_length);
 signals:
 
 public slots:
-
+    //文件上传结束
+    void onUploadFinish(std::string _ip,int _port,QString _filename,QByteArray _data);
 private:
     AgvPositionPublisher *positionPublisher;
     AgvStatusPublisher *statusPublisher;
     AgvTaskPublisher *taskPublisher;
-
+    FileTransferServer *fileUploadServer;
 };
 
 #endif // MSGCENTER_H

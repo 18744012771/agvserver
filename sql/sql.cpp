@@ -150,6 +150,21 @@ bool Sql::checkTables()
         if(!b)return false;
     }
 
+    args.clear();
+    args<<"agv_bkg";
+    qsl = query(querySql,args);
+    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0]=="1"){
+        //存在了
+    }else{
+        //不存在.创建
+        QString createSql = "CREATE TABLE agv_bkg (id INTEGER PRIMARY KEY auto_increment,bkg_name text,bkg_upload_time datetime,bkg_upload_user int,bkg_data mediumblob);";
+        args.clear();
+        bool b = exeSql(createSql,args);
+        if(!b)return false;
+    }
+
+
+
     return true;
 }
 

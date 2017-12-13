@@ -9,7 +9,8 @@
 MsgCenter::MsgCenter(QObject *parent) : QObject(parent),
     positionPublisher(NULL),
     statusPublisher(NULL),
-    taskPublisher(NULL)
+    taskPublisher(NULL),
+    fileUploadServer(NULL)
 {
 
 }
@@ -44,6 +45,10 @@ void MsgCenter::init()
     taskPublisher = new AgvTaskPublisher(this);
     taskPublisher->start();
 
+    //启动文件上传服务器
+    fileUploadServer = new FileTransferServer;
+    fileUploadServer->init();
+    connect(fileUploadServer,SIGNAL(onUploadFinish(std::string,int,QString,QByteArray)),this,SLOT(onUploadFinish(std::string,int,QString,QByteArray)));
 }
 
 MsgCenter::~MsgCenter()
@@ -92,4 +97,21 @@ bool MsgCenter::removeAgvTaskSubscribe(int subscribe)
     if(!taskPublisher)return false;
     taskPublisher->removeSubscribe(subscribe);
     return true;
+}
+
+void MsgCenter::uploadFile(std::string _ip,int _port,QString _filename,int _length)
+{
+    //上传文件
+    fileUploadServer->startUpload(_ip,_port,_filename,_length);
+}
+
+QString MsgCenter::downloadFile(std::string _ip, int _port, int &_length)
+{
+    fileUploadServer->startDonwload(_ip,_port,_length);
+    return fileUploadServer->getFileName();
+}
+
+void MsgCenter::onUploadFinish(std::string _ip,int _port,QString _filename,QByteArray _data)
+{
+    //do nothing
 }

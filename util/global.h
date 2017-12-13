@@ -84,7 +84,6 @@ extern TaskCenter g_taskCenter;//任务中心
 extern AgvCenter g_hrgAgvCenter;//车辆管理中心
 extern MsgCenter g_msgCenter;
 
-
 //bean的容器
 extern QMap<int,Agv *> g_m_agvs;//车辆
 extern QMap<int,AgvStation *> g_m_stations;//站点

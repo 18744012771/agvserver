@@ -1,4 +1,4 @@
-QT += core sql
+QT += core sql network
 QT -= gui
 
 CONFIG += c++11
@@ -30,7 +30,8 @@ SOURCES += main.cpp \
     log/agvlog.cpp \
     log/agvlogprocess.cpp \
     business/bezierarc.cpp \
-    business/agvtaskpublisher.cpp
+    business/agvtaskpublisher.cpp \
+    business/fileuploadserver.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -65,7 +66,8 @@ HEADERS += \
     log/agvlog.h \
     log/agvlogprocess.h \
     business/bezierarc.h \
-    business/agvtaskpublisher.h
+    business/agvtaskpublisher.h \
+    business/fileuploadserver.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include
