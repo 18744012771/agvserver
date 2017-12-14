@@ -39,6 +39,7 @@ void FileTransferServer::onConnect(QyhTcp::CLIENT_NODE node)
 //有客户端断开连接的回调函数
 void FileTransferServer::onDisconnect(QyhTcp::CLIENT_NODE node)
 {
+
     clientsMutex.lock();
     clients.removeAll(node);
     clientsMutex.unlock();
@@ -55,6 +56,16 @@ void FileTransferServer::onDisconnect(QyhTcp::CLIENT_NODE node)
         }
     }
     fileUploadersMutex.unlock();
+    fileDownloadMutex.lock();
+    for(QMap<std::string,int>::iterator itr = fileDownloaders.begin();itr!=fileDownloaders.end();++itr)
+    {
+        if(itr.key() == node.ip && itr.value() == node.port)
+        {
+            fileDownloaders.erase(itr);
+            break;
+        }
+    }
+    fileDownloadMutex.unlock();
 }
 
 void FileTransferServer::onRead(const char *data,int len,QyhTcp::CLIENT_NODE node)
@@ -87,10 +98,24 @@ void FileTransferServer::onRead(const char *data,int len,QyhTcp::CLIENT_NODE nod
         }
     }
     fileUploadersMutex.unlock();
+    if(fileName.length()>0 && fileData.length()>0 && fileDownloaders.size()>0)
+    {
+        QByteArray qba = fileData;
+        fileDownloadMutex.lock();
+        for(QMap<std::string,int>::iterator itr = fileDownloaders.begin();itr!=fileDownloaders.end();++itr)
+        {
+            if(itr.key() == node.ip && itr.value() == node.port)
+            {
+                //如果它已经在filedowloader中了，那么它发任何消息代表着准备好接收文件了
+                server->sendToOne(qba.data(),qba.length(),node);
+            }
+        }
+        fileDownloadMutex.unlock();
+    }
 }
 
 //开始上传
-void FileTransferServer::startUpload(std::string _ip, int _port, QString _filename, int length)
+void FileTransferServer::readyToUpload(std::string _ip, int _port, QString _filename, int length)
 {
     FILE_UPLOAD_NODE node;
     node.client_ip = _ip;
@@ -117,27 +142,13 @@ void FileTransferServer::stopUpload(std::string _ip, int _port)
     fileUploadersMutex.unlock();
 }
 
-//开始下载
-void FileTransferServer::startDonwload(std::string _ip, int port, int &_length)
+//放入下载队列中
+void FileTransferServer::readyToDownload(std::string _ip, int _port)
 {
-    _length = fileData.length();
-    if(fileName.length()>0 && fileData.length()>0){
-        QyhTcp::CLIENT_NODE n;
-        clientsMutex.lock();
-        for(QList<QyhTcp::CLIENT_NODE>::iterator itr=clients.begin();itr!=clients.end();++itr)
-        {
-            if(itr->ip == _ip && itr->port == port){
-                n = (*itr);
-                break;
-            }
-        }
-        clientsMutex.unlock();
-
-        //这个发送过程会造成消息阻塞
-        if(n.socket>0){
-            server->sendToOne(fileData.data(),fileData.length(),n);
-        }
-    }
+    fileDownloadMutex.lock();
+    fileDownloaders.insert(_ip,_port);
+    fileDownloadMutex.unlock();
+    return ;
 }
 
 //停止下载

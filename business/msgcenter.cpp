@@ -99,16 +99,25 @@ bool MsgCenter::removeAgvTaskSubscribe(int subscribe)
     return true;
 }
 
-void MsgCenter::uploadFile(std::string _ip,int _port,QString _filename,int _length)
+void MsgCenter::readyToUpload(std::string _ip,int _port,QString _filename,int _length)
 {
     //上传文件
-    fileUploadServer->startUpload(_ip,_port,_filename,_length);
+    fileUploadServer->readyToUpload(_ip,_port,_filename,_length);
 }
 
-QString MsgCenter::downloadFile(std::string _ip, int _port, int &_length)
+void MsgCenter::readyDownloadFile(std::string _ip, int _port)
 {
-    fileUploadServer->startDonwload(_ip,_port,_length);
+    fileUploadServer->readyToDownload(_ip,_port);
+}
+
+QString MsgCenter::getDownloadFileName()
+{
     return fileUploadServer->getFileName();
+}
+
+long MsgCenter::getDownloadFileLength()
+{
+    return fileUploadServer->getFileLength();
 }
 
 void MsgCenter::onUploadFinish(std::string _ip,int _port,QString _filename,QByteArray _data)

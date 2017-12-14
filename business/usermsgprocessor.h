@@ -152,6 +152,10 @@ private:
     void Log_Subscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
     //取消订阅日志
     void Log_CancelSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo);
+
+//    QTimer *delayDownloadFile;
+//    std::string downloadIp;
+//    int downloadPort;
 };
 
 #endif // USERMSGPROCESSOR_H

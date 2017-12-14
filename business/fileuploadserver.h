@@ -50,18 +50,20 @@ public:
     void onRead(const char *data, int len, QyhTcp::CLIENT_NODE node);
 
     //开始上传文件 [参数 ip/port是client端的IP和端口, filename文件名称, length文件长度]
-    void startUpload(std::string _ip,int _port, QString _filename, int length);
+    void readyToUpload(std::string _ip,int _port, QString _filename, int length);
 
     //停止上传
     void stopUpload(std::string _ip, int _port);
 
     //开始下载 [下载的文件名称什么的都不用，因为我们知道只有一个图片是给他们下载的]
-    void startDonwload(std::string _ip, int port, int &_length);
+    void readyToDownload(std::string _ip, int _port);
 
     //停止下载
     void stopDownload(std::string _ip,int port);
 
     QString getFileName(){return fileName;}
+
+    int getFileLength(){return fileData.length();}
 signals:
     //文件上传完成
     void onUploadFinish(std::string _ip,int _port,QString _filename,QByteArray _data);
@@ -79,6 +81,9 @@ private:
 
     QMutex fileUploadersMutex;
     QList<FILE_UPLOAD_NODE> fileUploaders;
+
+    QMutex fileDownloadMutex;
+    QMap<std::string,int> fileDownloaders;
 
     //文件的数据
     QByteArray fileData;

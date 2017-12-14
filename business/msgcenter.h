@@ -36,9 +36,13 @@ public:
     bool removeAgvTaskSubscribe(int subscribe);
 
     //上传文件，其功能主要用于设置背景图片
-    void uploadFile(std::string _ip, int _port, QString _filename, int _length);
+    void readyToUpload(std::string _ip, int _port, QString _filename, int _length);
 
-    QString downloadFile(std::string _ip, int _port, int &_length);
+    void readyDownloadFile(std::string _ip, int _port);
+
+    QString getDownloadFileName();
+
+    long getDownloadFileLength();
 signals:
 
 public slots:

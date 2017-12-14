@@ -9,7 +9,6 @@
 
 UserMsgProcessor::UserMsgProcessor(QObject *parent) : QThread(parent),isQuit(false)
 {
-
 }
 UserMsgProcessor::~UserMsgProcessor(){
     isQuit = true;
@@ -30,7 +29,6 @@ void UserMsgProcessor::run()
         QyhSleep(100);
     }
 }
-
 
 QString UserMsgProcessor::makeAccessToken()
 {
@@ -802,14 +800,17 @@ void UserMsgProcessor::Map_GetImage(const QyhMsgDateItem &item, QMap<QString, QS
 {
     if(checkParamExistAndNotNull(requestDatas,responseParams,"ip","port",NULL))
     {
-        int file_length = 0;
-        QString file_name = g_msgCenter.downloadFile(requestDatas["ip"].toStdString(),requestDatas["port"].toInt(),file_length);
-        if(file_name.length()>0 && file_length>0){
+        QString file_name = g_msgCenter.getDownloadFileName();
+        long file_length = g_msgCenter.getDownloadFileLength();
+        if(file_name.length()>0 && file_length>0)
+        {
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("file_name"),file_name);
             responseParams.insert(QString("file_length"),QString("%1").arg(file_length));
-        }else{
+            g_msgCenter.readyDownloadFile(requestDatas["ip"].toStdString(),requestDatas["port"].toInt());
+        }
+        else{
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("no background image"));
         }
@@ -821,13 +822,11 @@ void UserMsgProcessor::Map_SetImage(const QyhMsgDateItem &item, QMap<QString, QS
 {
     if(checkParamExistAndNotNull(requestDatas,responseParams,"ip","port","file_name","file_length",NULL))
     {
-        g_msgCenter.uploadFile(requestDatas["ip"].toStdString(),requestDatas["port"].toInt(),requestDatas["file_name"],requestDatas["file_length"].toInt());
+        g_msgCenter.readyToUpload(requestDatas["ip"].toStdString(),requestDatas["port"].toInt(),requestDatas["file_name"],requestDatas["file_length"].toInt());
         responseParams.insert(QString("result"),QString("success"));
         responseParams.insert(QString("info"),QString(""));
     }
 }
-
-
 
 /////////////////////////////关于手控部分
 //请求小车控制权
