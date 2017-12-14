@@ -16,10 +16,10 @@ class AgvLine
 public:
     AgvLine():
         line(false),
-        p1x(0),
-        p1y(0),
-        p2x(0),
-        p2y(0),
+        p1x(0.0),
+        p1y(0.0),
+        p2x(0.0),
+        p2y(0.0),
         id(0),
         draw(false),
         occuAgv(0),
@@ -64,10 +64,10 @@ public:
 
     //弧线单独部分
     //弧线(贝塞尔曲线),三次贝塞尔曲线，共四个点，P0(startx,starty),P1,P2,P3(endX,endY);这里需要额外的两个点坐标P1,P2
-    int p1x;
-    int p1y;
-    int p2x;
-    int p2y;
+    double p1x;
+    double p1y;
+    double p2x;
+    double p2y;
     //这条线路的颜色RGB，显示用的
     int color_r;
     int color_g;

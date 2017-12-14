@@ -215,7 +215,7 @@ void UserMsgProcessor::clientMsgMapProcess(const QyhMsgDateItem &item,QMap<QStri
 
     /// 创建地图
     if(requestDatas["todo"]=="create"){
-        Map_StationList(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Map_Create(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     /// 站点列表
     if(requestDatas["todo"]=="stationlist"){

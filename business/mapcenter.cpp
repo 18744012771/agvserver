@@ -113,12 +113,12 @@ void MapCenter::addLine(QString s)
                     aLine->rate = (pp.at(3).toDouble());
                     aLine->line = (true);
                     aLine->draw = (true);
-                    aLine->color_r = (pp.at(0).toInt());
-                    aLine->color_g = (pp.at(1).toInt());
-                    aLine->color_b = (pp.at(2).toInt());
+                    aLine->color_r = (pp.at(4).toInt());
+                    aLine->color_g = (pp.at(5).toInt());
+                    aLine->color_b = (pp.at(6).toInt());
 
                     if(!g_m_stations.contains(aLine->startStation)
-                            ||g_m_stations.contains(aLine->endStation)){
+                            ||!g_m_stations.contains(aLine->endStation)){
                         delete aLine;
                         continue;
                     }
@@ -182,7 +182,7 @@ void MapCenter::addArc(QString s)
 
 
                     if(!g_m_stations.contains(aLine->startStation)
-                            ||g_m_stations.contains(aLine->endStation)){
+                            ||!g_m_stations.contains(aLine->endStation)){
                         delete aLine;
                         continue;
                     }
@@ -195,7 +195,20 @@ void MapCenter::addArc(QString s)
 
                     QString insertSql = "INSERT INTO agv_line (id,line_startStation,line_endStation,line_rate,line_color_r,line_color_g,line_color_b,line_line,line_length,line_draw,line_p1x,line_p1y,line_p2x,line_p2y) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
                     QList<QVariant> params;
-                    params<<aLine->id<<aLine->startStation<<aLine->endStation<<aLine->rate<<aLine->color_r<<aLine->color_g<<aLine->color_b<<aLine->line<<aLine->length<<aLine->draw<<aLine->p1x<<aLine->p1y<<aLine->p2x<<aLine->p2y;
+                    params<<aLine->id
+                         <<aLine->startStation
+                        <<aLine->endStation
+                       <<aLine->rate
+                      <<aLine->color_r
+                     <<aLine->color_g
+                    <<aLine->color_b
+                    <<aLine->line
+                    <<aLine->length
+                    <<aLine->draw
+                    <<aLine->p1x
+                    <<aLine->p1y
+                    <<aLine->p2x
+                    <<aLine->p2y;
 
                     if(g_sql->exeSql(insertSql,params))
                     {
@@ -334,7 +347,7 @@ void MapCenter::create()
             rLine->p2x = line->p1x;
             rLine->p2y = line->p1y;
 
-            QString insertSql = "INSERT INTO agv_line (id,line_startStation,line_endStation,line_line,line_length,line_draw,line_rate,line_p1x,line_p1y,line_p2x,line_p2y,line_color_r,line_color_g,line_color_b) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+            QString insertSql = "INSERT INTO agv_line (id,line_startStation,line_endStation,line_line,line_length,line_draw,line_rate,line_p1x,line_p1y,line_p2x,line_p2y,line_color_r,line_color_g,line_color_b) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
             QList<QVariant> params;
             params<<rLine->id
                  <<rLine->startStation
@@ -360,7 +373,7 @@ void MapCenter::create()
                 continue;
             }
         }else{
-            QString insertSql = "INSERT INTO agv_line (id,line_startStation,line_endStation,line_line,line_length,line_draw,line_rate,line_color_r,line_color_g,line_color_b) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+            QString insertSql = "INSERT INTO agv_line (id,line_startStation,line_endStation,line_line,line_length,line_draw,line_rate,line_color_r,line_color_g,line_color_b) VALUES (?,?,?,?,?,?,?,?,?,?)";
             QList<QVariant> params;
             params<<rLine->id
                  <<rLine->startStation
@@ -461,7 +474,7 @@ void MapCenter::create()
 
     emit mapUpdate();
 
-    mutex.lock();
+    mutex.unlock();
 }
 
 
@@ -793,9 +806,6 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
         result.push_front(index);
         index = g_m_lines[index]->father;
     }
-
-    mutex.unlock();
-
     //去除第一条线路(因为已经到达了)
     if(result.length()>0 && lastPoint!=startPoint){
         if(!changeDirect){
@@ -810,9 +820,7 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
             //            }
         }
     }
-
-
-
+    mutex.unlock();
     return result;
 }
 
