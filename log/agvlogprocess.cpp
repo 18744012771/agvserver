@@ -41,7 +41,7 @@ void AgvLogProcess::run()
         OneLog onelog;
         if(!g_log_queue.try_dequeue(onelog))
         {
-            QyhSleep(500);
+            QyhSleep(50);
             continue;
         }
 
@@ -85,7 +85,6 @@ void AgvLogProcess::run()
             mutex.unlock();
         }
 
-
-        QyhSleep(50);
+        QyhSleep(20);
     }
 }

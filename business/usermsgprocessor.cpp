@@ -1547,7 +1547,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<AGV_LOG_LEVEL_TRACE;
+                params<<AGV_LOG_LEVEL_DEBUG;
                 firstappend = false;
             }
 
@@ -1558,7 +1558,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<AGV_LOG_LEVEL_TRACE;
+                params<<AGV_LOG_LEVEL_INFO;
                 firstappend = false;
             }
 
@@ -1569,7 +1569,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<AGV_LOG_LEVEL_TRACE;
+                params<<AGV_LOG_LEVEL_WARN;
                 firstappend = false;
             }
 
@@ -1580,7 +1580,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<AGV_LOG_LEVEL_TRACE;
+                params<<AGV_LOG_LEVEL_ERROR;
                 firstappend = false;
             }
 
@@ -1591,11 +1591,13 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
                 else{
                     querySql += QString("or log_level=? ");
                 }
-                params<<AGV_LOG_LEVEL_TRACE;
+                params<<AGV_LOG_LEVEL_FATAL;
                 firstappend = false;
             }
             querySql += ");";
         }
+
+        qDebug() << "querySql="<<querySql;
 
         QList<QList<QVariant> > result = g_sql->query(querySql,params);
 
