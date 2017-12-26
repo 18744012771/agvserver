@@ -37,7 +37,6 @@ void AgvNetWork::sendToSome(QList<int> ones,char *buf,int len)//发送给某些i
 
 void AgvNetWork::onRecvClientMsg(void *param, char *buf, int len,SOCKET sock,const QString &sIp,int port)
 {
-    //TODO:
     if (param != NULL)
     {
         ((AgvNetWork *)param)->recvClientMsgProcess(buf, len,sock,sIp,port);

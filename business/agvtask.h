@@ -26,7 +26,31 @@ enum{
     AGV_TASK_NODE_STATUS_DONE = 2,
 };
 
-struct TaskNode{
+class TaskNode{
+public:
+    TaskNode() {}
+    TaskNode(const TaskNode &b) {
+        id = b.id;
+        status = b.status;
+        queueNumber = b.queueNumber;
+        aimStation = b.aimStation;
+        waitType = b.waitType;
+        waitTime = b.waitTime;
+        if(b.arriveTime.isValid())
+            arriveTime = b.arriveTime;
+        if(b.leaveTime.isValid())
+            leaveTime = b.leaveTime;
+    }
+
+    bool operator < (const TaskNode &b)
+    {
+        return id<b.id;
+    }
+
+    bool operator == (const TaskNode &b){
+        return id == b.id;
+    }
+
     int id = 0;
     int status = 0;  //0未执行  1正在执行  2执行完成了
     int queueNumber = 0; //在这个任务中的序列号
@@ -37,59 +61,65 @@ struct TaskNode{
     QDateTime leaveTime;//离开时间
 };
 
-class AgvTask : public QObject
+class AgvTask
 {
-    Q_OBJECT
 public:
-    explicit AgvTask(QObject *parent = nullptr);
+    AgvTask(){}
 
-    //getter
-    int id(){return m_id;}
-    QDateTime produceTime(){return m_produceTime;}
-    QDateTime doneTime(){return m_doneTime;}
-    QDateTime doTime(){return m_doTime;}
-    int excuteCar(){return m_excuteCar;}
-    int status(){return m_status;}
+    AgvTask(const AgvTask &b) {
+        id = b.id;
+        status = b.status;
+        excuteCar = b.excuteCar;
+        circle = b.circle;
+        nextTodoIndex = b.nextTodoIndex;
+        lastDoneIndex = b.lastDoneIndex;
+        currentDoingIndex = b.currentDoingIndex;
+        if(b.produceTime.isValid())
+            produceTime = b.produceTime;
+        if(b.doneTime.isValid())
+            doneTime = b.doneTime;
+        if(b.doTime.isValid())
+            doTime = b.doTime;
 
-    //setter
-    void setId( int newId){m_id=newId;emit idChanged(newId);}
-    void setProduceTime( QDateTime newProduceTime){m_produceTime=newProduceTime;emit produceTimeChanged(newProduceTime);}
-    void setDoneTime( QDateTime newDoneTime){m_doneTime=newDoneTime;emit doneTimeChanged(newDoneTime);}
-    void setDoTime( QDateTime newDoTime){m_doTime=newDoTime;emit doTimeChanged(newDoTime);}
-    void setExcuteCar( int newExcuteCar){m_excuteCar=newExcuteCar;emit excuteCarChanged(newExcuteCar);}
-    void setStatus(int newStatus){m_status=newStatus;emit statusChanged(newStatus);}
+        for(int i=0;i<b.taskNodes.length();++i)
+        {
+            TaskNode *n = new TaskNode(*(b.taskNodes.at(i)));
+            taskNodes.append(n);
+        }
+
+        for(int i=0;i<b.taskNodesBackup.length();++i)
+        {
+            TaskNode *n = new TaskNode(*(b.taskNodesBackup.at(i)));
+            taskNodesBackup.append(n);
+        }
+
+    }
+
+    bool operator < (const AgvTask &b)
+    {
+        return id<b.id;
+    }
+
+    bool operator ==(const AgvTask &b){
+        return id == b.id;
+    }
+
+    int id = 0;
+    QDateTime produceTime;
+    QDateTime doneTime;
+    QDateTime doTime;
+    int excuteCar = 0;
+    int status = AGV_TASK_STATUS_UNEXCUTE;
+    bool circle = false;////是否是循环任务(如果是循环任务呢？)
+    int nextTodoIndex = 0;
+    int lastDoneIndex = -1;
+    int currentDoingIndex = -1;
 
     QList<TaskNode *> taskNodes;
-signals:
-    //change signal
-    void idChanged(int newid);
-    void produceTimeChanged(QDateTime newproduceTime);
-    void doneTimeChanged(QDateTime newdoneTime);
-    void doTimeChanged(QDateTime newdoTime);
-    void excuteCarChanged(int newexcuteCar);
-    void statusChanged(int newstatus);
+    QList<TaskNode *> taskNodesBackup;//循环任务的任务节点备份。取出来循环时，请重新赋值ID
 
-public slots:
+    bool isDone(){return currentDoingIndex>=taskNodes.length();}
 
-private:
-    int m_id;
-    QDateTime m_produceTime;
-    QDateTime m_doneTime;
-    QDateTime m_doTime;
-    int m_excuteCar;
-    int m_status;
-
-public:
-    //这两个是可以公有访问的.不过一般仅限于task中访问
-
-    int nextTodoIndex;
-    int lastDoneIndex;
-    int currentDoingIndex;
-
-    bool isDone();
-
-    //为了给node进行排序，
-    int nodeAmount;
 };
 
 #endif // AGVTASK_H

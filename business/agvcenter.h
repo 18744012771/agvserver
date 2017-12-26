@@ -15,9 +15,14 @@ public:
 
     bool agvStartTask(int agvId,QList<int> path);
 
+    bool agvStopTask(int agvId);
+
     void init();
 
-    QByteArray taskControlCmd(int agvId,bool changeDirect);
+    QByteArray taskStopCmd(int agvId);
+
+    QByteArray taskControlCmd(int agvId);
+    //QByteArray taskControlCmd(int agvId,bool changeDirect);
 
     bool handControlCmd(int agvId,int agvHandType,int speed);
 

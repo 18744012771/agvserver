@@ -49,9 +49,9 @@ void AgvTaskPublisher::run()
             QMap<QString,QString> mm;
             AgvTask *t = undos.at(i);
             if(t!=NULL){
-                mm.insert(QString("status"),QString("%1").arg(t->status()));
-                mm.insert(QString("excutecar"),QString("%1").arg(t->excuteCar()));
-                mm.insert(QString("id"),QString("%1").arg(t->id()));
+                mm.insert(QString("status"),QString("%1").arg(t->status));
+                mm.insert(QString("excutecar"),QString("%1").arg(t->excuteCar));
+                mm.insert(QString("id"),QString("%1").arg(t->id));
                 responseDatalists.push_back(mm);
             }
         }
@@ -61,9 +61,9 @@ void AgvTaskPublisher::run()
             AgvTask *t = doings.at(i);
             if(t!=NULL)
             {
-                mm.insert(QString("status"),QString("%1").arg(t->status()));
-                mm.insert(QString("excutecar"),QString("%1").arg(t->excuteCar()));
-                mm.insert(QString("id"),QString("%1").arg(t->id()));
+                mm.insert(QString("status"),QString("%1").arg(t->status));
+                mm.insert(QString("excutecar"),QString("%1").arg(t->excuteCar));
+                mm.insert(QString("id"),QString("%1").arg(t->id));
                 responseDatalists.push_back(mm);
             }
         }

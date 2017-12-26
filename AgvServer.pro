@@ -19,7 +19,6 @@ SOURCES += main.cpp \
     business/agvstation.cpp \
     business/agvline.cpp \
     business/agv.cpp \
-    business/agvtask.cpp \
     business/agvcenter.cpp \
     business/mapcenter.cpp \
     business/taskcenter.cpp \
@@ -55,7 +54,6 @@ HEADERS += \
     business/agvstation.h \
     business/agvline.h \
     business/agv.h \
-    business/agvtask.h \
     business/agvcenter.h \
     business/mapcenter.h \
     business/taskcenter.h \
@@ -67,7 +65,8 @@ HEADERS += \
     log/agvlogprocess.h \
     business/bezierarc.h \
     business/agvtaskpublisher.h \
-    business/fileuploadserver.h
+    business/fileuploadserver.h \
+    business/agvtask.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include

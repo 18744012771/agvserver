@@ -77,7 +77,7 @@ public:
     int y;
     int rotation;
 
-    int myStatus;//标记空闲、执行任务、返回充电、充电中、电量低等
+    int myStatus;//TODO 两个status 标记空闲、执行任务、返回充电、充电中、电量低等
 
     //UPLOAD INFO
     int mileage;

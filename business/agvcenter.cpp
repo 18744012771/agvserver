@@ -117,8 +117,7 @@ bool AgvCenter::handControlCmd(int agvId,int agvHandType,int speed)
     return tcpClient->sendToServer(result.data(),result.length());
 }
 
-
-QByteArray AgvCenter::taskControlCmd(int agvId, bool changeDirect)
+QByteArray AgvCenter::taskStopCmd(int agvId)
 {
     //组装一个agv执行path的命令
     QByteArray content;
@@ -128,20 +127,37 @@ QByteArray AgvCenter::taskControlCmd(int agvId, bool changeDirect)
     //队列编号 0-255循环使用
     content[0] = g_m_agvs[agvId]->queueNumber;
 
-    //1.判断是否掉向
     //首先需要启动
-    if(!changeDirect){
-        //1.立即启动
-        content.append(auto_instruct_forward(AGV_PACK_SEND_RFID_CODE_IMMEDIATELY,g_m_agvs[agvId]->speed));
+    //1.立即停止
+    content.append(auto_instruct_stop(AGV_PACK_SEND_RFID_CODE_ETERNITY,0));
+
+    //固定长度五组
+    while(content.length()+5 < 28){
+        content.append(auto_instruct_wait());///////////////////////////////////////////////////////5*5=25Byte
     }
-    //        else{
-    //            //掉头行驶
-    //            //TODO
-    //            content.append(auto_instruct_turnleft(AGV_RFID_CODE_IMMEDIATELY,0x0f));
-    //            content.append(auto_instruct_turnleft(AGV_RFID_CODE_IMMEDIATELY,0x00));
-    //        }
 
+    content.append(CHAR_NULL);
+    content.append(CHAR_NULL);/////////////////////////////////////////////设备地址 2Byte
 
+    assert(content.length() == 28);
+    //组包//加入包头、功能码、内容、校验和、包尾
+    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_AUDTO_MODE,content);
+
+    return result;
+}
+QByteArray AgvCenter::taskControlCmd(int agvId)
+{
+    //组装一个agv执行path的命令
+    QByteArray content;
+
+    ++g_m_agvs[agvId]->queueNumber;
+    g_m_agvs[agvId]->queueNumber &=  0xFF;
+    //队列编号 0-255循环使用
+    content[0] = g_m_agvs[agvId]->queueNumber;
+
+    //首先需要启动
+    //1.立即启动
+    content.append(auto_instruct_forward(AGV_PACK_SEND_RFID_CODE_IMMEDIATELY,g_m_agvs[agvId]->speed));
 
     //然后对接下来的要执行的数量进行预判
     for(int i=0;i<g_m_agvs[agvId]->currentPath.length() && content.length()+5 < 28;++i){
@@ -211,6 +227,16 @@ void AgvCenter::agvDisconnectCallBack()
     qDebug()<<("agv disconnect!\n");
 }
 
+bool AgvCenter::agvStopTask(int agvId)
+{
+    if(!g_m_agvs.contains(agvId))return false;
+    Agv *agv = g_m_agvs[agvId];
+    agv->currentPath.clear();
+    QByteArray qba =  taskControlCmd(agvId);
+    //组包完成，发送
+    return tcpClient->sendToServer(qba.data(),qba.length());
+}
+
 bool AgvCenter::agvStartTask(int agvId, QList<int> path)
 {
     if(!g_m_agvs.contains(agvId))return false;
@@ -226,7 +252,7 @@ bool AgvCenter::agvStartTask(int agvId, QList<int> path)
         agv->nextStation = g_m_lines[agv->currentPath.at(0)]->endStation;
     }
 
-    QByteArray qba =  taskControlCmd(agvId,false);
+    QByteArray qba =  taskControlCmd(agvId);
     //组包完成，发送
     return tcpClient->sendToServer(qba.data(),qba.length());
 }

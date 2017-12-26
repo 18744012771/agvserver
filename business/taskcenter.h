@@ -15,6 +15,9 @@ public:
 
     void init();
 
+    //产生一个循环任务【制定车辆执行一个任务】
+    int makeLoopTask(int agvId,int pickStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim);
+
     //产生一个取货送货的任务,pickupStation是取货点，aimStation是送货点
     int makePickupTask(int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim);
 
@@ -40,8 +43,6 @@ public:
 
     AgvTask *queryDoneTask(int taskId);
 
-    bool saveTaskToDatabase(AgvTask *task);
-
     QList<AgvTask *> getUnassignedTasks(){return unassignedTasks;}
     QList<AgvTask *> getDoingTasks(){return  doingTasks;}
 signals:
@@ -52,8 +53,6 @@ public slots:
     void unassignedTasksProcess();//未分配的任务
     void doingTaskProcess();//正在执行的任务(由于线路占用的问题，导致小车停在了某个位置，需要启动它)
 
-    //    void onPickUpFinish(int taskKey);
-    //    void onAimFinish(int taskKey);
 private:
     //这里可以对任务进行扩展。将任务要做的事情做成一个不定的
     //对于C类任务(直接去往目的地).它会先被放入todoAimtask中，等待分配车辆执行。如果分配到车辆了，这个任务会放入doingtasks中
@@ -63,8 +62,6 @@ private:
     //    QList<AgvTask *> todoAimTasks;//直接到目的地的任务
     //    QList<AgvTask *> todoPickTasks;//经过pickup的任务
     //    QList<AgvTask *> doingTasks;//正在执行的任务
-
-    void clear();
 
     QTimer taskProcessTimer;
 

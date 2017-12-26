@@ -556,7 +556,7 @@ void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, QMap<QSt
             responseParams.insert(QString("result"),QString("fail"));
         }else{
             if(queryresult.at(0).at(0).toString()==requestDatas["oldpassword"]){
-                /////TODO:设置新的密码
+                /////设置新的密码
                 QString updateSql = "update agv_user set user_password=? where user_username=?";
                 params.clear();
                 params<<requestDatas["newpassword"]<<requestDatas["username"];
@@ -1038,7 +1038,7 @@ void UserMsgProcessor:: AgvManage_List(const QyhMsgDateItem &item, QMap<QString,
 void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
     //要求name和ip
     if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip",NULL)){
-        //TODO //TODO
+        //TODO
         QString insertSql = "insert into agv_agv (agv_name)values(?)";
         QList<QVariant> tempParams;
         tempParams<<requestDatas["name"]<<requestDatas["ip"];
@@ -1313,10 +1313,10 @@ void UserMsgProcessor::Task_ListUnassigned(const QyhMsgDateItem &item, QMap<QStr
         AgvTask * task = *itr;
         QMap<QString,QString> onetask;
 
-        onetask.insert(QString("id"),QString("%1").arg(task->id()));
-        onetask.insert(QString("produceTime"),task->produceTime().toString(DATE_TIME_FORMAT));
-        onetask.insert(QString("excuteCar"),QString("%1").arg(task->excuteCar()));
-        onetask.insert(QString("status"),QString("%1").arg(task->status()));
+        onetask.insert(QString("id"),QString("%1").arg(task->id));
+        onetask.insert(QString("produceTime"),task->produceTime.toString(DATE_TIME_FORMAT));
+        onetask.insert(QString("excuteCar"),QString("%1").arg(task->excuteCar));
+        onetask.insert(QString("status"),QString("%1").arg(task->status));
 
         responseDatalists.push_back(onetask);
     }
@@ -1332,11 +1332,11 @@ void UserMsgProcessor::Task_ListDoing(const QyhMsgDateItem &item, QMap<QString, 
         AgvTask * task = *itr;
         QMap<QString,QString> onetask;
 
-        onetask.insert(QString("id"),QString("%1").arg(task->id()));
-        onetask.insert(QString("produceTime"),task->produceTime().toString(DATE_TIME_FORMAT));
-        onetask.insert(QString("doTime"),task->doTime().toString(DATE_TIME_FORMAT));
-        onetask.insert(QString("excuteCar"),QString("%1").arg(task->excuteCar()));
-        onetask.insert(QString("status"),QString("%1").arg(task->status()));
+        onetask.insert(QString("id"),QString("%1").arg(task->id));
+        onetask.insert(QString("produceTime"),task->produceTime.toString(DATE_TIME_FORMAT));
+        onetask.insert(QString("doTime"),task->doTime.toString(DATE_TIME_FORMAT));
+        onetask.insert(QString("excuteCar"),QString("%1").arg(task->excuteCar));
+        onetask.insert(QString("status"),QString("%1").arg(task->status));
 
         responseDatalists.push_back(onetask);
     }
@@ -1468,12 +1468,12 @@ void UserMsgProcessor::Task_Detail(const QyhMsgDateItem &item, QMap<QString, QSt
             responseParams.insert(QString("result"),QString("success"));
 
             {
-                responseParams.insert(QString("id"),QString("%1").arg(task->id()));
-                responseParams.insert(QString("produceTime"),task->produceTime().toString(DATE_TIME_FORMAT));
-                responseParams.insert(QString("doneTime"),task->doneTime().toString(DATE_TIME_FORMAT));
-                responseParams.insert(QString("doTime"),task->doTime().toString(DATE_TIME_FORMAT));
-                responseParams.insert(QString("excuteCar"),QString("%1").arg(task->excuteCar()));
-                responseParams.insert(QString("status"),QString("%1").arg(task->status()));
+                responseParams.insert(QString("id"),QString("%1").arg(task->id));
+                responseParams.insert(QString("produceTime"),task->produceTime.toString(DATE_TIME_FORMAT));
+                responseParams.insert(QString("doneTime"),task->doneTime.toString(DATE_TIME_FORMAT));
+                responseParams.insert(QString("doTime"),task->doTime.toString(DATE_TIME_FORMAT));
+                responseParams.insert(QString("excuteCar"),QString("%1").arg(task->excuteCar));
+                responseParams.insert(QString("status"),QString("%1").arg(task->status));
             }
             //装入节点
             for(int i=0;i<task->taskNodes.length();++i)
