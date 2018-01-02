@@ -101,7 +101,7 @@ bool Sql::checkTables()
     args.clear();
     args<<"agv_task";
     qsl = query(querySql,args);
-    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0]=="1"){
+    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0].toInt()>0){
         //存在了
     }else{
         //不存在.创建

@@ -395,6 +395,10 @@ void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QStr
     else  if(requestDatas["todo"]=="agvPassYtoX"){
         Task_CreateAgvYToX(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
+    /// 创建任务(创建指定车辆经过Y点到X点的任务)
+    else  if(requestDatas["todo"]=="agvPassYtoXCircle"){
+        Task_CreateAgvYToXCircle(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
     /// 查询任务状态
     if(requestDatas["todo"]=="queryStatus"){
         Task_QueryStatus(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
@@ -422,6 +426,10 @@ void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QStr
     /// 已经完成任务列表(from to 时间)
     else  if(requestDatas["todo"]=="listDuring"){
         Task_ListDoneDuring(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    }
+    /// 查询任务详情
+    else  if(requestDatas["todo"]=="detail"){
+        Task_Detail(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     //封装
     QString xml = getResponseXml(responseParams,responseDatalists);
@@ -1271,6 +1279,44 @@ void UserMsgProcessor::Task_CreateAgvYToX(const QyhMsgDateItem &item, QMap<QStri
             responseParams.insert(QString("info"),QString("not found agv"));
         }else{
             int id = g_taskCenter.makeAgvPickupTask(agvId,iX,iY,waitTypeX,watiTimeX,waitTypeY,watiTimeY);
+            responseParams.insert(QString("info"),QString(""));
+            responseParams.insert(QString("result"),QString("success"));
+            responseParams.insert(QString("id"),QString("%1").arg(id));
+        }
+    }
+}
+
+//创建任务(创建指定车辆经过Y点到X点的任务)
+void UserMsgProcessor::Task_CreateAgvYToXCircle(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"x","y","agvid",NULL)){
+        int iX = requestDatas["x"].toInt();
+        int iY = requestDatas["y"].toInt();
+        int agvId = requestDatas["agvid"].toInt();
+
+        int waitTypeX = AGV_TASK_WAIT_TYPE_NOWAIT;
+        int watiTimeX = 30;
+        int waitTypeY = AGV_TASK_WAIT_TYPE_NOWAIT;
+        int watiTimeY = 30;
+
+        //判断是否设置了等待时间和等待时长
+        if(requestDatas.contains("xWaitType"))waitTypeX=requestDatas["xWaitType"].toInt();
+        if(requestDatas.contains("xWaitTime"))watiTimeX=requestDatas["xWaitTime"].toInt();
+        if(requestDatas.contains("yWaitType"))waitTypeY=requestDatas["yWaitType"].toInt();
+        if(requestDatas.contains("yWaitTime"))watiTimeY=requestDatas["yWaitTime"].toInt();
+
+        //确保站点存在
+        if(!g_m_stations.contains(iX)){
+            responseParams.insert(QString("result"),QString("fail"));
+            responseParams.insert(QString("info"),QString("not found station x"));
+        }else if(!g_m_stations.contains(iY)){
+            responseParams.insert(QString("result"),QString("fail"));
+            responseParams.insert(QString("info"),QString("not found station y"));
+        }else if(!g_m_agvs.contains(agvId)){
+            responseParams.insert(QString("result"),QString("fail"));
+            responseParams.insert(QString("info"),QString("not found agv"));
+        }else{
+            int id = g_taskCenter.makeLoopTask(agvId,iX,iY,waitTypeX,watiTimeX,waitTypeY,watiTimeY);
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("id"),QString("%1").arg(id));
