@@ -110,6 +110,7 @@ void TaskCenter::unassignedTasksProcess()
             //要看返回的结果的！！！！！！ 如果失败了，要回滚上述所有操作！太难了
             g_hrgAgvCenter.agvStartTask(bestCar->id,path);
 
+            emit sigTaskStart(ttask->id,ttask->excuteCar);
             //如果成功了，那么 将node设置为doing
             //将未执行的节点，设置为正在执行
             ttask->lastDoneIndex = ttask->currentDoingIndex;
@@ -434,7 +435,6 @@ int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick
 
     unassignedTasks.append(newtask);
     return newtask->id;
-
 }
 
 AgvTask *TaskCenter::queryUndoTask(int taskId)
@@ -853,6 +853,8 @@ void TaskCenter::doingTaskProcess()
                         task->doneTime = (QDateTime::currentDateTime());
                         task->status = (AGV_TASK_STATUS_DONE);
 
+                        emit sigTaskFinish(task->id);
+
                         //置车辆状态
                         if(g_m_agvs.contains(task->excuteCar)){
                             if(g_m_agvs[task->excuteCar]->myStatus == AGV_STATUS_TASKING){
@@ -1012,6 +1014,7 @@ void TaskCenter::doingTaskProcess()
             }
 
             if(!task->circle){
+                emit sigTaskFinish(task->id);
                 QString updateSql = "upadte agv_task set task_status=?,task_doneTime=? where id = ?";
                 QList<QVariant> args;
                 args<<task->status<<task->doneTime<<task->id;

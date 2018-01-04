@@ -9,7 +9,6 @@ QString g_strExeRoot;
 Sql *g_sql = NULL;
 AgvLog *g_log = NULL;
 AgvLogProcess *g_logProcess = NULL;
-SqlServer *g_sqlServer = NULL;
 AgvNetWork *g_netWork;//服务器中心
 
 //所有的bean集合
@@ -25,6 +24,7 @@ MapCenter g_agvMapCenter;//地图管理(地图载入，地图保存，地图计�
 TaskCenter g_taskCenter;//任务管理(任务分配，任务保存，任务调度)
 AgvCenter g_hrgAgvCenter;//车辆管理(车辆载入。车辆保存。车辆增加。车辆删除)
 MsgCenter g_msgCenter;   //消息处理中心，对所有的消息进行解析和组装等
+TaskMaker *g_taskMaker;
 
 ///登录的客户端的信息
 QMap<int,LoginUserInfo> loginUserIdSock;

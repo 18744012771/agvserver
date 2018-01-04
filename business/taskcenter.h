@@ -46,7 +46,8 @@ public:
     QList<AgvTask *> getUnassignedTasks(){return unassignedTasks;}
     QList<AgvTask *> getDoingTasks(){return  doingTasks;}
 signals:
-
+    void sigTaskStart(int,int);
+    void sigTaskFinish(int);
 public slots:
     void carArriveStation(int car,int station);
 

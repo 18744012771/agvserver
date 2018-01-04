@@ -30,7 +30,9 @@ SOURCES += main.cpp \
     log/agvlogprocess.cpp \
     business/bezierarc.cpp \
     business/agvtaskpublisher.cpp \
-    business/fileuploadserver.cpp
+    business/fileuploadserver.cpp \
+    service/taskmaker.cpp \
+    service/taskmakerworker.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -66,7 +68,9 @@ HEADERS += \
     business/bezierarc.h \
     business/agvtaskpublisher.h \
     business/fileuploadserver.h \
-    business/agvtask.h
+    business/agvtask.h \
+    service/taskmaker.h \
+    service/taskmakerworker.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include

@@ -46,8 +46,9 @@ bool SqlServer::closeConnection()
 }
 
 //执行sql语句
-bool SqlServer::exeSql(QString qeurysql,QStringList args)
+bool SqlServer::exeSql(QString qeurysql, QList<QVariant> args)
 {
+    mutex.lock();
     QSqlQuery sql_query(database);
     sql_query.prepare(qeurysql);
     for(int i=0;i<args.length();++i){
@@ -57,35 +58,74 @@ bool SqlServer::exeSql(QString qeurysql,QStringList args)
     if(!sql_query.exec())
     {
         //g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text());
+        mutex.unlock();
         return false;
     }
-
+    mutex.unlock();
     return true;
 }
 
 //查询数据
-QList<QStringList> SqlServer::query(QString qeurysql, QStringList args)
+QList<QList<QVariant>> SqlServer::query(QString qeurysql, QList<QVariant> args)
 {
-    QList<QStringList> xx;
-    QSqlQuery sql_query(database);
-    sql_query.prepare(qeurysql);
-    for(int i=0;i<args.length();++i){
-        sql_query.addBindValue(args[i]);
-    }
+    QList<QList<QVariant> > xx;
+    if(qeurysql.contains("@@Identity")){
+        QString insertSql = qeurysql.split(";").at(0);
+        QString querySqlNew = qeurysql.split(";").at(1);
 
-    if(!sql_query.exec())
-    {
-        //g_log->log(AGV_LOG_LEVEL_ERROR,"Error: Fail to sql_query.exec()."+sql_query.lastError().text());
-        return xx;
-    }
-    while(sql_query.next()){
-        int columnNum=sql_query.record().count();
-        QStringList qsl;
-        for(int i=0;i<columnNum;++i)
-            qsl.append(sql_query.value(i).toString());
-        xx.append(qsl);
-    }
+        mutex.lock();
+        QSqlQuery sql_insert(database);
+        sql_insert.prepare(insertSql);
+        for(int i=0;i<args.length();++i){
+            sql_insert.addBindValue(args[i]);
+        }
 
+        if(!sql_insert.exec())
+        {
+            qDebug() << "Error: Fail to sql_query.exec()."<<sql_insert.lastError();
+            mutex.unlock();
+            return xx;
+        }
+
+        QSqlQuery sql_query(database);
+        sql_query.prepare(querySqlNew);
+
+        if(!sql_query.exec())
+        {
+            qDebug() << "Error: Fail to sql_query.exec()."<<sql_query.lastError();
+            mutex.unlock();
+            return xx;
+        }
+        while(sql_query.next()){
+            int columnNum=sql_query.record().count();
+            QList<QVariant> qsl;
+            for(int i=0;i<columnNum;++i)
+                qsl.append(sql_query.value(i));
+            xx.append(qsl);
+        }
+        mutex.unlock();
+    }else{
+        mutex.lock();
+        QSqlQuery sql_query(database);
+        sql_query.prepare(qeurysql);
+        for(int i=0;i<args.length();++i){
+            sql_query.addBindValue(args[i]);
+        }
+        if(!sql_query.exec())
+        {
+            qDebug() << "Error: Fail to sql_query.exec()."<<sql_query.lastError();
+            mutex.unlock();
+            return xx;
+        }
+        while(sql_query.next()){
+            int columnNum=sql_query.record().count();
+            QList<QVariant> qsl;
+            for(int i=0;i<columnNum;++i)
+                qsl.append(sql_query.value(i));
+            xx.append(qsl);
+        }
+        mutex.unlock();
+    }
     return xx;
 }
 

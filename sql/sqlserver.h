@@ -3,6 +3,8 @@
 
 #include <QList>
 #include <QSqlDatabase>
+#include <QMutex>
+#include <QVariant>
 
 class SqlServer
 {
@@ -21,13 +23,14 @@ public:
 
     //执行sql语句
     //原则上，除了id 时间日期 外的其他字段统统text(vchar)
-    bool exeSql(QString qeurysql,QStringList args);
+    bool exeSql(QString qeurysql,QList<QVariant> args);
 
     //查询数据
-    QList<QStringList> query(QString qeurysql, QStringList args);
+    QList<QList<QVariant>> query(QString qeurysql, QList<QVariant> args);
 
 private:
     QSqlDatabase database;
+    QMutex mutex;
 };
 
 #endif // SQLSERVER_H

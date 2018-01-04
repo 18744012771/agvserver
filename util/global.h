@@ -27,6 +27,8 @@
 
 #include "util/concurrentqueue.h"
 
+#include "service/taskmaker.h"
+
 struct LoginUserInfo
 {
     int id;//ID
@@ -75,7 +77,6 @@ extern QString g_strExeRoot;
 extern Sql *g_sql;
 extern AgvLog *g_log;
 extern AgvLogProcess *g_logProcess;
-extern SqlServer *g_sqlServer;
 extern AgvNetWork *g_netWork;//服务器中心
 
 //全局业务处理类实例
@@ -83,6 +84,7 @@ extern MapCenter g_agvMapCenter;//地图路径中心
 extern TaskCenter g_taskCenter;//任务中心
 extern AgvCenter g_hrgAgvCenter;//车辆管理中心
 extern MsgCenter g_msgCenter;
+extern TaskMaker *g_taskMaker;
 
 //bean的容器
 extern QMap<int,Agv *> g_m_agvs;//车辆
