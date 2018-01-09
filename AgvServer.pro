@@ -14,8 +14,6 @@ SOURCES += main.cpp \
     util/global.cpp \
     sql/sql.cpp \
     sql/sqlserver.cpp \
-    network/agvnetwork.cpp \
-    network/IOCPModel.cpp \
     business/agvstation.cpp \
     business/agvline.cpp \
     business/agv.cpp \
@@ -30,9 +28,11 @@ SOURCES += main.cpp \
     log/agvlogprocess.cpp \
     business/bezierarc.cpp \
     business/agvtaskpublisher.cpp \
-    business/fileuploadserver.cpp \
     service/taskmaker.cpp \
-    service/taskmakerworker.cpp
+    service/taskmakerworker.cpp \
+    network/qyhzmqserver.cpp \
+    network/qyhzmqserverworker.cpp \
+    network/qyhzmqftp.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -51,8 +51,6 @@ HEADERS += \
     util/global.h \
     sql/sql.h \
     sql/sqlserver.h \
-    network/agvnetwork.h \
-    network/IOCPModel.h \
     business/agvstation.h \
     business/agvline.h \
     business/agv.h \
@@ -67,10 +65,12 @@ HEADERS += \
     log/agvlogprocess.h \
     business/bezierarc.h \
     business/agvtaskpublisher.h \
-    business/fileuploadserver.h \
     business/agvtask.h \
     service/taskmaker.h \
-    service/taskmakerworker.h
+    service/taskmakerworker.h \
+    network/qyhzmqserver.h \
+    network/qyhzmqserverworker.h \
+    network/qyhzmqftp.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include
@@ -86,5 +86,13 @@ CONFIG(debug, debug|release) {
     LIBS += D:\thirdparty\QyhTcpLib\lib\Debug\QyhTcpLib.lib
 } else {
     LIBS += D:\thirdparty\QyhTcpLib\lib\Release\QyhTcpLib.lib
+}
+
+#zeromq
+INCLUDEPATH += D:\thirdparty\zeromq\include
+CONFIG(debug, debug|release) {
+    LIBS += D:\thirdparty\zeromq\lib\debug\dynamic\libzmq.lib
+} else {
+    LIBS += D:\thirdparty\zeromq\lib\release\dynamic\libzmq.lib
 }
 

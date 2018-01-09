@@ -23,17 +23,13 @@ public:
     explicit AgvLogProcess(QObject *parent = nullptr);
 
     ~AgvLogProcess();
-    void addSubscribe(int sock,SubNode node);
-    void removeSubscribe(int sock);
-    void run() override;
 
+    void run() override;
 signals:
 
 public slots:
 
 private:
-    QMap<int,SubNode> subscribers;
-    QMutex mutex;
     volatile bool isQuit;
 };
 

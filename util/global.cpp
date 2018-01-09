@@ -9,7 +9,7 @@ QString g_strExeRoot;
 Sql *g_sql = NULL;
 AgvLog *g_log = NULL;
 AgvLogProcess *g_logProcess = NULL;
-AgvNetWork *g_netWork;//服务器中心
+//AgvNetWork *g_netWork;//服务器中心
 
 //所有的bean集合
 QMap<int,Agv *> g_m_agvs;             //所有车辆们
@@ -23,11 +23,9 @@ QMap<int,int> g_reverseLines;           //线路和它的反方向线路的集�
 MapCenter g_agvMapCenter;//地图管理(地图载入，地图保存，地图计算)
 TaskCenter g_taskCenter;//任务管理(任务分配，任务保存，任务调度)
 AgvCenter g_hrgAgvCenter;//车辆管理(车辆载入。车辆保存。车辆增加。车辆删除)
-MsgCenter g_msgCenter;   //消息处理中心，对所有的消息进行解析和组装等
+//MsgCenter g_msgCenter;   //消息处理中心，对所有的消息进行解析和组装等
+UserMsgProcessor *userMsgProcessor = NULL;
 TaskMaker *g_taskMaker;
-
-///登录的客户端的信息
-QMap<int,LoginUserInfo> loginUserIdSock;
 
 const QString DATE_TIME_FORMAT = "yyyy-MM-dd hh:mm:ss";//统一时间格式
 
@@ -54,7 +52,7 @@ moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
 QMap<int,std::string> client2serverBuffer;
 moodycamel::ConcurrentQueue<OneLog> g_log_queue;
 
-QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,QString> > &responseDatalists)
+std::string getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,QString> > &responseDatalists)
 {
     pugi::xml_document doc;
     pugi::xml_node root  = doc.append_child("xml");
@@ -94,7 +92,7 @@ QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,
     //封装完成
     std::stringstream result;
     doc.print(result, "", pugi::format_raw);
-    return QString::fromStdString(result.str());
+    return result.str();
 }
 
 bool getRequestParam(const std::string &xmlStr,QMap<QString,QString> &params,QList<QMap<QString,QString> > &datalist)

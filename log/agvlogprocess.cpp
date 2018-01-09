@@ -12,26 +12,11 @@ AgvLogProcess::~AgvLogProcess()
     isQuit = true;
 }
 
-void AgvLogProcess::addSubscribe(int sock, SubNode node)
-{
-    mutex.lock();
-    if(subscribers.contains(sock)){
-        subscribers[sock] = node;
-    }else{
-        subscribers.insert(sock,node);
-    }
-    mutex.unlock();
-}
-
-void AgvLogProcess::removeSubscribe(int sock)
-{
-    mutex.lock();
-    subscribers.remove(sock);
-    mutex.unlock();
-}
-
 void AgvLogProcess::run()
 {
+    zmq::context_t context(1);
+    zmq::socket_t publisher(context, ZMQ_PUB);
+    publisher.bind("tcp://*:5565");
     //处理日志队列的消息
     //处理方法如下:
     //取出消息，存入数据库
@@ -67,22 +52,12 @@ void AgvLogProcess::run()
             responseDatas.insert(QString("msg"),onelog.msg);
             responseDatas.insert(QString("id"),QString("%1").arg(id));
 
-
-            QString xml = getResponseXml(responseDatas,responseDatalists);
+            std::string xml = getResponseXml(responseDatas,responseDatalists);
 
             //发送订阅信息
-            mutex.lock();
-            for(QMap<int,SubNode>::iterator itr = subscribers.begin();itr!=subscribers.end();++itr)
-            {
-                if(onelog.level==AGV_LOG_LEVEL_TRACE &&!itr.value().trace)continue;
-                if(onelog.level==AGV_LOG_LEVEL_DEBUG &&!itr.value().debug)continue;
-                if(onelog.level==AGV_LOG_LEVEL_INFO &&!itr.value().info)continue;
-                if(onelog.level==AGV_LOG_LEVEL_WARN &&!itr.value().warn)continue;
-                if(onelog.level==AGV_LOG_LEVEL_ERROR &&!itr.value().error)continue;
-                if(onelog.level==AGV_LOG_LEVEL_FATAL &&!itr.value().fatal)continue;
-                g_netWork->sendToOne(itr.key(),xml.toStdString().c_str(),xml.toStdString().length());
-            }
-            mutex.unlock();
+            zmq::message_t message(xml.size());
+            memcpy (message.data(), xml.data(), xml.size());
+            publisher.send (message);
         }
 
         QyhSleep(20);

@@ -18,6 +18,14 @@ class MapCenter : public QObject
     Q_OBJECT
 public:
     explicit MapCenter(QObject *parent = nullptr);
+
+    enum{
+        PATH_LMF_NOWAY = -2,//代表可能要掉头行驶
+        PATH_LMR_LEFT=-1,
+        PATH_LMR_MIDDLE=0,
+        PATH_LMR_RIGHT=1,
+    };
+
     //对外接口
 
     //1.创建地图

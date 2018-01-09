@@ -13,7 +13,7 @@
 #include "log/agvlogprocess.h"
 #include "concurrentqueue.h"
 #include "sql/sqlserver.h"
-#include "network/agvnetwork.h"
+#include "network/qyhzmqserver.h"
 
 #include "business/agv.h"
 #include "business/agvline.h"
@@ -23,21 +23,13 @@
 #include "business/agvcenter.h"
 #include "business/mapcenter.h"
 #include "business/taskcenter.h"
-#include "business/msgcenter.h"
+//#include "business/msgcenter.h"
+#include "business/usermsgprocessor.h"
 
 #include "util/concurrentqueue.h"
 
 #include "service/taskmaker.h"
 
-struct LoginUserInfo
-{
-    int id;//ID
-    SOCKET sock;//对应的socket
-    QString password;//密码
-    QString username;//用户名
-    int role;//角色
-    QString access_tocken;//随机码(安全码)，登录以后，给用户的，之后的所有请求要求带上随机码。
-};
 
 struct QyhMsgDateItem
 {
@@ -65,25 +57,18 @@ struct PATH_LEFT_MIDDLE_RIGHT{
     }
 };
 
-enum{
-    PATH_LMF_NOWAY = -2,//代表可能要掉头行驶
-    PATH_LMR_LEFT=-1,
-    PATH_LMR_MIDDLE=0,
-    PATH_LMR_RIGHT=1,
-};
-
 //全局共有变量处理类实例
 extern QString g_strExeRoot;
 extern Sql *g_sql;
 extern AgvLog *g_log;
 extern AgvLogProcess *g_logProcess;
-extern AgvNetWork *g_netWork;//服务器中心
+extern QyhZmqServer *g_server;
 
 //全局业务处理类实例
 extern MapCenter g_agvMapCenter;//地图路径中心
 extern TaskCenter g_taskCenter;//任务中心
 extern AgvCenter g_hrgAgvCenter;//车辆管理中心
-extern MsgCenter g_msgCenter;
+extern UserMsgProcessor *userMsgProcessor;
 extern TaskMaker *g_taskMaker;
 
 //bean的容器
@@ -98,20 +83,16 @@ void QyhSleep(int msec);
 
 int getRandom(int maxRandom);
 
-//用户上来的消息队列
-extern moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
-
 //用户消息的缓存区(用于拆包、分包)
 extern QMap<int,std::string> client2serverBuffer;
 
 ////将结果封装成xml格式(解析-封装 的封装)
-QString getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,QString> > &responseDatalists);
+std::string getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QString,QString> > &responseDatalists);
 
 ////将xml格式转成两个参数模式(解析-封装 的解析)
 bool getRequestParam(const std::string &xmlStr, QMap<QString,QString> &params, QList<QMap<QString,QString> > &datalist);
 
-///登录的客户端的id和它对应的sock
-extern QMap<int,LoginUserInfo> loginUserIdSock;
+
 
 extern const QString DATE_TIME_FORMAT;
 

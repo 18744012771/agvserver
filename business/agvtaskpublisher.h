@@ -13,15 +13,11 @@ class AgvTaskPublisher : public QThread
 public:
     explicit AgvTaskPublisher(QObject *parent = nullptr);
     ~AgvTaskPublisher();
-    void addSubscribe(int subscribe);
-    void removeSubscribe(int subscribe);
     void run();
 signals:
 
 public slots:
 private:
-    QList<int> subscribers;
-    QMutex mutex;
     volatile bool isQuit;
 };
 

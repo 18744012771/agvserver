@@ -21,12 +21,10 @@ int main(int argc, char *argv[])
     g_hrgAgvCenter.init();//载入车辆
     g_agvMapCenter.load();//地图路径中心
     g_taskCenter.init();//任务中心
-    g_msgCenter.init();//消息处理中心
+    userMsgProcessor = new UserMsgProcessor;//消息处理
 
-    //对外接口
-    g_netWork = new AgvNetWork;
-    g_netWork->initServer();
-
+    g_server = new QyhZmqServer;
+    std::thread(std::bind(&QyhZmqServer::run, g_server)).detach();//zmq server
 
     //启动一个独立线程，执行任务产生和完成回调
     g_taskMaker = new TaskMaker;

@@ -14,15 +14,11 @@ class AgvPositionPublisher : public QThread
 public:
     explicit AgvPositionPublisher(QObject *parent = nullptr);
     ~AgvPositionPublisher();
-    void addSubscribe(int subscribe);
-    void removeSubscribe(int subscribe);
     void run();
 signals:
 
 public slots:
 private:
-    QList<int> subscribers;
-    QMutex mutex;
     volatile bool isQuit;
 };
 

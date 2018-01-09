@@ -12,29 +12,13 @@ AgvTaskPublisher::~AgvTaskPublisher()
     isQuit = true;
 }
 
-void AgvTaskPublisher::addSubscribe(int subscribe)
-{
-    mutex.lock();
-    if(!subscribers.contains(subscribe))
-        subscribers.push_back(subscribe);
-    mutex.unlock();
-}
-
-void AgvTaskPublisher::removeSubscribe(int subscribe)
-{
-    mutex.lock();
-    subscribers.removeAll(subscribe);
-    mutex.unlock();
-}
-
 void AgvTaskPublisher::run()
 {
-    while(!isQuit){
-        if(subscribers.size()==0){//没有订阅者或者没有车辆
-            QyhSleep(500);
-            continue;
-        }
+    zmq::context_t context(1);
+    zmq::socket_t publisher(context, ZMQ_PUB);
+    publisher.bind("tcp://*:5566");
 
+    while(!isQuit){
         //组装订阅信息
         QMap<QString,QString> responseDatas;
         QList<QMap<QString,QString> > responseDatalists;
@@ -68,15 +52,12 @@ void AgvTaskPublisher::run()
             }
         }
 
-        QString xml = getResponseXml(responseDatas,responseDatalists);
+        std::string xml = getResponseXml(responseDatas,responseDatalists);
 
         //发送订阅信息
-        mutex.lock();
-        for(QList<int>::iterator itr = subscribers.begin();itr!=subscribers.end();++itr)
-        {
-            g_netWork->sendToOne(*itr,xml.toStdString().c_str(),xml.toStdString().length());
-        }
-        mutex.unlock();
+        zmq::message_t message(xml.size());
+        memcpy (message.data(), xml.data(), xml.size());
+        publisher.send (message);
 
         QyhSleep(1000);
     }

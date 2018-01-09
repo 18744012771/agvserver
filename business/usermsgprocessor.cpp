@@ -10,24 +10,9 @@
 UserMsgProcessor::UserMsgProcessor(QObject *parent) : QThread(parent),isQuit(false)
 {
 }
+
 UserMsgProcessor::~UserMsgProcessor(){
     isQuit = true;
-}
-
-void UserMsgProcessor::run()
-{
-    while(!isQuit){
-        QyhMsgDateItem item;
-        if(g_user_msg_queue.try_dequeue(item)){
-
-            if(item.data.length()==0)continue;
-
-            g_log->log(AGV_LOG_LEVEL_INFO,"get client msg="+QString::fromStdString(item.data));
-
-            parseOneMsg(item,item.data);
-        }
-        QyhSleep(100);
-    }
 }
 
 QString UserMsgProcessor::makeAccessToken()
@@ -44,12 +29,12 @@ void UserMsgProcessor::myquit()
 
 //对接收到的xml消息进行转换
 //这里，采用速度最最快的pluginXml.以保证效率，解析单个xml的时间应该在3ms之内
-void UserMsgProcessor::parseOneMsg(const QyhMsgDateItem &item, const std::string &oneMsg)
+std::string UserMsgProcessor::parseOneMsg(zmq::context_t *ctx, const std::string &oneMsg)
 {
     QMap<QString,QString> params;
     QList<QMap<QString,QString> > datalist;
     //解析
-    if(!getRequestParam(oneMsg,params,datalist))return ;
+    if(!getRequestParam(oneMsg,params,datalist))return "";
 
     //初步判断，如果不合格，那就直接淘汰
     QMap<QString,QString>::iterator itr;
@@ -57,15 +42,16 @@ void UserMsgProcessor::parseOneMsg(const QyhMsgDateItem &item, const std::string
             &&(itr=params.find("todo"))!=params.end()
             &&(itr=params.find("queuenumber"))!=params.end()){
         //接下来对这条消息进行响应
-        LARGE_INTEGER start;
-        LARGE_INTEGER end ;
-        LARGE_INTEGER frequency;
-        QueryPerformanceFrequency(&frequency);
-        QueryPerformanceCounter(&start); //开始计时
-        responseOneMsg(item,params,datalist);
-        QueryPerformanceCounter(&end); //结束计时
-        qDebug()<<"reponse one msg total time= "<<1000*(double)(end.QuadPart - start.QuadPart) / (double)frequency.QuadPart<<" ms";
+        //        LARGE_INTEGER start;
+        //        LARGE_INTEGER end ;
+        //        LARGE_INTEGER frequency;
+        //        QueryPerformanceFrequency(&frequency);
+        //        QueryPerformanceCounter(&start); //开始计时
+        return  responseOneMsg(ctx,params,datalist);
+        //        QueryPerformanceCounter(&end); //结束计时
+        //        qDebug()<<"reponse one msg total time= "<<1000*(double)(end.QuadPart - start.QuadPart) / (double)frequency.QuadPart<<" ms";
     }
+    return "";
 }
 
 bool UserMsgProcessor::checkParamExistAndNotNull(QMap<QString,QString> &requestDatas,QMap<QString,QString> &responseParams,const char* s,...)
@@ -99,7 +85,7 @@ bool UserMsgProcessor::checkParamExistAndNotNull(QMap<QString,QString> &requestD
     return result;
 }
 
-bool UserMsgProcessor::checkAccessToken(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QMap<QString,QString> &responseParams,LoginUserInfo &loginUserInfo)
+bool UserMsgProcessor::checkAccessToken(zmq::context_t *ctx,QMap<QString,QString> &requestDatas,QMap<QString,QString> &responseParams,LoginUserInfo &loginUserinfo)
 {
     if(!checkParamExistAndNotNull(requestDatas,responseParams,"access_token",NULL))
         return false;
@@ -107,42 +93,47 @@ bool UserMsgProcessor::checkAccessToken(const QyhMsgDateItem &item,QMap<QString,
     ////对access_token判断是否正确
     bool access_token_correct = false;
 
-    if(loginUserIdSock.contains(item.sock)){
-        if(loginUserIdSock[item.sock].access_tocken == requestDatas["access_token"]){
+    loginUserIdSockMutex.lock();
+    for(QList<LoginUserInfo>::iterator itr = loginUserIdSock.begin();itr!=loginUserIdSock.end();++itr)
+    {
+        if(itr->ctx == ctx && itr->access_tocken == requestDatas["access_token"])
+        {
             access_token_correct = true;
-            loginUserInfo = loginUserIdSock[item.sock];
+            loginUserinfo = *itr;
+            break;
         }
     }
+    loginUserIdSockMutex.unlock();
 
     if(!access_token_correct){
         //access_token错误
         responseParams.insert(QString("info"),QString("not correct:access_token,please relogin!"));
         responseParams.insert(QString("result"),QString("fail"));
-
         return false;
     }
     return true;
 }
 
 //对接收到的消息，进行处理！
-void UserMsgProcessor::responseOneMsg(const QyhMsgDateItem &item, QMap<QString, QString> requestDatas, QList<QMap<QString,QString> > datalists)
+std::string UserMsgProcessor::responseOneMsg(zmq::context_t *ctx, QMap<QString, QString> requestDatas, QList<QMap<QString,QString> > datalists)
 {
     if(requestDatas["type"] == "user"){
-        clientMsgUserProcess(item,requestDatas,datalists);
+        return clientMsgUserProcess(ctx,requestDatas,datalists);
     }else if(requestDatas["type"] == "map"){
-        clientMsgMapProcess(item,requestDatas,datalists);
+        return clientMsgMapProcess(ctx,requestDatas,datalists);
     }else if(requestDatas["type"] == "agv"){
-        clientMsgAgvProcess(item,requestDatas,datalists);
+        return clientMsgAgvProcess(ctx,requestDatas,datalists);
     }else if(requestDatas["type"] == "agvManage"){
-        clientMsgAgvManageProcess(item,requestDatas,datalists);
+        return clientMsgAgvManageProcess(ctx,requestDatas,datalists);
     }else if(requestDatas["type"] == "task"){
-        clientMsgTaskProcess(item,requestDatas,datalists);
+        return clientMsgTaskProcess(ctx,requestDatas,datalists);
     }else if(requestDatas["type"] == "log"){
-        clientMsgLogProcess(item,requestDatas,datalists);
+        return clientMsgLogProcess(ctx,requestDatas,datalists);
     }
+    return "";
 }
 
-void UserMsgProcessor::clientMsgUserProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
+std::string UserMsgProcessor::clientMsgUserProcess(zmq::context_t *ctx,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
 {
     QMap<QString,QString> responseParams;
     QList<QMap<QString,QString> > responseDatalists;
@@ -154,50 +145,40 @@ void UserMsgProcessor::clientMsgUserProcess(const QyhMsgDateItem &item,QMap<QStr
     /////////////////////////////////////这段是和掐所有地方不应的一个点
     if(requestDatas["todo"]=="login")
     {
-        User_Login(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-
-        //封装        //发送
-        QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-
-        return ;
+        User_Login(ctx,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        return  getResponseXml(responseParams,responseDatalists);
     }
     /////////////////////////////////////这段是和掐所有地方不应的一个点
 
     /////所有的非登录消息，需要进行，安全验证 随机码
-    if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
-        QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-        return ;
+    if(!checkAccessToken(ctx,requestDatas,responseParams,loginUserinfo)){
+        return getResponseXml(responseParams,responseDatalists);
     }
 
     if(requestDatas["todo"]=="logout")
     {
-        User_Logout(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        User_Logout(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     else if(requestDatas["todo"]=="changepassword"){
-        User_ChangePassword(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        User_ChangePassword(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     else if(requestDatas["todo"]=="list"){
-        User_List(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        User_List(ctx,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     else if(requestDatas["todo"]=="delete"){
-        User_Delete(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        User_Delete(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     else if(requestDatas["todo"]=="add"){
-        User_Add(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        User_Add(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     else if(requestDatas["todo"]=="modify"){
-        User_Modify(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        User_Modify(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
 
-    //封装
-    QString xml = getResponseXml(responseParams,responseDatalists);
-    //发送
-    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+    return getResponseXml(responseParams,responseDatalists);
 }
 
-void UserMsgProcessor::clientMsgMapProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
+std::string UserMsgProcessor::clientMsgMapProcess(zmq::context_t *ctx, QMap<QString,QString> &requestDatas, QList<QMap<QString,QString> > &datalists)
 {
     QMap<QString,QString> responseParams;
     QList<QMap<QString,QString> > responseDatalists;
@@ -207,54 +188,29 @@ void UserMsgProcessor::clientMsgMapProcess(const QyhMsgDateItem &item,QMap<QStri
     LoginUserInfo loginUserinfo;
 
     /////所有的非登录消息，需要进行，安全验证 随机码
-    if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
-        QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-        return ;
+    if(!checkAccessToken(ctx,requestDatas,responseParams,loginUserinfo)){
+        return getResponseXml(responseParams,responseDatalists);
     }
 
     /// 创建地图
     if(requestDatas["todo"]=="create"){
-        Map_Create(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Map_Create(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 站点列表
     if(requestDatas["todo"]=="stationlist"){
-        Map_StationList(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Map_StationList(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
 
     /// 线路列表
     else if(requestDatas["todo"]=="linelist"){
-        Map_LineList(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Map_LineList(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
 
-    /// 订阅车辆位置信息
-    else if(requestDatas["todo"]=="subscribe"){
-        Map_AgvPositionSubscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-
-    ///取消订阅车辆位置信息
-    else if(requestDatas["todo"]=="cancelSubscribe"){
-        Map_AgvPositionCancelSubscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-
-    /// 获取背景图片
-    if(requestDatas["todo"]=="getImage"){
-        Map_GetImage(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-
-    /// 设置背景图片
-    else if(requestDatas["todo"]=="setImage"){
-        Map_SetImage(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-
-    //封装
-    QString xml = getResponseXml(responseParams,responseDatalists);
-    //发送
-    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+    return  getResponseXml(responseParams,responseDatalists);
 
 }
 
-void UserMsgProcessor::clientMsgAgvProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
+std::string UserMsgProcessor::clientMsgAgvProcess(zmq::context_t *ctx,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
 {
     QMap<QString,QString> responseParams;
     QList<QMap<QString,QString> > responseDatalists;
@@ -264,60 +220,43 @@ void UserMsgProcessor::clientMsgAgvProcess(const QyhMsgDateItem &item,QMap<QStri
     LoginUserInfo loginUserinfo;
 
     /////所有的非登录消息，需要进行，安全验证 随机码
-    if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
-        QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-        return ;
+    if(!checkAccessToken(ctx,requestDatas,responseParams,loginUserinfo)){
+        return getResponseXml(responseParams,responseDatalists);
     }
 
     /// 请求控制权
     if(requestDatas["todo"]=="hand"){
-        Agv_Hand(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        //Agv_Hand(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     /// 释放控制权
     else  if(requestDatas["todo"]=="release"){
-        Agv_Release(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        //Agv_Release(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     /// 小车前进
     else  if(requestDatas["todo"]=="forward"){
-        Agv_Forward(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        //Agv_Forward(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     /// 小车后退
     else  if(requestDatas["todo"]=="backward"){
-        Agv_Backward(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        //Agv_Backward(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     /// 小车左转
     else  if(requestDatas["todo"]=="turnleft"){
-        Agv_Turnleft(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        //Agv_Turnleft(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     /// 小车右转
     else  if(requestDatas["todo"]=="turnright"){
-        Agv_Turnright(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        //Agv_Turnright(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
     }
     /// 小车灯带
     else  if(requestDatas["todo"]=="turnright"){
-        Agv_Light(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-    /// TODO:因为不确定啥意思
-
-    /// 订阅小车状态(只能订阅一辆车的状态信息)
-    else  if(requestDatas["todo"]=="subscribe"){
-        Agv_StatusSubscribte(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        //Agv_Light(item,requestDatas,datalists,responseParams,responseDatalists);
     }
 
-    /// 取消订阅小车状态
-    else  if(requestDatas["todo"]=="cancelSubscribe"){
-        Agv_CancelStatusSubscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-
-    //封装
-    QString xml = getResponseXml(responseParams,responseDatalists);
-    //发送
-    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-
+    return getResponseXml(responseParams,responseDatalists);
 }
 
-void UserMsgProcessor::clientMsgAgvManageProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
+std::string UserMsgProcessor::clientMsgAgvManageProcess(zmq::context_t *ctx,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
 {
     QMap<QString,QString> responseParams;
     QList<QMap<QString,QString> > responseDatalists;
@@ -327,35 +266,30 @@ void UserMsgProcessor::clientMsgAgvManageProcess(const QyhMsgDateItem &item,QMap
     LoginUserInfo loginUserinfo;
 
     /////所有的非登录消息，需要进行，安全验证 随机码
-    if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
-        QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-        return ;
+    if(!checkAccessToken(ctx,requestDatas,responseParams,loginUserinfo)){
+        return getResponseXml(responseParams,responseDatalists);
     }
 
     /// agv列表
     if(requestDatas["todo"]=="list"){
-        AgvManage_List(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        AgvManage_List(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 增加agv
     else  if(requestDatas["todo"]=="add"){
-        AgvManage_Add(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        AgvManage_Add(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 删除agv
     else  if(requestDatas["todo"]=="delete"){
-        AgvManage_Delete(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        AgvManage_Delete(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 修改agv
     else  if(requestDatas["todo"]=="modify"){
-        AgvManage_Modify(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        AgvManage_Modify(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
-    //封装
-    QString xml = getResponseXml(responseParams,responseDatalists);
-    //发送
-    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+    return getResponseXml(responseParams,responseDatalists);
 }
 
-void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
+std::string UserMsgProcessor::clientMsgTaskProcess(zmq::context_t *ctx,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
 {
     QMap<QString,QString> responseParams;
     QList<QMap<QString,QString> > responseDatalists;
@@ -365,79 +299,66 @@ void UserMsgProcessor::clientMsgTaskProcess(const QyhMsgDateItem &item,QMap<QStr
     LoginUserInfo loginUserinfo;
 
     /////所有的非登录消息，需要进行，安全验证 随机码
-    if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
-        QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-        return ;
-    }
-
-    if(requestDatas["todo"]=="subscribe"){
-        Task_Subscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-
-    else if(requestDatas["todo"]=="cancelSubscribe"){
-        Task_CancelSubscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+    if(!checkAccessToken(ctx,requestDatas,responseParams,loginUserinfo)){
+        return getResponseXml(responseParams,responseDatalists);
     }
 
     /// 创建任务(创建到X点的任务)
     else if(requestDatas["todo"]=="toX"){
-        Task_CreateToX(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_CreateToX(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 创建任务(创建指定车辆到X点的任务)
     else  if(requestDatas["todo"]=="agvToX"){
-        Task_CreateAgvToX(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_CreateAgvToX(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 创建任务(创建经过Y点到X点的任务)
     else  if(requestDatas["todo"]=="passYtoX"){
-        Task_CreateYToX(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_CreateYToX(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 创建任务(创建指定车辆经过Y点到X点的任务)
     else  if(requestDatas["todo"]=="agvPassYtoX"){
-        Task_CreateAgvYToX(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_CreateAgvYToX(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 创建任务(创建指定车辆经过Y点到X点的任务)
     else  if(requestDatas["todo"]=="agvPassYtoXCircle"){
-        Task_CreateAgvYToXCircle(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_CreateAgvYToXCircle(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 查询任务状态
     if(requestDatas["todo"]=="queryStatus"){
-        Task_QueryStatus(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_QueryStatus(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 取消任务
     else  if(requestDatas["todo"]=="cancel"){
-        Task_Cancel(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_Cancel(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 未分配任务列表
     else  if(requestDatas["todo"]=="listUndo"){
-        Task_ListUnassigned(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_ListUnassigned(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 正在执行任务列表
     else  if(requestDatas["todo"]=="listDoing"){
-        Task_ListDoing(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_ListDoing(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 已经完成任务列表(today)
     if(requestDatas["todo"]=="listDoneToday"){
-        Task_ListDoneToday(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_ListDoneToday(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 已经完成任务列表(all)
     else  if(requestDatas["todo"]=="listDone"){
-        Task_ListDoneAll(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_ListDoneAll(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 已经完成任务列表(from to 时间)
     else  if(requestDatas["todo"]=="listDuring"){
-        Task_ListDoneDuring(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_ListDoneDuring(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
     /// 查询任务详情
     else  if(requestDatas["todo"]=="detail"){
-        Task_Detail(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Task_Detail(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
-    //封装
-    QString xml = getResponseXml(responseParams,responseDatalists);
-    //发送
-    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
+    return getResponseXml(responseParams,responseDatalists);
 }
 
-void UserMsgProcessor::clientMsgLogProcess(const QyhMsgDateItem &item,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
+std::string UserMsgProcessor::clientMsgLogProcess(zmq::context_t *ctx,QMap<QString,QString> &requestDatas,QList<QMap<QString,QString> > &datalists)
 {
     QMap<QString,QString> responseParams;
     QList<QMap<QString,QString> > responseDatalists;
@@ -447,39 +368,23 @@ void UserMsgProcessor::clientMsgLogProcess(const QyhMsgDateItem &item,QMap<QStri
     LoginUserInfo loginUserinfo;
 
     /////所有的非登录消息，需要进行，安全验证 随机码
-    if(!checkAccessToken(item,requestDatas,responseParams,loginUserinfo)){
-        QString xml = getResponseXml(responseParams,responseDatalists);
-        g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-        return ;
+    if(!checkAccessToken(ctx,requestDatas,responseParams,loginUserinfo)){
+        return getResponseXml(responseParams,responseDatalists);
     }
 
-    /// 创建任务(创建到X点的任务)
     if(requestDatas["todo"]=="listDuring"){
-        Log_ListDuring(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Log_ListDuring(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
-    /// 创建任务(创建指定车辆到X点的任务)
     else  if(requestDatas["todo"]=="listAll"){
-        Log_ListAll(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
+        Log_ListAll(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
-    /// 创建任务(创建经过Y点到X点的任务)
-    else  if(requestDatas["todo"]=="subscribe"){
-        Log_Subscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-    /// 创建任务(创建指定车辆经过Y点到X点的任务)
-    else  if(requestDatas["todo"]=="cancelSubscribe"){
-        Log_CancelSubscribe(item,requestDatas,datalists,responseParams,responseDatalists,loginUserinfo);
-    }
-    //封装
-    QString xml = getResponseXml(responseParams,responseDatalists);
-    //发送
-    g_netWork->sendToOne(item.sock,xml.toStdString().c_str(),xml.toStdString().length());
-
+    return getResponseXml(responseParams,responseDatalists);
 }
 
 //接下来是具体的业务
 /////////////////////////////关于用户部分
 //用户登录
-void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+void UserMsgProcessor::User_Login(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
 {
     //////////////////请求登录(做特殊处理，因为这里不需要验证access_token!)
     if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password",NULL)){//要求包含用户名和密码
@@ -510,12 +415,14 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, QMap<QString, QStr
                     //加入已登录的队伍中
                     LoginUserInfo loginUserInfo;
                     loginUserInfo.id = queryresult.at(0).at(0).toInt();
-                    loginUserInfo.sock = item.sock;
+                    loginUserInfo.ctx = ctx;
                     loginUserInfo.access_tocken = makeAccessToken();
                     loginUserInfo.password = requestDatas["username"];
                     loginUserInfo.username = requestDatas["password"];
                     loginUserInfo.role = queryresult.at(0).at(2).toInt();
-                    loginUserIdSock.insert(item.sock,loginUserInfo);
+                    loginUserIdSockMutex.lock();
+                    loginUserIdSock.push_back(loginUserInfo);
+                    loginUserIdSockMutex.unlock();
 
                     //登录成功
                     responseParams.insert(QString("info"),QString(""));
@@ -535,12 +442,9 @@ void UserMsgProcessor::User_Login(const QyhMsgDateItem &item, QMap<QString, QStr
 }
 
 //用户登出
-void UserMsgProcessor:: User_Logout(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: User_Logout(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     //////////////////退出登录
     if(checkParamExistAndNotNull(requestDatas,responseParams,"id",NULL)){
-        //取消的订阅
-        g_msgCenter.removeAgvPositionSubscribe(item.sock);
-        g_msgCenter.removeAgvStatusSubscribe(item.sock);
         //设置它的数据库中的状态
         QString updateSql = "update agv_user set user_signState = 0 where id=?";
         QList<QVariant> param;
@@ -552,7 +456,7 @@ void UserMsgProcessor:: User_Logout(const QyhMsgDateItem &item, QMap<QString, QS
 }
 
 //修改密码
-void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: User_ChangePassword(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     ///////////////////修改密码
     if(checkParamExistAndNotNull(requestDatas,responseParams,"username","oldpassword","newpassword",NULL)){
         QString querySqlA = "select user_password from agv_user where user_username=?";
@@ -584,7 +488,7 @@ void UserMsgProcessor:: User_ChangePassword(const QyhMsgDateItem &item, QMap<QSt
 
 }
 //用户列表
-void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: User_List(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
     ////////////////////////获取用户列表
     //开始查询用户 只能查看到同等级或者低等级的用户
     QString querySqlB = "select id,user_username,user_password,user_signState,user_lastSignTime,user_createTime,user_role,user_realname,user_age from agv_user where user_role<=?";
@@ -618,7 +522,7 @@ void UserMsgProcessor:: User_List(const QyhMsgDateItem &item, QMap<QString, QStr
     }
 }
 //删除用户
-void UserMsgProcessor:: User_Delete(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: User_Delete(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     ////////////////////////////////删除用户
     if(checkParamExistAndNotNull(requestDatas,responseParams,"id",NULL)){
         QString deleteSql = "delete from agv_user where id=?";
@@ -634,7 +538,7 @@ void UserMsgProcessor:: User_Delete(const QyhMsgDateItem &item, QMap<QString, QS
     }
 }
 
-void UserMsgProcessor::User_Modify(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+void UserMsgProcessor::User_Modify(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists)
 {
     ///////////////////////////////////修改
     if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password","id",NULL))
@@ -683,7 +587,7 @@ void UserMsgProcessor::User_Modify(const QyhMsgDateItem &item, QMap<QString, QSt
 
 }
 //添加用户
-void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: User_Add(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     ///////////////////////////////////添加用户
     if(checkParamExistAndNotNull(requestDatas,responseParams,"username","password","role",NULL))
     {
@@ -723,7 +627,7 @@ void UserMsgProcessor:: User_Add(const QyhMsgDateItem &item, QMap<QString, QStri
 
 /////////////////////////////关于地图部分
 //创建地图
-void UserMsgProcessor::Map_Create(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+void UserMsgProcessor::Map_Create(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists)
 {
     if(checkParamExistAndNotNull(requestDatas,responseParams,"line","arc","station",NULL))
     {
@@ -734,7 +638,7 @@ void UserMsgProcessor::Map_Create(const QyhMsgDateItem &item, QMap<QString, QStr
 }
 
 //地图 站点列表
-void UserMsgProcessor::Map_StationList(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Map_StationList(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
     for(QMap<int,AgvStation *>::iterator itr=g_m_stations.begin();itr!=g_m_stations.end();++itr){
@@ -753,7 +657,7 @@ void UserMsgProcessor::Map_StationList(const QyhMsgDateItem &item, QMap<QString,
     }
 }
 //地图 线路列表
-void UserMsgProcessor:: Map_LineList(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: Map_LineList(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
     for(QMap<int,AgvLine *>::iterator itr=g_m_lines.begin();itr!=g_m_lines.end();++itr){
@@ -779,257 +683,10 @@ void UserMsgProcessor:: Map_LineList(const QyhMsgDateItem &item, QMap<QString, Q
     }
 
 }
-//订阅车辆位置信息
-void UserMsgProcessor:: Map_AgvPositionSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    //将sock加入到车辆位置订阅者丢列中
-    if(g_msgCenter.addAgvPostionSubscribe(item.sock)){
-        responseParams.insert(QString("info"),QString(""));
-        responseParams.insert(QString("result"),QString("success"));
-    }else{
-        responseParams.insert(QString("info"),QString("unknow error"));
-        responseParams.insert(QString("result"),QString("fail"));
-    }
-
-}
-//取消订阅车辆位置信息
-void UserMsgProcessor:: Map_AgvPositionCancelSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    //将sock加入到车辆位置订阅者丢列中
-    if(g_msgCenter.removeAgvPositionSubscribe(item.sock)){
-        responseParams.insert(QString("info"),QString(""));
-        responseParams.insert(QString("result"),QString("success"));
-    }else{
-        responseParams.insert(QString("info"),QString("unknow error"));
-        responseParams.insert(QString("result"),QString("fail"));
-    }
-}
-
-//获取地图背景
-void UserMsgProcessor::Map_GetImage(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
-{
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"ip","port",NULL))
-    {
-        QString file_name = g_msgCenter.getDownloadFileName();
-        long file_length = g_msgCenter.getDownloadFileLength();
-        if(file_name.length()>0 && file_length>0)
-        {
-            responseParams.insert(QString("result"),QString("success"));
-            responseParams.insert(QString("info"),QString(""));
-            responseParams.insert(QString("file_name"),file_name);
-            responseParams.insert(QString("file_length"),QString("%1").arg(file_length));
-            g_msgCenter.readyDownloadFile(requestDatas["ip"].toStdString(),requestDatas["port"].toInt());
-        }
-        else{
-            responseParams.insert(QString("result"),QString("fail"));
-            responseParams.insert(QString("info"),QString("no background image"));
-        }
-    }
-}
-
-//设置地图背景
-void UserMsgProcessor::Map_SetImage(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
-{
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"ip","port","file_name","file_length",NULL))
-    {
-        g_msgCenter.readyToUpload(requestDatas["ip"].toStdString(),requestDatas["port"].toInt(),requestDatas["file_name"],requestDatas["file_length"].toInt());
-        responseParams.insert(QString("result"),QString("success"));
-        responseParams.insert(QString("info"),QString(""));
-    }
-}
-
-/////////////////////////////关于手控部分
-//请求小车控制权
-void UserMsgProcessor:: Agv_Hand(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
-        int iAgvId = requestDatas["agvid"].toInt();
-        //查找这辆车
-        if(!g_m_agvs.contains(iAgvId)){
-            //不存在这辆车
-            responseParams.insert(QString("info"),QString("not found agv with id:")+requestDatas["agvid"]);
-            responseParams.insert(QString("result"),QString("fail"));
-        }else{
-            Agv *agv = g_m_agvs[iAgvId];
-            if(agv->currentHandUser == loginUserInfo.id||agv->currentHandUser <= 0){
-                //OK
-                agv->currentHandUser = loginUserInfo.id;
-                agv->currentHandUserRole = loginUserInfo.role;
-                responseParams.insert(QString("info"),QString(""));
-                responseParams.insert(QString("result"),QString("success"));
-            }else{
-                //判断两个用户的权限，如果申请的人更高，OK。如果没有更高的权限，失败
-                if(agv->currentHandUserRole<loginUserInfo.role){
-                    //新用户权限更高
-                    agv->currentHandUser = loginUserInfo.id;
-                    agv->currentHandUserRole = loginUserInfo.role;
-                    responseParams.insert(QString("info"),QString(""));
-                    responseParams.insert(QString("result"),QString("success"));
-                }else{
-                    //新用户权限并不高//旧用户继续占用这辆车的手动控制权
-                    responseParams.insert(QString("info"),QString("agv already handed by other user"));
-                    responseParams.insert(QString("result"),QString("fail"));
-                }
-            }
-        }
-    }
-}
-//释放小车控制权
-void UserMsgProcessor:: Agv_Release(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
-
-        int iAgvId = requestDatas["agvid"].toInt();
-        //查找这辆车
-        if(!g_m_agvs.contains(iAgvId)){
-            //不存在这辆车
-            responseParams.insert(QString("info"),QString("not found agv with id:")+requestDatas["agvid"]);
-            responseParams.insert(QString("result"),QString("fail"));
-        }else{
-            Agv *agv = g_m_agvs[iAgvId];
-            if(agv->currentHandUser == loginUserInfo.id){
-                //OK
-                agv->currentHandUser=0;
-                agv->currentHandUserRole=0;
-                responseParams.insert(QString("info"),QString(""));
-                responseParams.insert(QString("result"),QString("success"));
-            }else{
-                //这辆车并不受你控制
-                responseParams.insert(QString("info"),QString("agv is not under your control"));
-                responseParams.insert(QString("result"),QString("fail"));
-            }
-        }
-    }
-}
-//前进
-void UserMsgProcessor:: Agv_Forward(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed",NULL)){
-        int iAgvId = requestDatas["agvid"].toInt();
-        int iSpeed = requestDatas["speed"].toInt();
-        //查找这辆车
-
-        if(!g_m_agvs.contains(iAgvId)){
-            //不存在这辆车
-            responseParams.insert(QString("info"),QString("not found agv with id:")+requestDatas["agvid"]);
-            responseParams.insert(QString("result"),QString("fail"));
-        }else
-        {
-            Agv *agv = g_m_agvs[iAgvId];
-            if(agv->currentHandUser == loginUserInfo.id){
-                //OK
-                //下发指令
-                g_hrgAgvCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_FORWARD,iSpeed);
-            }else{
-                //这辆车并不受你控制
-                responseParams.insert(QString("info"),QString("agv is not under your control"));
-                responseParams.insert(QString("result"),QString("fail"));
-            }
-        }
-    }
-}
-
-//后退
-void UserMsgProcessor:: Agv_Backward(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed",NULL)){
-        int iAgvId = requestDatas["agvid"].toInt();
-        int iSpeed = requestDatas["speed"].toInt();
-        //查找这辆车
-        if(!g_m_agvs.contains(iAgvId)){
-            //不存在这辆车
-            responseParams.insert(QString("info"),QString("not found agv with id:")+requestDatas["agvid"]);
-            responseParams.insert(QString("result"),QString("fail"));
-        }else
-        {
-            Agv *agv = g_m_agvs[iAgvId];
-            if(agv->currentHandUser == loginUserInfo.id){
-                //OK
-                //下发指令
-                g_hrgAgvCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_BACKWARD,iSpeed);
-            }else{
-                //这辆车并不受你控制
-                responseParams.insert(QString("info"),QString("agv is not in your hand"));
-                responseParams.insert(QString("result"),QString("fail"));
-            }
-        }
-    }
-}
-//左转
-void UserMsgProcessor:: Agv_Turnleft(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed",NULL)){
-        int iAgvId = requestDatas["agvid"].toInt();
-        int iSpeed = requestDatas["speed"].toInt();
-
-        if(!g_m_agvs.contains(iAgvId)){
-            //不存在这辆车
-            responseParams.insert(QString("info"),QString("not found agv with id:")+requestDatas["agvid"]);
-            responseParams.insert(QString("result"),QString("fail"));
-        }else
-        {
-            Agv *agv = g_m_agvs[iAgvId];
-            if(agv->currentHandUser == loginUserInfo.id){
-                //OK
-                //下发指令
-                g_hrgAgvCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_TURNLEFT,iSpeed);
-            }else{
-                //这辆车并不受你控制
-                responseParams.insert(QString("info"),QString("agv is not in your hand"));
-                responseParams.insert(QString("result"),QString("fail"));
-            }
-        }
-    }
-}
-//右转
-void UserMsgProcessor:: Agv_Turnright(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    ////该用户要求控制id为agvid的小车，
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","speed",NULL)){
-        int iAgvId = requestDatas["agvid"].toInt();
-        int iSpeed = requestDatas["speed"].toInt();
-
-        if(!g_m_agvs.contains(iAgvId)){
-            //不存在这辆车
-            responseParams.insert(QString("info"),QString("not found agv with id:")+requestDatas["agvid"]);
-            responseParams.insert(QString("result"),QString("fail"));
-        }else
-        {
-            Agv *agv = g_m_agvs[iAgvId];
-            if(agv->currentHandUser == loginUserInfo.id){
-                //OK
-                //下发指令
-                g_hrgAgvCenter.handControlCmd(iAgvId,AGV_HAND_TYPE_TURNRIGHT,iSpeed);
-            }else{
-                //这辆车并不受你控制
-                responseParams.insert(QString("info"),QString("agv is not in your hand"));
-                responseParams.insert(QString("result"),QString("fail"));
-            }
-        }
-    }
-}
-//灯带
-void UserMsgProcessor:: Agv_Light(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){}
-//小车状态订阅
-void UserMsgProcessor:: Agv_StatusSubscribte(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
-    //OK
-    //下发指令
-    g_msgCenter.addAgvStatusSubscribe(item.sock);
-    responseParams.insert(QString("info"),QString(""));
-    responseParams.insert(QString("result"),QString("success"));
-
-}
-
-//取消小车状态订阅
-void UserMsgProcessor:: Agv_CancelStatusSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
-{
-    //OK
-    //下发指令
-    g_msgCenter.removeAgvStatusSubscribe(item.sock);
-    responseParams.insert(QString("info"),QString(""));
-    responseParams.insert(QString("result"),QString("success"));
-}
 
 /////////////////////////////////车辆管理部分
 //列表
-void UserMsgProcessor:: AgvManage_List(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: AgvManage_List(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
     for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
@@ -1043,7 +700,7 @@ void UserMsgProcessor:: AgvManage_List(const QyhMsgDateItem &item, QMap<QString,
     }
 }
 //增加
-void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: AgvManage_Add(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     //要求name和ip
     if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip",NULL)){
         //TODO
@@ -1077,7 +734,7 @@ void UserMsgProcessor:: AgvManage_Add(const QyhMsgDateItem &item, QMap<QString, 
 
 }
 //删除
-void UserMsgProcessor:: AgvManage_Delete(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: AgvManage_Delete(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     //要求agvid
     if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
         int iAgvId = requestDatas["agvid"].toInt();
@@ -1107,7 +764,7 @@ void UserMsgProcessor:: AgvManage_Delete(const QyhMsgDateItem &item, QMap<QStrin
     }
 }
 //修改
-void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor:: AgvManage_Modify(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","name","ip",NULL)){
         int iAgvId = requestDatas["agvid"].toInt();
 
@@ -1135,36 +792,8 @@ void UserMsgProcessor:: AgvManage_Modify(const QyhMsgDateItem &item, QMap<QStrin
 
 
 ////////////////////////////////任务部分
-
-//订阅任务状态信息（简单显示）
-void UserMsgProcessor::Task_Subscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
-{
-    //将sock加入到车辆位置订阅者丢列中
-    if(g_msgCenter.addAgvTaskSubscribe(item.sock)){
-        responseParams.insert(QString("info"),QString(""));
-        responseParams.insert(QString("result"),QString("success"));
-    }else{
-        responseParams.insert(QString("info"),QString("unknow error"));
-        responseParams.insert(QString("result"),QString("fail"));
-    }
-}
-
-
-//取消任务状态信息订阅
-void UserMsgProcessor::Task_CancelSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
-{
-    //将sock加入到车辆位置订阅者丢列中
-    if(g_msgCenter.removeAgvTaskSubscribe(item.sock)){
-        responseParams.insert(QString("info"),QString(""));
-        responseParams.insert(QString("result"),QString("success"));
-    }else{
-        responseParams.insert(QString("info"),QString("unknow error"));
-        responseParams.insert(QString("result"),QString("fail"));
-    }
-}
-
 //创建任务(创建到X点的任务)
-void UserMsgProcessor::Task_CreateToX(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_CreateToX(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"x",NULL)){
         //可选项<xWaitType><xWaitTime><yWaitType><yWaitTime>
         int iX = requestDatas["x"].toInt();
@@ -1190,7 +819,7 @@ void UserMsgProcessor::Task_CreateToX(const QyhMsgDateItem &item, QMap<QString, 
 }
 
 //创建任务(创建指定车辆到X点的任务)
-void UserMsgProcessor::Task_CreateAgvToX(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_CreateAgvToX(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"x","agvid",NULL)){
         int iX = requestDatas["x"].toInt();
         int iAgvid = requestDatas["agvid"].toInt();
@@ -1217,7 +846,7 @@ void UserMsgProcessor::Task_CreateAgvToX(const QyhMsgDateItem &item, QMap<QStrin
     }
 }
 //创建任务(创建经过Y点到X点的任务)
-void UserMsgProcessor::Task_CreateYToX(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_CreateYToX(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"x","y",NULL)){
         int iX = requestDatas["x"].toInt();
         int iY = requestDatas["y"].toInt();
@@ -1249,7 +878,7 @@ void UserMsgProcessor::Task_CreateYToX(const QyhMsgDateItem &item, QMap<QString,
     }
 }
 //创建任务(创建指定车辆经过Y点到X点的任务)
-void UserMsgProcessor::Task_CreateAgvYToX(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_CreateAgvYToX(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
 
     if(checkParamExistAndNotNull(requestDatas,responseParams,"x","y","agvid",NULL)){
         int iX = requestDatas["x"].toInt();
@@ -1287,7 +916,7 @@ void UserMsgProcessor::Task_CreateAgvYToX(const QyhMsgDateItem &item, QMap<QStri
 }
 
 //创建任务(创建指定车辆经过Y点到X点的任务)
-void UserMsgProcessor::Task_CreateAgvYToXCircle(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_CreateAgvYToXCircle(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
 
     if(checkParamExistAndNotNull(requestDatas,responseParams,"x","y","agvid",NULL)){
         int iX = requestDatas["x"].toInt();
@@ -1324,7 +953,7 @@ void UserMsgProcessor::Task_CreateAgvYToXCircle(const QyhMsgDateItem &item, QMap
     }
 }
 //查询任务状态
-void UserMsgProcessor::Task_QueryStatus(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_QueryStatus(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid",NULL)){
         int taskid = requestDatas["taskid"].toInt();
         int status = g_taskCenter.queryTaskStatus(taskid);
@@ -1335,7 +964,7 @@ void UserMsgProcessor::Task_QueryStatus(const QyhMsgDateItem &item, QMap<QString
     }
 }
 //取消任务
-void UserMsgProcessor::Task_Cancel(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_Cancel(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid",NULL)){
         int taskid = requestDatas["taskid"].toInt();
 
@@ -1350,7 +979,7 @@ void UserMsgProcessor::Task_Cancel(const QyhMsgDateItem &item, QMap<QString, QSt
     }
 }
 //未分配任务列表
-void UserMsgProcessor::Task_ListUnassigned(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_ListUnassigned(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
     //添加列表
@@ -1369,7 +998,7 @@ void UserMsgProcessor::Task_ListUnassigned(const QyhMsgDateItem &item, QMap<QStr
 
 }
 //正在执行任务列表
-void UserMsgProcessor::Task_ListDoing(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_ListDoing(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
     //添加列表
@@ -1388,7 +1017,7 @@ void UserMsgProcessor::Task_ListDoing(const QyhMsgDateItem &item, QMap<QString, 
     }
 }
 //已经完成任务列表(today)
-void UserMsgProcessor::Task_ListDoneToday(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo){
+void UserMsgProcessor::Task_ListDoneToday(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
 
@@ -1424,7 +1053,7 @@ void UserMsgProcessor::Task_ListDoneToday(const QyhMsgDateItem &item, QMap<QStri
 }
 
 //已经完成任务列表(all)
-void UserMsgProcessor::Task_ListDoneAll(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+void UserMsgProcessor::Task_ListDoneAll(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists)
 {
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
@@ -1454,7 +1083,7 @@ void UserMsgProcessor::Task_ListDoneAll(const QyhMsgDateItem &item, QMap<QString
 }
 
 //已经完成任务列表(from to 时间)
-void UserMsgProcessor::Task_ListDoneDuring(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+void UserMsgProcessor::Task_ListDoneDuring(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists)
 {
     //要求带有from和to
     if(checkParamExistAndNotNull(requestDatas,responseParams,"from","to",NULL)){
@@ -1488,7 +1117,7 @@ void UserMsgProcessor::Task_ListDoneDuring(const QyhMsgDateItem &item, QMap<QStr
     }
 }
 
-void UserMsgProcessor::Task_Detail(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+void UserMsgProcessor::Task_Detail(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists)
 {
     //要求带有taskid
     bool needDelete = false;
@@ -1546,7 +1175,7 @@ void UserMsgProcessor::Task_Detail(const QyhMsgDateItem &item, QMap<QString, QSt
 }
 
 //查询日志 from to时间
-void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+void UserMsgProcessor::Log_ListDuring(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists)
 {
     //要求带有from和to <trace> <debug> <info> <warn> <error> <fatal>
     if(checkParamExistAndNotNull(requestDatas,responseParams,"from","to","trace","debug","info","warn","error","fatal",NULL))
@@ -1665,7 +1294,7 @@ void UserMsgProcessor::Log_ListDuring(const QyhMsgDateItem &item, QMap<QString, 
 }
 
 //查询所有日志
-void UserMsgProcessor::Log_ListAll(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
+void UserMsgProcessor::Log_ListAll(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists)
 {
     ////<trace> <debug> <info> <warn> <error> <fatal>
     if(checkParamExistAndNotNull(requestDatas,responseParams,"trace","debug","info","warn","error","fatal",NULL))
@@ -1695,35 +1324,7 @@ void UserMsgProcessor::Log_ListAll(const QyhMsgDateItem &item, QMap<QString, QSt
         }
     }
 }
-//订阅日志
-void UserMsgProcessor::Log_Subscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
-{
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"trace","debug","info","warn","error","fatal",NULL))
-    {
-        responseParams.insert(QString("info"),QString(""));
-        responseParams.insert(QString("result"),QString("success"));
-        g_logProcess->removeSubscribe(item.sock);//先去掉原来的订阅
-        //加入现在的订阅
-        SubNode subnode;
-        subnode.trace = requestDatas["trace"] == "1";
-        subnode.debug = requestDatas["debug"] == "1";
-        subnode.info = requestDatas["info"] == "1";
-        subnode.warn = requestDatas["warn"] == "1";
-        subnode.error = requestDatas["error"] == "1";
-        subnode.fatal = requestDatas["fatal"] == "1";
-        g_logProcess->addSubscribe(item.sock,subnode);
-    }
-}
 
-//取消订阅日志
-void UserMsgProcessor::Log_CancelSubscribe(const QyhMsgDateItem &item, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists,LoginUserInfo &loginUserInfo)
-{
-
-    responseParams.insert(QString("info"),QString(""));
-    responseParams.insert(QString("result"),QString("success"));
-    g_logProcess->removeSubscribe(item.sock);
-
-}
 
 
 

@@ -34,6 +34,15 @@
 #define AGV_PACK_SEND_INSTRUC_CODE_MP3RIGHT      0x06
 #define AGV_PACK_SEND_INSTRUC_CODE_MP3VOLUME      0x07
 
+
+enum AGV_HAND_TYPE{
+    AGV_HAND_TYPE_STOP = 0,//停止移动
+    AGV_HAND_TYPE_FORWARD = 0x1,//前进
+    AGV_HAND_TYPE_BACKWARD = 0x2,//后退
+    AGV_HAND_TYPE_TURNLEFT = 0x3,//左转
+    AGV_HAND_TYPE_TURNRIGHT = 0x4,//右转
+};
+
 const char CHAR_NULL = '\0';
 
 AgvCenter::AgvCenter(QObject *parent) : QObject(parent)

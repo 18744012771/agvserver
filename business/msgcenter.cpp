@@ -9,8 +9,7 @@
 MsgCenter::MsgCenter(QObject *parent) : QObject(parent),
     positionPublisher(NULL),
     statusPublisher(NULL),
-    taskPublisher(NULL),
-    fileUploadServer(NULL)
+    taskPublisher(NULL)
 {
 
 }
@@ -44,83 +43,12 @@ void MsgCenter::init()
     }
     taskPublisher = new AgvTaskPublisher(this);
     taskPublisher->start();
-
-    //启动文件上传服务器
-    fileUploadServer = new FileTransferServer;
-    fileUploadServer->init();
-    connect(fileUploadServer,SIGNAL(onUploadFinish(std::string,int,QString,QByteArray)),this,SLOT(onUploadFinish(std::string,int,QString,QByteArray)));
 }
 
 MsgCenter::~MsgCenter()
 {
     if(positionPublisher)delete positionPublisher;
     if(statusPublisher)delete statusPublisher;
+    if(taskPublisher)delete taskPublisher;
 }
 
-bool MsgCenter::addAgvPostionSubscribe(int subscribe)
-{
-    if(!positionPublisher)return false;
-    positionPublisher->addSubscribe(subscribe);
-    return true;
-}
-
-bool MsgCenter::removeAgvPositionSubscribe(int subscribe)
-{
-    if(!positionPublisher)return false;
-    positionPublisher->removeSubscribe(subscribe);
-    return true;
-}
-
-bool MsgCenter::addAgvStatusSubscribe(int subscribe)
-{
-    if(!statusPublisher)return false;
-    statusPublisher->addSubscribe(subscribe);
-    return true;
-}
-
-bool MsgCenter::removeAgvStatusSubscribe(int subscribe)
-{
-    if(!statusPublisher)return false;
-    statusPublisher->removeSubscribe(subscribe);
-    return true;
-}
-
-bool MsgCenter::addAgvTaskSubscribe(int subscribe)
-{
-    if(!taskPublisher)return false;
-    taskPublisher->addSubscribe(subscribe);
-    return true;
-}
-
-bool MsgCenter::removeAgvTaskSubscribe(int subscribe)
-{
-    if(!taskPublisher)return false;
-    taskPublisher->removeSubscribe(subscribe);
-    return true;
-}
-
-void MsgCenter::readyToUpload(std::string _ip,int _port,QString _filename,int _length)
-{
-    //上传文件
-    fileUploadServer->readyToUpload(_ip,_port,_filename,_length);
-}
-
-void MsgCenter::readyDownloadFile(std::string _ip, int _port)
-{
-    fileUploadServer->readyToDownload(_ip,_port);
-}
-
-QString MsgCenter::getDownloadFileName()
-{
-    return fileUploadServer->getFileName();
-}
-
-long MsgCenter::getDownloadFileLength()
-{
-    return fileUploadServer->getFileLength();
-}
-
-void MsgCenter::onUploadFinish(std::string _ip,int _port,QString _filename,QByteArray _data)
-{
-    //do nothing
-}
