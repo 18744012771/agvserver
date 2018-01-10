@@ -23,42 +23,26 @@
 #include "business/agvcenter.h"
 #include "business/mapcenter.h"
 #include "business/taskcenter.h"
-//#include "business/msgcenter.h"
 #include "business/usermsgprocessor.h"
 
 #include "util/concurrentqueue.h"
 
 #include "service/taskmaker.h"
 
+//定义几个端口
+//消息相应端口
+#define GLOBAL_PORT_INTERFACE   5555
+//日志publisher 端口
+#define GLOBAL_PORT_LOG   5556
+//agv状态publisher 端口
+#define GLOBAL_PORT_AGV_STATUS   5557
+//agv位置publisher 端口
+#define GLOBAL_PORT_AGV_POSITION   5558
+//任务状态publiser 端口
+#define GLOBAL_PORT_TASK   5559
 
-struct QyhMsgDateItem
-{
-    std::string data;
-    QString ip;//发送方IP
-    int port;//发送方端口
-    SOCKET sock;
-};
-
-struct PATH_LEFT_MIDDLE_RIGHT{
-    int lastLine;
-    int nextLine;
-
-    bool operator == (const PATH_LEFT_MIDDLE_RIGHT &r){
-        return lastLine == r.lastLine && nextLine == r.nextLine;
-    }
-
-    bool operator < (const PATH_LEFT_MIDDLE_RIGHT &r) const
-    {
-        if(lastLine!=r.lastLine){
-            return lastLine<r.lastLine;
-        }
-
-        return nextLine<r.nextLine;
-    }
-};
 
 //全局共有变量处理类实例
-extern QString g_strExeRoot;
 extern Sql *g_sql;
 extern AgvLog *g_log;
 extern AgvLogProcess *g_logProcess;
@@ -75,13 +59,12 @@ extern TaskMaker *g_taskMaker;
 extern QMap<int,Agv *> g_m_agvs;//车辆
 extern QMap<int,AgvStation *> g_m_stations;//站点
 extern QMap<int,AgvLine *> g_m_lines;//线路
-extern QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_lmr; //左中右
-extern QMap<int,QList<AgvLine*> > g_m_l_adj;  //从一条线路到另一条线路的关联表
-extern QMap<int,int> g_reverseLines;//线路和它的反方向线路的集合。
 
 void QyhSleep(int msec);
 
 int getRandom(int maxRandom);
+
+std::string intToStdString(int x);
 
 //用户消息的缓存区(用于拆包、分包)
 extern QMap<int,std::string> client2serverBuffer;
@@ -91,8 +74,6 @@ std::string getResponseXml(QMap<QString,QString> &responseDatas, QList<QMap<QStr
 
 ////将xml格式转成两个参数模式(解析-封装 的解析)
 bool getRequestParam(const std::string &xmlStr, QMap<QString,QString> &params, QList<QMap<QString,QString> > &datalist);
-
-
 
 extern const QString DATE_TIME_FORMAT;
 

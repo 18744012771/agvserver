@@ -19,7 +19,9 @@ void AgvPositionPublisher::run()
 {
     zmq::context_t context(1);
     zmq::socket_t publisher(context, ZMQ_PUB);
-    publisher.bind("tcp://*:5564");
+    std::string portStr = intToStdString(GLOBAL_PORT_AGV_POSITION);
+    std::string url = "tcp://*:"+portStr;
+    publisher.bind(url.c_str());
 
     while(!isQuit){
         //组装订阅信息

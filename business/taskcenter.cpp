@@ -92,11 +92,9 @@ void TaskCenter::unassignedTasksProcess()
                 ttask->taskNodes[ttask->lastDoneIndex]->leaveTime = QDateTime::currentDateTime();
             }
 
-            //对线路属性进行赋值         //4.把线路的反方向线路定为不可用
+            //对线路属性进行赋值         //4.把线路的反方向线路定为占用
             for(int i=0;i<path.length();++i){
-                int reverseLineKey = g_reverseLines[path[i] ];
-                //将这条线路的可用性置为false
-                g_m_lines[reverseLineKey]->occuAgv=(bestCar->id);
+                g_agvMapCenter.setReverseOccuAgv(path[i],(bestCar->id));
             }
             //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
             bestCar->myStatus = (AGV_STATUS_TASKING);
@@ -777,9 +775,7 @@ void TaskCenter::carArriveStation(int car,int station)
             agv->currentPath = (pppath);
 
             //将反向的线路置为可用
-            int reverseLineKey = g_reverseLines[iLine];
-            AgvLine *rLine = g_m_lines[reverseLineKey];
-            rLine->occuAgv = (0);
+            g_agvMapCenter.setReverseOccuAgv(iLine,0);
 
             AgvLine *line = g_m_lines[iLine];
             //如果是最后经过的这条线路，退出循环
@@ -923,9 +919,7 @@ void TaskCenter::doingTaskProcess()
                                 //对线路属性进行赋值
                                 //4.把线路的反方向线路定为不可用
                                 for(int i=0;i<result.length();++i){
-                                    int reverseLineKey = g_reverseLines[result[i] ];
-                                    //将这条线路的可用性置为false
-                                    g_m_lines[reverseLineKey]->occuAgv=(excutecar->id);
+                                    g_agvMapCenter.setReverseOccuAgv(result[i],(excutecar->id));
                                 }
                                 //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
                                 excutecar->myStatus = (AGV_STATUS_TASKING);
@@ -978,9 +972,7 @@ void TaskCenter::doingTaskProcess()
                     //对线路属性进行赋值
                     //4.把线路的反方向线路定为不可用
                     for(int i=0;i<result.length();++i){
-                        int reverseLineKey = g_reverseLines[result[i] ];
-                        //将这条线路的可用性置为false
-                        g_m_lines[reverseLineKey]->occuAgv=(excutecar->id);
+                        g_agvMapCenter.setReverseOccuAgv(result[i],(excutecar->id));
                     }
                     //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
                     excutecar->myStatus = (AGV_STATUS_TASKING);

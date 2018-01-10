@@ -5,19 +5,15 @@
 #include "pugixml.hpp"
 
 //全局的一些common变量
-QString g_strExeRoot;
 Sql *g_sql = NULL;
 AgvLog *g_log = NULL;
 AgvLogProcess *g_logProcess = NULL;
-//AgvNetWork *g_netWork;//服务器中心
+QyhZmqServer *g_server;
 
 //所有的bean集合
 QMap<int,Agv *> g_m_agvs;             //所有车辆们
 QMap<int,AgvStation *> g_m_stations;  //所有的站点(站点+线路 = 地图)
 QMap<int,AgvLine *> g_m_lines;        //所有的线路(站点+线路 = 地图)
-QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_lmr;//用来保存左中右信息，用于通知agv左中右信息
-QMap<int,QList<AgvLine*> > g_m_l_adj;  //从一条线路到另一条线路的关联表。用来计算可到达的位置
-QMap<int,int> g_reverseLines;           //线路和它的反方向线路的集合。
 
 //所有的业务处理
 MapCenter g_agvMapCenter;//地图管理(地图载入，地图保存，地图计算)
@@ -48,7 +44,6 @@ int getRandom(int maxRandom)
     return qrand();
 }
 
-moodycamel::ConcurrentQueue<QyhMsgDateItem> g_user_msg_queue;
 QMap<int,std::string> client2serverBuffer;
 moodycamel::ConcurrentQueue<OneLog> g_log_queue;
 
@@ -133,6 +128,15 @@ bool getRequestParam(const std::string &xmlStr,QMap<QString,QString> &params,QLi
         }
     }
     return true;
+}
+
+std::string intToStdString(int x)
+{
+    std::string result;
+    std::stringstream ss;
+    ss<<x;
+    ss>>result;
+    return result;
 }
 
 

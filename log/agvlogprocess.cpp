@@ -16,7 +16,11 @@ void AgvLogProcess::run()
 {
     zmq::context_t context(1);
     zmq::socket_t publisher(context, ZMQ_PUB);
-    publisher.bind("tcp://*:5565");
+
+    std::string portStr = intToStdString(GLOBAL_PORT_LOG);
+    std::string url = "tcp://*:"+portStr;
+    publisher.bind(url.c_str());
+
     //处理日志队列的消息
     //处理方法如下:
     //取出消息，存入数据库

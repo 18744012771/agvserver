@@ -18,9 +18,6 @@ signals:
 public slots:
 private:
     volatile bool isQuit;
-signals:
-
-public slots:
 };
 
 #endif // AGVSTATUSPUBLISHER_H

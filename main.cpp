@@ -5,7 +5,7 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-    g_strExeRoot = QCoreApplication::applicationDirPath();
+    QString g_strExeRoot = QCoreApplication::applicationDirPath();
     QDir::setCurrent(g_strExeRoot);
 
     //初始化日志
@@ -32,8 +32,6 @@ int main(int argc, char *argv[])
     {
         g_log->log(AGV_LOG_LEVEL_ERROR,"task make fail init,check your sqlserver connection!");
     }
-
-    //初始化服务器
 
     return a.exec();
 }

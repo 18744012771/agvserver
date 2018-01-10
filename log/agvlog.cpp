@@ -43,7 +43,7 @@ void AgvLog::log(AGV_LOG_LEVEL level, QString msg)
     //2.入队一个消息
     OneLog onelog;
     onelog.level = level;
-    onelog.time=now;
+    onelog.time = now;
     onelog.msg = msg;
 
     g_log_queue.enqueue(onelog);

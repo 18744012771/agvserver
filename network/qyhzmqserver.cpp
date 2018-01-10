@@ -1,5 +1,6 @@
 #include "qyhzmqserver.h"
 #include "qyhzmqserverworker.h"
+#include "util/global.h"
 
 QyhZmqServer::QyhZmqServer():
     ctx_(1),
@@ -11,7 +12,9 @@ QyhZmqServer::QyhZmqServer():
 
 void QyhZmqServer::run()
 {
-    frontend_.bind("tcp://*:5555");
+    std::string portStr = intToStdString(GLOBAL_PORT_INTERFACE);
+    std::string url = "tcp://*:"+portStr;
+    frontend_.bind(url.c_str());
     backend_.bind("inproc://workers");
 
     std::vector<QyhZmqServerWorker *> worker;

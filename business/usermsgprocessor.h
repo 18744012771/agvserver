@@ -1,8 +1,10 @@
 ﻿#ifndef USERMSGPROCESSOR_H
 #define USERMSGPROCESSOR_H
 
+#include <string>
+#include <QMutex>
 #include <QThread>
-#include "util/global.h"
+#include <zmq.hpp>
 
 
 class UserMsgProcessor : public QThread

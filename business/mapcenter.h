@@ -2,6 +2,7 @@
 #define MAPCENTER_H
 
 #include <QObject>
+#include <QMap>
 #include <QMutex>
 #include "agvline.h"
 
@@ -18,6 +19,24 @@ class MapCenter : public QObject
     Q_OBJECT
 public:
     explicit MapCenter(QObject *parent = nullptr);
+
+    struct PATH_LEFT_MIDDLE_RIGHT{
+        int lastLine;
+        int nextLine;
+
+        bool operator == (const PATH_LEFT_MIDDLE_RIGHT &r){
+            return lastLine == r.lastLine && nextLine == r.nextLine;
+        }
+
+        bool operator < (const PATH_LEFT_MIDDLE_RIGHT &r) const
+        {
+            if(lastLine!=r.lastLine){
+                return lastLine<r.lastLine;
+            }
+
+            return nextLine<r.nextLine;
+        }
+    };
 
     enum{
         PATH_LMF_NOWAY = -2,//代表可能要掉头行驶
@@ -37,6 +56,8 @@ public:
     //获取最优路径
     QList<int> getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect = false);//最后一个参数是是否可以换个方向
 
+    //设置lineid的反向线路的占用agv
+    void setReverseOccuAgv(int lineid,int occagv);
 signals:
     void mapUpdate();//地图更新了,通知前端的所有显示界面，更新地图
 public slots:
@@ -55,6 +76,10 @@ private:
 
     int getLMR(AgvLine *lastLine,AgvLine *nextLine);
 
+    QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_lmr; //左中右
+    QMap<int,QList<AgvLine*> > g_m_l_adj;  //从一条线路到另一条线路的关联表
+
+    QMap<int,int> g_reverseLines;//线路和它的反方向线路的集合。
 };
 
 #endif // MAPCENTER_H

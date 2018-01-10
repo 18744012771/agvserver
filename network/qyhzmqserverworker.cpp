@@ -12,20 +12,21 @@ void QyhZmqServerWorker::work()
 {
     worker_.connect("inproc://workers");
 
-    try {
-        while (true) {
-            zmq::message_t msg;
-            zmq::message_t copied_msg;
+    while (true) {
+        zmq::message_t msg;
+        zmq::message_t copied_msg;
+        try {
             worker_.recv(&msg);
-            std::string s = std::string((char *)msg.data(),msg.size());
-            userMsgProcessor->parseOneMsg(ctx_,s);
 
-            //TODO:
             //处理结尾没有\0的问题
-            printf("recv:%s\n",std::string((char*)msg.data(),msg.size()).c_str());
-            copied_msg.copy(&msg);
+            std::string s = std::string((char *)msg.data(),msg.size());
+            printf("recv:\n%s\n",s.c_str());
+
+            std::string rep = userMsgProcessor->parseOneMsg(ctx_,s);
+
+            copied_msg = zmq::message_t(rep.data(),rep.length());
             worker_.send(copied_msg);
         }
+        catch (std::exception &e) {}
     }
-    catch (std::exception &e) {}
 }

@@ -17,6 +17,11 @@ void AgvStatusPublisher::run()
 {
     zmq::context_t context(1);
     zmq::socket_t publisher(context, ZMQ_PUB);
+
+    std::string portStr = intToStdString(GLOBAL_PORT_AGV_STATUS);
+    std::string url = "tcp://*:"+portStr;
+    publisher.bind(url.c_str());
+
     publisher.bind("tcp://*:5563");
 
     while(!isQuit)

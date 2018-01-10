@@ -622,6 +622,14 @@ bool MapCenter::load()
     return true;
 }
 
+//设置lineid的反向线路的占用agv
+void MapCenter::setReverseOccuAgv(int lineid, int occagv)
+{
+    int reverseLineKey = g_reverseLines[lineid];
+    //将这条线路的可用性置为false
+    g_m_lines[reverseLineKey]->occuAgv=occagv;
+}
+
 QList<int> MapCenter::getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect)//最后一个参数是是否可以换个方向
 {
     distance = distance_infinity;

@@ -39,7 +39,8 @@ bool Sql::checkTables()
     }else{
         //不存在.创建
         //MYSQL:
-        QString createSql = "create table agv_station (id INTEGER PRIMARY KEY AUTO_INCREMENT, station_x INTEGER, station_y INTEGER, station_type INTEGER, station_name text,station_lineAmount INTEGER,station_rfid INTEGER);";
+
+        QString createSql = "create table agv_station (id INTEGER PRIMARY KEY AUTO_INCREMENT, station_x INTEGER, station_y INTEGER, station_name text,station_rfid INTEGER,station_color_r INTEGER,station_color_g INTEGER,station_color_b INTEGER);";
         args.clear();
         bool b = exeSql(createSql,args);
         if(!b)return false;
@@ -52,7 +53,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "create table agv_line (id INTEGER PRIMARY KEY AUTO_INCREMENT,line_startX INTEGER,line_startY INTEGER,line_endX INTEGER,line_endY INTEGER,line_radius INTEGER,line_name text,line_clockwise BOOLEAN,line_line BOOLEAN,line_midX INTEGER,line_midY INTEGER,line_centerX INTEGER,line_centerY INTEGER,line_angle INTEGER,line_length INTEGER,line_startStation INTEGER,line_endStation INTEGER, line_draw BOOLEAN);";
+        QString createSql = "create table agv_line (id INTEGER PRIMARY KEY AUTO_INCREMENT,line_startStation INTEGER,line_endStation INTEGER,line_line BOOLEAN,line_length DOUBLE, line_draw BOOLEAN,line_rate DOUBLE,line_color_r INTEGER,line_color_g INTEGER,line_color_b INTEGER,line_p1x DOUBLE,line_p1y DOUBLE,line_p2x DOUBLE,line_p2y DOUBLE);";
         args.clear();
         bool b = exeSql(createSql,args);
         if(!b)return false;
@@ -162,9 +163,6 @@ bool Sql::checkTables()
         bool b = exeSql(createSql,args);
         if(!b)return false;
     }
-
-
-
     return true;
 }
 
