@@ -16,10 +16,11 @@ void TaskCenter::init()
     taskProcessTimer.start();
 }
 
-
+//这里不怕unassignedTasksProcess和doingTaskProcess中两个锁死锁，是以为它俩是同在主线程中，所以不必担心死锁问题
 void TaskCenter::unassignedTasksProcess()
 {
     //遍历所有的未分配的任务，对他们和空闲车辆进行匹配。找到最合适的后，执行去
+    uTaskMtx.lock();
     for(int mmm=0;mmm<unassignedTasks.length();++mmm)
     {
         AgvTask *ttask = unassignedTasks.at(mmm);
@@ -103,8 +104,9 @@ void TaskCenter::unassignedTasksProcess()
             //将任务移动到正在执行的任务//6.把这个任务定为doing。
             unassignedTasks.removeAt(mmm);
             mmm--;
+            dTaskMtx.lock();
             doingTasks.append(ttask);
-
+            dTaskMtx.unlock();
             //要看返回的结果的！！！！！！ 如果失败了，要回滚上述所有操作！太难了
             g_hrgAgvCenter.agvStartTask(bestCar->id,path);
 
@@ -117,6 +119,7 @@ void TaskCenter::unassignedTasksProcess()
             nextNode->status = AGV_TASK_NODE_STATUS_DOING;
         }
     }
+    uTaskMtx.unlock();
 }
 
 int TaskCenter::makeAgvAimTask(int agvKey,int aimStation,int waitType,int waitTime)
@@ -157,8 +160,10 @@ int TaskCenter::makeAgvAimTask(int agvKey,int aimStation,int waitType,int waitTi
     node->id = (result.at(0).at(0).toInt());
     newtask->taskNodes.append(node);
 
-
+    uTaskMtx.lock();
     unassignedTasks.append(newtask);
+    qSort(unassignedTasks.begin(),unassignedTasks.end(),agvTaskLessThan);
+    uTaskMtx.unlock();
     return newtask->id;
 }
 
@@ -199,8 +204,10 @@ int TaskCenter::makeAimTask(int aimStation,int waitType,int waitTime)
     node->id = (result.at(0).at(0).toInt());
     newtask->taskNodes.append(node);
 
-
+    uTaskMtx.lock();
     unassignedTasks.append(newtask);
+    qSort(unassignedTasks.begin(),unassignedTasks.end(),agvTaskLessThan);
+    uTaskMtx.unlock();
     return newtask->id;
 }
 int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim)
@@ -272,7 +279,10 @@ int TaskCenter::makeAgvPickupTask(int agvId,int pickupStation,int aimStation,int
     node_aim->id = (result.at(0).at(0).toInt());
     newtask->taskNodes.append(node_aim);
 
+    uTaskMtx.lock();
     unassignedTasks.append(newtask);
+    qSort(unassignedTasks.begin(),unassignedTasks.end(),agvTaskLessThan);
+    uTaskMtx.unlock();
     return newtask->id;
 }
 
@@ -356,7 +366,10 @@ int TaskCenter::makeLoopTask(int agvId,int pickStation,int aimStation,int waitTy
         newtask->taskNodesBackup.append(t);
     }
 
+    uTaskMtx.lock();
     unassignedTasks.append(newtask);
+    qSort(unassignedTasks.begin(),unassignedTasks.end(),agvTaskLessThan);
+    uTaskMtx.unlock();
     return newtask->id;
 }
 
@@ -431,28 +444,38 @@ int TaskCenter::makePickupTask(int pickupStation,int aimStation,int waitTypePick
     node_aim->id = (result.at(0).at(0).toInt());
     newtask->taskNodes.append(node_aim);
 
+    uTaskMtx.lock();
     unassignedTasks.append(newtask);
+    qSort(unassignedTasks.begin(),unassignedTasks.end(),agvTaskLessThan);
+    uTaskMtx.unlock();
     return newtask->id;
 }
 
 AgvTask *TaskCenter::queryUndoTask(int taskId)
 {
+    AgvTask *t = NULL;
+    uTaskMtx.lock();
     for(int i=0;i<unassignedTasks.length();++i){
         if(unassignedTasks.at(i)->id == taskId){
-            return unassignedTasks.at(i);
+            t = unassignedTasks.at(i);
+            break;
         }
     }
-    return NULL;
+    uTaskMtx.unlock();
+    return t;
 }
 
 AgvTask *TaskCenter::queryDoingTask(int taskId)
 {
+    AgvTask *t = NULL;
+    dTaskMtx.lock();
     for(int i=0;i<doingTasks.length();++i){
         if(doingTasks.at(i)->id == taskId){
-            return doingTasks.at(i);
+            t = doingTasks.at(i);
         }
     }
-    return NULL;
+    dTaskMtx.unlock();
+    return t;
 }
 
 AgvTask *TaskCenter::queryDoneTask(int taskId)
@@ -498,79 +521,27 @@ AgvTask *TaskCenter::queryDoneTask(int taskId)
     return result;
 }
 
-//AgvTask *TaskCenter::queryTask(int taskId)
-//{
-//    for(int i=0;i<unassignedTasks.length();++i){
-//        if(unassignedTasks.at(i)->id() == taskId){
-//            return unassignedTasks.at(i);
-//        }
-//    }
-//    for(int i=0;i<doingTasks.length();++i){
-//        if(doingTasks.at(i)->id() == taskId){
-//            return doingTasks.at(i);
-//        }
-//    }
-//    //查找已完成的任务
-//    AgvTask *result = NULL;
-//    QString querySql = "select id,produceTime,doneTime,doTime,excuteCar,status from agv_task where id= ?";
-//    QStringList param;
-//    param.append(QString("%1").arg(taskId));
-//    QList<QStringList> queryresult = g_sql->query(querySql,param);
-//    if(queryresult.length()==0 ||queryresult.at(0).length()!=6)
-//        return result;
-//    //这个任务是存在的
-//    result = new AgvTask;
-//    result->setId(queryresult.at(0).at(0).toInt());
-//    result->setProduceTime(QDateTime::fromString(queryresult.at(0).at(1),DATE_TIME_FORMAT));
-//    result->setDoneTime(QDateTime::fromString(queryresult.at(0).at(2),DATE_TIME_FORMAT));
-//    result->setDoTime(QDateTime::fromString(queryresult.at(0).at(3),DATE_TIME_FORMAT));
-//    result->setExcuteCar(queryresult.at(0).at(4).toInt());
-//    result->setStatus(queryresult.at(0).at(5).toInt());
-
-//    //查询任务的节点信息
-//    querySql = "select status,queueNumber,aimStation,waitType,waitTime,arriveTime,leaveTime from agv_task_node where taskid= ? order by queueNumber";
-//    queryresult = g_sql->query(querySql,param);
-//    if(queryresult.length()==0 ||queryresult.at(0).length()!=7)
-//        return result;
-
-//    for(int i=0;i<queryresult.length();++i)
-//    {
-//        QStringList qsl = queryresult.at(i);
-//        if(qsl.length()!=7)continue;
-//        TaskNode n;
-//        n.status = qsl.at(0).toInt();
-//        n.queueNumber = qsl.at(1).toInt();
-//        n.aimStation = qsl.at(2).toInt();
-//        n.waitType = qsl.at(3).toInt();
-//        n.waitTime = qsl.at(4).toInt();
-//        n.arriveTime = QDateTime::fromString( qsl.at(5),DATE_TIME_FORMAT);
-//        n.leaveTime = QDateTime::fromString( qsl.at(6),DATE_TIME_FORMAT);
-//        if(n.status == 0)//未执行的节点
-//            result->taskNodesTodo.push_back(n);
-//        else if(n.status == 1)//正在执行
-//            result->taskNodeDoing = n;
-//        else if(n.status == 2)//执行过了的节点
-//            result->taskNodeDone.push_back(n);
-//    }
-
-//    return result;
-//}
-
 //返回task的状态。
 int TaskCenter::queryTaskStatus(int taskId)
 {
     //查找未分配的任务
+    uTaskMtx.lock();
     for(int i=0;i<unassignedTasks.length();++i){
         if(unassignedTasks.at(i)->id == taskId){
-            return     AGV_TASK_STATUS_UNEXCUTE;
+            uTaskMtx.unlock();
+            return AGV_TASK_STATUS_UNEXCUTE;
         }
     }
+    uTaskMtx.unlock();
     //查找正在执行的任务
+    dTaskMtx.lock();
     for(int i=0;i<doingTasks.length();++i){
         if(doingTasks.at(i)->id == taskId){
+            dTaskMtx.unlock();
             return AGV_TASK_STATUS_EXCUTING;
         }
     }
+    dTaskMtx.unlock();
     //查找已完成的任务
     QString querySql = "select task_status from agv_task where id= ?";
     QList<QVariant> param;
@@ -581,35 +552,11 @@ int TaskCenter::queryTaskStatus(int taskId)
     return queryresult.at(0).at(0).toInt();
 }
 
-//查询这个任务是那辆车执行的
-int TaskCenter::queryTaskCar(int taskId)
-{
-    //查找未分配的任务
-    for(int i=0;i<unassignedTasks.length();++i){
-        if(unassignedTasks.at(i)->id == taskId){
-            return unassignedTasks.at(i)->excuteCar;
-        }
-    }
-    //查找正在执行的任务
-    for(int i=0;i<doingTasks.length();++i){
-        if(doingTasks.at(i)->id == taskId){
-            return doingTasks.at(i)->excuteCar;
-        }
-    }
-    //查找已完成的任务
-    QString querySql = "select task_excuteCar from agv_task where id= ?";
-    QList<QVariant> param;
-    param.append(taskId);
-    QList<QList<QVariant> > queryresult = g_sql->query(querySql,param);
-    if(queryresult.length()==0 ||queryresult.at(0).length()==0)
-        return 0;
-    return queryresult.at(0).at(0).toInt();
-}
-
 //取消一个任务
 int TaskCenter::cancelTask(int taskId)
 {
     //查找未分配的任务
+    uTaskMtx.lock();
     for(int i=0;i<unassignedTasks.length();++i){
         if(unassignedTasks.at(i)->id == taskId){
             AgvTask *task = unassignedTasks.at(i);
@@ -627,12 +574,16 @@ int TaskCenter::cancelTask(int taskId)
             }
             //释放
             delete task;
+            uTaskMtx.unlock();
             return 1;
         }
     }
+    uTaskMtx.unlock();
 
     //查找正在执行的任务
-    for(int i=0;i<doingTasks.length();++i){
+    dTaskMtx.lock();
+    for(int i=0;i<doingTasks.length();++i)
+    {
         if(doingTasks.at(i)->id == taskId){
             AgvTask *task = doingTasks.at(i);
             Agv *agv= g_m_agvs[task->excuteCar];
@@ -712,9 +663,11 @@ int TaskCenter::cancelTask(int taskId)
 
             //释放
             delete task;
+            dTaskMtx.unlock();
             return 2;
         }
     }
+    dTaskMtx.unlock();
     return 0;
 }
 
@@ -735,6 +688,7 @@ void TaskCenter::carArriveStation(int car,int station)
 
     //小车当前的任务
     AgvTask *ttask = NULL;
+    dTaskMtx.lock();
     for(QList<AgvTask *>::iterator itr= doingTasks.begin();itr!=doingTasks.end();++itr){
         AgvTask *taskTemp = *itr;
         if(taskTemp->id == agv->task)
@@ -743,6 +697,7 @@ void TaskCenter::carArriveStation(int car,int station)
             break;
         }
     }
+    dTaskMtx.unlock();
 
     //小车并没有任务
     if(ttask==NULL){return ;}
@@ -821,7 +776,9 @@ void TaskCenter::doingTaskProcess()
         duration = 0;
         resent = true;
     }
-    for(int i=0;i<doingTasks.length();++i){
+    dTaskMtx.lock();
+    for(int i=0;i<doingTasks.length();++i)
+    {
         AgvTask* task = doingTasks.at(i);
         if(task->currentDoingIndex!=-1 &&task->currentDoingIndex<task->taskNodes.length())
         {
@@ -885,7 +842,10 @@ void TaskCenter::doingTaskProcess()
                             //将它从doing放入undo中
                             //将任务从doing列表移动到done中
                             doingTasks.removeAt(i--);
+                            uTaskMtx.lock();
                             unassignedTasks.append(task);
+                            qSort(unassignedTasks.begin(),unassignedTasks.end(),agvTaskLessThan);
+                            uTaskMtx.unlock();
                         }
                     }else{
                         //计算到下个节点任务的目的地的路径
@@ -1033,10 +993,15 @@ void TaskCenter::doingTaskProcess()
                 //将它从doing放入undo中
                 //将任务从doing列表移动到done中
                 doingTasks.removeAt(i--);
+
+                uTaskMtx.lock();
                 unassignedTasks.append(task);
+                qSort(unassignedTasks.begin(),unassignedTasks.end(),agvTaskLessThan);
+                uTaskMtx.unlock();
             }
         }
     }
+    dTaskMtx.unlock();
 }
 
 

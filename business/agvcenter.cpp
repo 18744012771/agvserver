@@ -54,17 +54,29 @@ AgvCenter::AgvCenter(QObject *parent) : QObject(parent)
 QList<Agv *> AgvCenter::getIdleAgvs()
 {
     QList<Agv *> result;
+
+    agvsMtx.lock();
     for(QMap<int,Agv *>::iterator itr =g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
     {
         if(itr.value()->myStatus == AGV_STATUS_IDLE){
+            agvsMtx.unlock();
             result.push_back(itr.value());
         }
     }
+    agvsMtx.unlock();
     return result;
 }
+
+
 bool AgvCenter::handControlCmd(int agvId,int agvHandType,int speed)
 {
-    if(!g_m_agvs.contains(agvId))return false;
+    agvsMtx.lock();
+    if(!g_m_agvs.contains(agvId))
+    {
+        agvsMtx.unlock();
+        return false;
+    }
+    agvsMtx.unlock();
     //组装一个手控的命令
     QByteArray content;
     content.append(0x33);//手控的功能码
@@ -131,11 +143,14 @@ QByteArray AgvCenter::taskStopCmd(int agvId)
     //组装一个agv执行path的命令
     QByteArray content;
 
-    ++g_m_agvs[agvId]->queueNumber;
+    agvsMtx.lock();
+    (g_m_agvs[agvId]->queueNumber) +=1;
     g_m_agvs[agvId]->queueNumber &=  0xFF;
+
+
     //队列编号 0-255循环使用
     content[0] = g_m_agvs[agvId]->queueNumber;
-
+    agvsMtx.unlock();
     //首先需要启动
     //1.立即停止
     content.append(auto_instruct_stop(AGV_PACK_SEND_RFID_CODE_ETERNITY,0));
@@ -159,11 +174,11 @@ QByteArray AgvCenter::taskControlCmd(int agvId)
     //组装一个agv执行path的命令
     QByteArray content;
 
+    agvsMtx.lock();
     ++g_m_agvs[agvId]->queueNumber;
     g_m_agvs[agvId]->queueNumber &=  0xFF;
     //队列编号 0-255循环使用
     content[0] = g_m_agvs[agvId]->queueNumber;
-
     //首先需要启动
     //1.立即启动
     content.append(auto_instruct_forward(AGV_PACK_SEND_RFID_CODE_IMMEDIATELY,g_m_agvs[agvId]->speed));
@@ -175,6 +190,7 @@ QByteArray AgvCenter::taskControlCmd(int agvId)
         //加入一个命令
         content.append(auto_instruct_forward(station->rfid,g_m_agvs[agvId]->speed));
     }
+    agvsMtx.unlock();
 
     //固定长度五组
     while(content.length()+5 < 28){
@@ -218,9 +234,12 @@ void AgvCenter::onAgvRead(const char *data,int len)
             }
             buffer = buffer.right(buffer.length()-end-1);
             //截取这条消息的agvId
+            agvsMtx.lock();
             if(g_m_agvs.contains(agvid)){
+                agvsMtx.unlock();
                 processOneMsg(agvid,oneMsg);
             }
+            agvsMtx.unlock();
         }
     }
 
@@ -238,8 +257,14 @@ void AgvCenter::agvDisconnectCallBack()
 
 bool AgvCenter::agvStopTask(int agvId)
 {
-    if(!g_m_agvs.contains(agvId))return false;
+    agvsMtx.lock();
+    if(!g_m_agvs.contains(agvId))
+    {
+        agvsMtx.unlock();
+        return false;
+    }
     Agv *agv = g_m_agvs[agvId];
+    agvsMtx.unlock();
     agv->currentPath.clear();
     QByteArray qba =  taskControlCmd(agvId);
     //组包完成，发送
@@ -248,8 +273,14 @@ bool AgvCenter::agvStopTask(int agvId)
 
 bool AgvCenter::agvStartTask(int agvId, QList<int> path)
 {
-    if(!g_m_agvs.contains(agvId))return false;
+    agvsMtx.lock();
+    if(!g_m_agvs.contains(agvId))
+    {
+        agvsMtx.unlock();
+        return false;
+    }
     Agv *agv = g_m_agvs[agvId];
+    agvsMtx.unlock();
 
     //TODO:这里需要启动小车，告诉小车下一站和下几站，还有就是左中右信息(回头再说左中右)
     agv->currentPath = (path);
@@ -268,8 +299,14 @@ bool AgvCenter::agvStartTask(int agvId, QList<int> path)
 
 void AgvCenter::processOneMsg(int id, QByteArray oneMsg)
 {
-    if(!g_m_agvs.contains(id))return;
+    agvsMtx.lock();
+    if(!g_m_agvs.contains(id))
+    {
+        agvsMtx.unlock();
+        return;
+    }
     Agv *agv = g_m_agvs[id];
+    agvsMtx.unlock();
     //////////////////////////oneMsg组成部分
     /// 1Byte 包头 0x55
     /// 1Byte 功能码 (理论上只有0x44)
@@ -469,6 +506,8 @@ void AgvCenter::updateOdometer(Agv *agv, int odometer)
 //2.有站点信息和里程计信息
 void AgvCenter::updateStationOdometer(Agv *agv, int station, int odometer)
 {
+
+
     if(!g_m_stations.contains(station))return ;
     //更新当前位置
 
@@ -509,7 +548,9 @@ bool AgvCenter::load()//从数据库载入所有的agv
             Agv *agv = new Agv;
             agv->id=(qsl.at(0).toInt());
             agv->name=(qsl.at(1).toString());
+            agvsMtx.lock();
             g_m_agvs.insert(agv->id,agv);
+            agvsMtx.unlock();
         }
     }
     return true;
@@ -529,7 +570,7 @@ bool AgvCenter::save()//将agv保存到数据库
             selectAgvIds.push_back(id);
         }
     }
-
+    agvsMtx.lock();
     for(int i=0;i<selectAgvIds.length();++i)
     {
         if(g_m_agvs.contains(selectAgvIds.at(i))){
@@ -537,8 +578,12 @@ bool AgvCenter::save()//将agv保存到数据库
             QString updateSql = "update agv_agv set agv_name=? where id=?";
             params.clear();
             params<<g_m_agvs[selectAgvIds.at(i)]->name<<QString("%1").arg(g_m_agvs[selectAgvIds.at(i)]->id);
+
             if(!g_sql->exeSql(updateSql,params))
+            {
+                agvsMtx.unlock();
                 return false;
+            }
         }else{
             //不含有，就删除
             QString deleteSql = "delete from agv_agv where id=?";
@@ -547,9 +592,11 @@ bool AgvCenter::save()//将agv保存到数据库
                 selectAgvIds.removeAt(i);
                 --i;
             }else{
+                agvsMtx.unlock();
                 return false;
             }
         }
+
     }
 
     //如果在g_m_agvs中有更多的呢，怎么呢，插入
@@ -559,8 +606,12 @@ bool AgvCenter::save()//将agv保存到数据库
         QString insertSql = "insert into agv_agv(id,agv_name) values(?,?)";
         params.clear();
         params<<QString("%1").arg(itr.value()->id)<<itr.value()->name;
-        if(!g_sql->exeSql(insertSql,params))return false;
+        if(!g_sql->exeSql(insertSql,params)){
+            agvsMtx.unlock();
+            return false;
+        }
     }
+    agvsMtx.unlock();
     return true;
 }
 

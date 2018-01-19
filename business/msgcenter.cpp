@@ -3,7 +3,7 @@
 #include "util/global.h"
 #include "util/common.h"
 #include "usermsgprocessor.h"
-#include "agvpositionpublisher.h"
+#include "publisher/agvpositionpublisher.h"
 
 
 MsgCenter::MsgCenter(QObject *parent) : QObject(parent),

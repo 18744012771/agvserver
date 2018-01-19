@@ -7,24 +7,17 @@
 #include <stdarg.h>
 #include <QDebug>
 
-UserMsgProcessor::UserMsgProcessor(QObject *parent) : QThread(parent),isQuit(false)
+UserMsgProcessor::UserMsgProcessor(QObject *parent) : QThread(parent)
 {
 }
 
 UserMsgProcessor::~UserMsgProcessor(){
-    isQuit = true;
 }
 
 QString UserMsgProcessor::makeAccessToken()
 {
     //生成一个随机的16位字符串
     return QUuid::createUuid().toString().replace("{","").replace("}","");
-}
-
-
-void UserMsgProcessor::myquit()
-{
-    isQuit=true;
 }
 
 //对接收到的xml消息进行转换
@@ -446,10 +439,20 @@ void UserMsgProcessor:: User_Logout(zmq::context_t *ctx, QMap<QString, QString> 
     //////////////////退出登录
     if(checkParamExistAndNotNull(requestDatas,responseParams,"id",NULL)){
         //设置它的数据库中的状态
+        int id = requestDatas["id"].toInt();
         QString updateSql = "update agv_user set user_signState = 0 where id=?";
         QList<QVariant> param;
-        param<<requestDatas["id"];
+        param<<id;
         g_sql->exeSql(updateSql,param);
+        loginUserIdSockMutex.lock();
+        for(QList<LoginUserInfo>::iterator itr=loginUserIdSock.begin();itr!=loginUserIdSock.end();++itr)
+        {
+            if(itr->id == id){
+                loginUserIdSock.erase(itr);
+                break;
+            }
+        }
+        loginUserIdSockMutex.unlock();
         responseParams.insert(QString("info"),QString(""));
         responseParams.insert(QString("result"),QString("success"));
     }
@@ -532,6 +535,15 @@ void UserMsgProcessor:: User_Delete(zmq::context_t *ctx, QMap<QString, QString> 
             responseParams.insert(QString("info"),QString("delete fail for sql fail"));
             responseParams.insert(QString("result"),QString("fail"));
         }else{
+            loginUserIdSockMutex.lock();
+            for(QList<LoginUserInfo>::iterator itr=loginUserIdSock.begin();itr!=loginUserIdSock.end();++itr)
+            {
+                if(itr->id == requestDatas["id"].toInt()){
+                    loginUserIdSock.erase(itr);
+                    break;
+                }
+            }
+            loginUserIdSockMutex.unlock();
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
         }
@@ -641,7 +653,11 @@ void UserMsgProcessor::Map_Create(zmq::context_t *ctx, QMap<QString, QString> &r
 void UserMsgProcessor::Map_StationList(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
-    for(QMap<int,AgvStation *>::iterator itr=g_m_stations.begin();itr!=g_m_stations.end();++itr){
+
+    QMap<int,AgvStation *> stations = g_agvMapCenter.getAgvStations();
+
+    for(QMap<int,AgvStation *>::iterator itr=stations.begin();itr!=stations.end();++itr)
+    {
         QMap<QString,QString> list;
 
         list.insert(QString("x"),QString("%1").arg(itr.value()->x));
@@ -660,7 +676,8 @@ void UserMsgProcessor::Map_StationList(zmq::context_t *ctx, QMap<QString, QStrin
 void UserMsgProcessor:: Map_LineList(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
-    for(QMap<int,AgvLine *>::iterator itr=g_m_lines.begin();itr!=g_m_lines.end();++itr){
+    QMap<int,AgvLine *> lines = g_agvMapCenter.getAgvLines();
+    for(QMap<int,AgvLine *>::iterator itr=lines.begin();itr!=lines.end();++itr){
         QMap<QString,QString> list;
 
         list.insert(QString("startStation"),QString("%1").arg(itr.value()->startStation));
@@ -689,7 +706,9 @@ void UserMsgProcessor:: Map_LineList(zmq::context_t *ctx, QMap<QString, QString>
 void UserMsgProcessor:: AgvManage_List(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
-    for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
+
+    QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
+    for(QMap<int,Agv *>::iterator itr = agvs.begin();itr!=agvs.end();++itr){
         QMap<QString,QString> list;
         Agv *agv = itr.value();
 
@@ -699,6 +718,7 @@ void UserMsgProcessor:: AgvManage_List(zmq::context_t *ctx, QMap<QString, QStrin
         responseDatalists.push_back(list);
     }
 }
+
 //增加
 void UserMsgProcessor:: AgvManage_Add(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     //要求name和ip
@@ -718,7 +738,7 @@ void UserMsgProcessor:: AgvManage_Add(zmq::context_t *ctx, QMap<QString, QString
                 agv->id = (newId);
                 agv->name = (requestDatas["name"]);
                 //agv->setIp(requestDatas["ip"]);
-                g_m_agvs.insert(newId,agv);
+                g_hrgAgvCenter.addAgv(agv);
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));
                 responseParams.insert(QString("id"),queryresult.at(0).at(0).toString());
@@ -739,8 +759,9 @@ void UserMsgProcessor:: AgvManage_Delete(zmq::context_t *ctx, QMap<QString, QStr
     if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
         int iAgvId = requestDatas["agvid"].toInt();
 
+        QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
         //查找是否存在
-        if(g_m_agvs.contains(iAgvId)){
+        if(agvs.contains(iAgvId)){
             //从数据库中清除
             QString deleteSql = "delete from agv_agv where id=?";
             QList<QVariant> tempParams;
@@ -748,8 +769,8 @@ void UserMsgProcessor:: AgvManage_Delete(zmq::context_t *ctx, QMap<QString, QStr
             if(g_sql->exeSql(deleteSql,tempParams))
             {
                 //从列表中清楚
-                if(g_m_agvs.contains(iAgvId)){
-                    g_m_agvs.remove(iAgvId);
+                if(agvs.contains(iAgvId)){
+                    g_hrgAgvCenter.removeAgv(iAgvId);
                 }
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));
@@ -767,13 +788,14 @@ void UserMsgProcessor:: AgvManage_Delete(zmq::context_t *ctx, QMap<QString, QStr
 void UserMsgProcessor:: AgvManage_Modify(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","name","ip",NULL)){
         int iAgvId = requestDatas["agvid"].toInt();
+        QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
 
-        if(!g_m_agvs.contains(iAgvId)){
+        if(!agvs.contains(iAgvId)){
             //不存在这辆车
             responseParams.insert(QString("info"),QString("not exist of this agvid."));
             responseParams.insert(QString("result"),QString("fail"));
         }else{
-            Agv *agv = g_m_agvs[iAgvId];
+            Agv *agv = agvs[iAgvId];
             QString updateSql = "update agv_agv set agv_name=?,agv_ip=? where id=?";
             QList<QVariant> params;
             params<<(requestDatas["name"])<<(requestDatas["ip"])<<(requestDatas["agvid"]);
@@ -806,7 +828,9 @@ void UserMsgProcessor::Task_CreateToX(zmq::context_t *ctx, QMap<QString, QString
         if(requestDatas.contains("xWaitType"))waitTypeX=requestDatas["xWaitType"].toInt();
         if(requestDatas.contains("xWaitTime"))watiTimeX=requestDatas["xWaitTime"].toInt();
 
-        if(!g_m_stations.contains(iX)){
+        QMap<int,AgvStation *> stations = g_agvMapCenter.getAgvStations();
+
+        if(!stations.contains(iX)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station"));
         }else{
@@ -831,10 +855,13 @@ void UserMsgProcessor::Task_CreateAgvToX(zmq::context_t *ctx, QMap<QString, QStr
         if(requestDatas.contains("xWaitType"))waitTypeX=requestDatas["xWaitType"].toInt();
         if(requestDatas.contains("xWaitTime"))watiTimeX=requestDatas["xWaitTime"].toInt();
 
-        if(!g_m_stations.contains(iX)){
+        QMap<int,AgvStation *> stations = g_agvMapCenter.getAgvStations();
+        QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
+
+        if(!stations.contains(iX)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station"));
-        }else if(!g_m_agvs.contains(iAgvid)){
+        }else if(!agvs.contains(iAgvid)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found agv"));
         }else{
@@ -862,11 +889,12 @@ void UserMsgProcessor::Task_CreateYToX(zmq::context_t *ctx, QMap<QString, QStrin
         if(requestDatas.contains("yWaitType"))waitTypeY=requestDatas["yWaitType"].toInt();
         if(requestDatas.contains("yWaitTime"))watiTimeY=requestDatas["yWaitTime"].toInt();
 
+        QMap<int,AgvStation *> stations = g_agvMapCenter.getAgvStations();
         //确保站点存在
-        if(!g_m_stations.contains(iX)){
+        if(!stations.contains(iX)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station x"));
-        }else if(!g_m_stations.contains(iY)){
+        }else if(!stations.contains(iY)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station y"));
         }else{
@@ -897,13 +925,16 @@ void UserMsgProcessor::Task_CreateAgvYToX(zmq::context_t *ctx, QMap<QString, QSt
         if(requestDatas.contains("yWaitTime"))watiTimeY=requestDatas["yWaitTime"].toInt();
 
         //确保站点存在
-        if(!g_m_stations.contains(iX)){
+        QMap<int,AgvStation *> stations = g_agvMapCenter.getAgvStations();
+        QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
+
+        if(!stations.contains(iX)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station x"));
-        }else if(!g_m_stations.contains(iY)){
+        }else if(!stations.contains(iY)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station y"));
-        }else if(!g_m_agvs.contains(agvId)){
+        }else if(!agvs.contains(agvId)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found agv"));
         }else{
@@ -935,13 +966,16 @@ void UserMsgProcessor::Task_CreateAgvYToXCircle(zmq::context_t *ctx, QMap<QStrin
         if(requestDatas.contains("yWaitTime"))watiTimeY=requestDatas["yWaitTime"].toInt();
 
         //确保站点存在
-        if(!g_m_stations.contains(iX)){
+        QMap<int,AgvStation *> stations = g_agvMapCenter.getAgvStations();
+        QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
+
+        if(!stations.contains(iX)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station x"));
-        }else if(!g_m_stations.contains(iY)){
+        }else if(!stations.contains(iY)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station y"));
-        }else if(!g_m_agvs.contains(agvId)){
+        }else if(!agvs.contains(agvId)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found agv"));
         }else{

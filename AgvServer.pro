@@ -14,25 +14,23 @@ SOURCES += main.cpp \
     util/global.cpp \
     sql/sql.cpp \
     sql/sqlserver.cpp \
-    business/agvstation.cpp \
-    business/agvline.cpp \
-    business/agv.cpp \
     business/agvcenter.cpp \
     business/mapcenter.cpp \
     business/taskcenter.cpp \
     business/msgcenter.cpp \
     business/usermsgprocessor.cpp \
-    business/agvpositionpublisher.cpp \
-    business/agvstatuspublisher.cpp \
     log/agvlog.cpp \
     log/agvlogprocess.cpp \
-    business/bezierarc.cpp \
-    business/agvtaskpublisher.cpp \
     service/taskmaker.cpp \
     service/taskmakerworker.cpp \
     network/qyhzmqserver.cpp \
     network/qyhzmqserverworker.cpp \
-    network/qyhzmqftp.cpp
+    network/qyhzmqftp.cpp \
+    util/bezierarc.cpp \
+    publisher/agvpositionpublisher.cpp \
+    publisher/agvstatuspublisher.cpp \
+    publisher/agvtaskpublisher.cpp \
+    publisher/logpublisher.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -51,26 +49,27 @@ HEADERS += \
     util/global.h \
     sql/sql.h \
     sql/sqlserver.h \
-    business/agvstation.h \
-    business/agvline.h \
-    business/agv.h \
     business/agvcenter.h \
     business/mapcenter.h \
     business/taskcenter.h \
     business/msgcenter.h \
     business/usermsgprocessor.h \
-    business/agvpositionpublisher.h \
-    business/agvstatuspublisher.h \
     log/agvlog.h \
     log/agvlogprocess.h \
-    business/bezierarc.h \
-    business/agvtaskpublisher.h \
-    business/agvtask.h \
     service/taskmaker.h \
     service/taskmakerworker.h \
     network/qyhzmqserver.h \
     network/qyhzmqserverworker.h \
-    network/qyhzmqftp.h
+    network/qyhzmqftp.h \
+    util/bezierarc.h \
+    bean/agv.h \
+    bean/agvline.h \
+    bean/agvstation.h \
+    bean/agvtask.h \
+    publisher/agvpositionpublisher.h \
+    publisher/agvstatuspublisher.h \
+    publisher/agvtaskpublisher.h \
+    publisher/logpublisher.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include

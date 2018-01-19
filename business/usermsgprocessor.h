@@ -25,9 +25,6 @@ public:
         QString access_tocken;//随机码(安全码)，登录以后，给用户的，之后的所有请求要求带上随机码。
     }Login_User_Info;
 
-    //    void run() override;
-    void myquit();
-
     //对接收到的一条消息进行xml解析
     std::string parseOneMsg(zmq::context_t * ctx, const std::string &oneMsg);
 signals:
@@ -35,8 +32,6 @@ signals:
 public slots:
 
 private:
-    volatile bool isQuit;
-
     QString makeAccessToken();
 
     //对解析后的请求信息，进行处理，并得到相应的回应内容

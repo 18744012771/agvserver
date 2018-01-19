@@ -3,9 +3,9 @@
 
 #include <QObject>
 #include <QThread>
-#include "agvpositionpublisher.h"
-#include "agvstatuspublisher.h"
-#include "agvtaskpublisher.h"
+#include "publisher/agvpositionpublisher.h"
+#include "publisher/agvstatuspublisher.h"
+#include "publisher/agvtaskpublisher.h"
 //这里将会启动一个CPU个数*2的线程，用于处理用户的数据
 //保证并发量和响应时间
 

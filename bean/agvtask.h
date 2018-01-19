@@ -95,12 +95,15 @@ public:
 
     }
 
+    //对其进行排序时，采用从小到大排序，就是a<b 则a先执行
     bool operator < (const AgvTask &b)
     {
-        return id<b.id;
+        if(priority==b.priority)
+            return id<b.id;
+        return priority>b.priority;
     }
 
-    bool operator ==(const AgvTask &b){
+    bool operator == (const AgvTask &b){
         return id == b.id;
     }
 
@@ -114,11 +117,13 @@ public:
     int nextTodoIndex = 0;
     int lastDoneIndex = -1;
     int currentDoingIndex = -1;
+    int priority;/////优先级,数字越大则优先级越高
 
     QList<TaskNode *> taskNodes;
     QList<TaskNode *> taskNodesBackup;//循环任务的任务节点备份。取出来循环时，请重新赋值ID
 
     bool isDone(){return currentDoingIndex>=taskNodes.length();}
+
 
 };
 

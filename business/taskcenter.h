@@ -3,8 +3,9 @@
 
 #include <QObject>
 #include <QTimer>
-#include "agvtask.h"
-#include "agv.h"
+#include <QMutex>
+#include "bean/agvtask.h"
+#include "bean/agv.h"
 
 
 class TaskCenter : public QObject
@@ -34,7 +35,7 @@ public:
     int makeAgvPickupReturnTask(int pickupStation,int aimStation,int waitTypePick,int waitTimePick,int waitTypeAim,int waitTimeAim);
 
     int queryTaskStatus(int taskId);//返回task的状态。
-    int queryTaskCar(int taskId);//查询这个任务是那辆车执行的
+
     int cancelTask(int taskId);//取消一个任务
 
     AgvTask *queryUndoTask(int taskId);
@@ -50,7 +51,7 @@ signals:
     void sigTaskFinish(int);
 public slots:
     void carArriveStation(int car,int station);
-
+private slots:
     void unassignedTasksProcess();//未分配的任务
     void doingTaskProcess();//正在执行的任务(由于线路占用的问题，导致小车停在了某个位置，需要启动它)
 
@@ -59,7 +60,10 @@ private:
     //对于C类任务(直接去往目的地).它会先被放入todoAimtask中，等待分配车辆执行。如果分配到车辆了，这个任务会放入doingtasks中
     //对于AB类任务(去A地装货，然后送到B地)，它会先被放入todoPickTasks中，等待分配车辆，如果分配到的车辆了，这个任务会放入doingtasks中，如果完成了装货，它会被放入todoAimTasks中，等待有可行线路去往目的地
     QList<AgvTask *> unassignedTasks;           //未分配的任务
+    QMutex uTaskMtx;
+
     QList<AgvTask *> doingTasks;                //正在执行的任务
+    QMutex dTaskMtx;
     //    QList<AgvTask *> todoAimTasks;//直接到目的地的任务
     //    QList<AgvTask *> todoPickTasks;//经过pickup的任务
     //    QList<AgvTask *> doingTasks;//正在执行的任务

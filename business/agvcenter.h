@@ -3,8 +3,9 @@
 
 #include <QObject>
 #include <QList>
+#include <QMutex>
 #include <qyhtcpclient.h>
-#include "agv.h"
+#include "bean/agv.h"
 
 class AgvCenter : public QObject
 {
@@ -38,6 +39,30 @@ public:
 
     void agvDisconnectCallBack();
 
+    QMap<int,Agv *> getAgvs()
+    {
+        QMap<int,Agv *> agvs;
+        agvsMtx.lock();
+        agvs = g_m_agvs;
+        agvsMtx.unlock();
+        return agvs;
+    }
+
+    void addAgv(Agv *agv)
+    {
+        agvsMtx.lock();
+        g_m_agvs.insert(agv->id,agv);
+        agvsMtx.unlock();
+    }
+
+    void removeAgv(int id)
+    {
+        agvsMtx.lock();
+        g_m_agvs.remove(id);
+        agvsMtx.unlock();
+
+    }
+
 signals:
     void carArriveStation(int agvId,int station);
 public slots:
@@ -62,6 +87,10 @@ private:
     QByteArray auto_instruct_wait();
 
     QyhTcp::QyhTcpClient *tcpClient;
+
+    //所有的bean集合
+    QMap<int,Agv *> g_m_agvs;             //所有车辆们
+    QMutex agvsMtx;
 };
 
 #endif // AGVCENTER_H

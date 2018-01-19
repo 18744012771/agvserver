@@ -15,10 +15,10 @@
 #include "sql/sqlserver.h"
 #include "network/qyhzmqserver.h"
 
-#include "business/agv.h"
-#include "business/agvline.h"
-#include "business/agvstation.h"
-#include "business/agvtask.h"
+#include "bean/agv.h"
+#include "bean/agvline.h"
+#include "bean/agvstation.h"
+#include "bean/agvtask.h"
 
 #include "business/agvcenter.h"
 #include "business/mapcenter.h"
@@ -55,11 +55,6 @@ extern AgvCenter g_hrgAgvCenter;//车辆管理中心
 extern UserMsgProcessor *userMsgProcessor;
 extern TaskMaker *g_taskMaker;
 
-//bean的容器
-extern QMap<int,Agv *> g_m_agvs;//车辆
-extern QMap<int,AgvStation *> g_m_stations;//站点
-extern QMap<int,AgvLine *> g_m_lines;//线路
-
 void QyhSleep(int msec);
 
 int getRandom(int maxRandom);
@@ -79,5 +74,8 @@ extern const QString DATE_TIME_FORMAT;
 
 //日志的消息队列
 extern moodycamel::ConcurrentQueue<OneLog> g_log_queue;
+
+
+bool agvTaskLessThan( const AgvTask *a, const AgvTask *b );
 
 #endif // GLOBAL_H

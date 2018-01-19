@@ -5,21 +5,15 @@
 #include "pugixml.hpp"
 
 //全局的一些common变量
-Sql *g_sql = NULL;
-AgvLog *g_log = NULL;
-AgvLogProcess *g_logProcess = NULL;
-QyhZmqServer *g_server;
-
-//所有的bean集合
-QMap<int,Agv *> g_m_agvs;             //所有车辆们
-QMap<int,AgvStation *> g_m_stations;  //所有的站点(站点+线路 = 地图)
-QMap<int,AgvLine *> g_m_lines;        //所有的线路(站点+线路 = 地图)
+Sql *g_sql = NULL;//数据库执行
+AgvLog *g_log = NULL;//日志调用
+AgvLogProcess *g_logProcess = NULL;//日志存库、publish
+QyhZmqServer *g_server;//
 
 //所有的业务处理
 MapCenter g_agvMapCenter;//地图管理(地图载入，地图保存，地图计算)
 TaskCenter g_taskCenter;//任务管理(任务分配，任务保存，任务调度)
 AgvCenter g_hrgAgvCenter;//车辆管理(车辆载入。车辆保存。车辆增加。车辆删除)
-//MsgCenter g_msgCenter;   //消息处理中心，对所有的消息进行解析和组装等
 UserMsgProcessor *userMsgProcessor = NULL;
 TaskMaker *g_taskMaker;
 
@@ -31,7 +25,7 @@ void QyhSleep(int msec)
     QTime dieTime = QTime::currentTime().addMSecs(msec);
 
     while( QTime::currentTime() < dieTime )
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 1);
 }
 
 int getRandom(int maxRandom)
@@ -139,4 +133,10 @@ std::string intToStdString(int x)
     return result;
 }
 
+bool agvTaskLessThan( const AgvTask *a, const AgvTask *b )
+{
+    AgvTask aa = *a;
+    AgvTask bb = *b;
+    return aa < bb;
+}
 

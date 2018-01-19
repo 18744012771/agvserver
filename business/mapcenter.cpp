@@ -4,7 +4,7 @@
 #include <math.h>
 #include "util/global.h"
 
-#include "bezierarc.h"
+#include "util/bezierarc.h"
 
 MapCenter::MapCenter(QObject *parent) : QObject(parent)
 {
@@ -225,6 +225,8 @@ void MapCenter::addArc(QString s)
     g_log->log(AGV_LOG_LEVEL_DEBUG,ss);
 }
 
+
+
 int MapCenter::getLMR(AgvLine *lastLine,AgvLine *nextLine)
 {
     if(lastLine->endStation != nextLine->startStation)return PATH_LMF_NOWAY;
@@ -309,7 +311,6 @@ int MapCenter::getLMR(AgvLine *lastLine,AgvLine *nextLine)
 
 void MapCenter::create()
 {
-    mutex.lock();
     //1. 计算线路的长度
     //已经计算过了
 
@@ -471,15 +472,12 @@ void MapCenter::create()
             g_sql->exeSql(insertSql,params);
         }
     }
-
-    emit mapUpdate();
-
-    mutex.unlock();
 }
 
 
 bool MapCenter::resetMap(QString stationStr, QString lineStr, QString arcStr, QString imagestr)//站点、直线、弧线
 {
+    mutex.lock();
     clear();
 
     //添加站点
@@ -496,13 +494,17 @@ bool MapCenter::resetMap(QString stationStr, QString lineStr, QString arcStr, QS
     //生成adj信息存库
     create();
 
-    //设置背景图片
+    mutex.unlock();
+
+    emit mapUpdate();
 
     return true;
 }
 
 bool MapCenter::load()
 {
+    mutex.lock();
+
     qDeleteAll(g_m_lines.values());
     qDeleteAll(g_m_stations.values());
 
@@ -526,6 +528,7 @@ bool MapCenter::load()
         if(qsl.length()!=8){
             QString ss =  "select error!!!!!!" + queryStationSql;
             g_log->log(AGV_LOG_LEVEL_ERROR,ss);
+            mutex.unlock();
             return false;
         }
         AgvStation *station = new AgvStation;
@@ -549,6 +552,7 @@ bool MapCenter::load()
             QString ss;
             ss = "select error!!!!!!"+squeryLineSql;
             g_log->log(AGV_LOG_LEVEL_ERROR,ss);
+            mutex.unlock();
             return false;
         }
         AgvLine *line = new AgvLine;
@@ -589,6 +593,7 @@ bool MapCenter::load()
         if(qsl.length()!=3){
             QString ss =  "select error!!!!!!"+queryLmrSql;
             g_log->log(AGV_LOG_LEVEL_ERROR,ss);
+            mutex.unlock();
             return false;
         }
         PATH_LEFT_MIDDLE_RIGHT ll;
@@ -606,6 +611,7 @@ bool MapCenter::load()
         if(qsl.length()!=2){
             QString ss = "select error!!!!!!"+queryAdjSql;
             g_log->log(AGV_LOG_LEVEL_ERROR,ss);
+            mutex.unlock();
             return false;
         }
         AgvLine* endLine = g_m_lines[qsl.at(1).toInt()];
@@ -618,16 +624,18 @@ bool MapCenter::load()
             g_m_l_adj[startLine] = lines;
         }
     }
-
+    mutex.unlock();
     return true;
 }
 
 //设置lineid的反向线路的占用agv
 void MapCenter::setReverseOccuAgv(int lineid, int occagv)
 {
+    mutex.lock();
     int reverseLineKey = g_reverseLines[lineid];
     //将这条线路的可用性置为false
     g_m_lines[reverseLineKey]->occuAgv=occagv;
+    mutex.unlock();
 }
 
 QList<int> MapCenter::getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect)//最后一个参数是是否可以换个方向
