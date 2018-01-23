@@ -64,9 +64,6 @@ private:
 
     QList<AgvTask *> doingTasks;                //正在执行的任务
     QMutex dTaskMtx;
-    //    QList<AgvTask *> todoAimTasks;//直接到目的地的任务
-    //    QList<AgvTask *> todoPickTasks;//经过pickup的任务
-    //    QList<AgvTask *> doingTasks;//正在执行的任务
 
     QTimer taskProcessTimer;
 

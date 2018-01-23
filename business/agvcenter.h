@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QList>
 #include <QMutex>
+#include <QMap>
 #include <qyhtcpclient.h>
 #include "bean/agv.h"
 
@@ -31,9 +32,9 @@ public:
 
     bool save();//将agv保存到数据库
 
-    void processOneMsg(int id,QByteArray oneMsg);
+    //void processOneMsg(int id,QByteArray oneMsg);
 
-    void onAgvRead(const char *data,int len);
+    //void onAgvRead(const char *data,int len);
 
     void agvConnectCallBack();
 
@@ -85,8 +86,6 @@ private:
     QByteArray auto_instruct_mp3_right(int rfid, int mp3Id);
     QByteArray auto_instruct_mp3_volume(int rfid, int volume);
     QByteArray auto_instruct_wait();
-
-    QyhTcp::QyhTcpClient *tcpClient;
 
     //所有的bean集合
     QMap<int,Agv *> g_m_agvs;             //所有车辆们

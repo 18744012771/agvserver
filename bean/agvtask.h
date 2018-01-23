@@ -34,8 +34,11 @@ public:
         status = b.status;
         queueNumber = b.queueNumber;
         aimStation = b.aimStation;
-        waitType = b.waitType;
-        waitTime = b.waitTime;
+        aimOrderType = b.aimOrderType;//到达目的地的时候，做什么操作
+
+        aimForwardDistance = b.aimForwardDistance;
+        aimUpDistance = b.aimUpDistance;
+
         if(b.arriveTime.isValid())
             arriveTime = b.arriveTime;
         if(b.leaveTime.isValid())
@@ -55,8 +58,18 @@ public:
     int status = 0;  //0未执行  1正在执行  2执行完成了
     int queueNumber = 0; //在这个任务中的序列号
     int aimStation = 0;//要去的位置()如果是0，说明没有节点任务
-    int waitType = AGV_TASK_WAIT_TYPE_TIME;//到达该位置后的等待方式
-    int waitTime = 30;//到达该位置后的等待时间(秒)
+
+    //
+    enum{
+        AIM_ORDER_TYPE_NONE = 0,
+        AIM_ORDER_TYPE_LEFT_GET = 1,
+        AII_ORDER_TYPE_RIGHT_GET = 2,
+        AIM_ORDER_TYPE_LEFT_PUT = 3,
+        AIM_ORDER_TYPE_RIGHT_PUT = 4,
+    };
+    int aimOrderType;//到达目的地的时候，做什么操作
+    int aimForwardDistance = 300;
+    int aimUpDistance = 0;
     QDateTime arriveTime;//到达时间
     QDateTime leaveTime;//离开时间
 };
@@ -92,7 +105,6 @@ public:
             TaskNode *n = new TaskNode(*(b.taskNodesBackup.at(i)));
             taskNodesBackup.append(n);
         }
-
     }
 
     //对其进行排序时，采用从小到大排序，就是a<b 则a先执行

@@ -32,7 +32,7 @@ void TaskCenter::unassignedTasksProcess()
         TaskNode *nextNode = ttask->taskNodes[ttask->nextTodoIndex];
         if(ttask->excuteCar>0){//固定车辆去执行该任务
             Agv *excutecar = g_m_agvs[ttask->excuteCar];
-            if(excutecar->myStatus!=AGV_STATUS_IDLE)continue;
+            if(excutecar->status!=Agv::AGV_STATUS_IDLE)continue;
             QList<int> result;
             if(excutecar->nowStation>0){
                 result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nowStation,nextNode->aimStation,tempDis,false);
@@ -959,9 +959,9 @@ void TaskCenter::doingTaskProcess()
             //置车辆状态
             if(g_m_agvs.contains(task->excuteCar))
             {
-                if(g_m_agvs[task->excuteCar]->myStatus == AGV_STATUS_TASKING)
+                if(g_m_agvs[task->excuteCar]->status == Agv::AGV_STATUS_TASKING)
                 {
-                    g_m_agvs[task->excuteCar]->myStatus = AGV_STATUS_IDLE;
+                    g_m_agvs[task->excuteCar]->status = Agv::AGV_STATUS_IDLE;
                 }
             }
 

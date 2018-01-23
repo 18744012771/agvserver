@@ -140,3 +140,13 @@ bool agvTaskLessThan( const AgvTask *a, const AgvTask *b )
     return aa < bb;
 }
 
+unsigned char crc(unsigned char *data,int len)
+{
+    int sum=0;
+    for(int i=0;i<len;++i)
+    {
+        sum+=data[i]&0xFF;
+        sum&=0xFF;
+    }
+    return sum;
+}

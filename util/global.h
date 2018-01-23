@@ -78,4 +78,6 @@ extern moodycamel::ConcurrentQueue<OneLog> g_log_queue;
 
 bool agvTaskLessThan( const AgvTask *a, const AgvTask *b );
 
+unsigned char crc(unsigned char *data,int len);
+
 #endif // GLOBAL_H

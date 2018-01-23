@@ -30,7 +30,8 @@ SOURCES += main.cpp \
     publisher/agvpositionpublisher.cpp \
     publisher/agvstatuspublisher.cpp \
     publisher/agvtaskpublisher.cpp \
-    publisher/logpublisher.cpp
+    publisher/logpublisher.cpp \
+    bean/agv.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -62,14 +63,14 @@ HEADERS += \
     network/qyhzmqserverworker.h \
     network/qyhzmqftp.h \
     util/bezierarc.h \
-    bean/agv.h \
     bean/agvline.h \
     bean/agvstation.h \
     bean/agvtask.h \
     publisher/agvpositionpublisher.h \
     publisher/agvstatuspublisher.h \
     publisher/agvtaskpublisher.h \
-    publisher/logpublisher.h
+    publisher/logpublisher.h \
+    bean/agv.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include
