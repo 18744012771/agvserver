@@ -627,7 +627,17 @@ bool MapCenter::load()
     mutex.unlock();
     return true;
 }
-
+bool MapCenter::setStationOccuAgv(int station,int occuAgv)
+{
+    bool ret = false;
+    mutex.lock();
+    if(g_m_stations.contains(station) && g_m_stations[station]->occuAgv==0){
+        g_m_stations[station]->occuAgv = occuAgv;
+        ret = true;
+    }
+    mutex.unlock();
+    return ret;
+}
 //设置lineid的反向线路的占用agv
 void MapCenter::setReverseOccuAgv(int lineid, int occagv)
 {
@@ -636,6 +646,71 @@ void MapCenter::setReverseOccuAgv(int lineid, int occagv)
     //将这条线路的可用性置为false
     g_m_lines[reverseLineKey]->occuAgv=occagv;
     mutex.unlock();
+}
+void MapCenter::freeStationIfAgvOccu(int station,int occuAgv)
+{
+    mutex.lock();
+    if(g_m_stations.contains(station))
+        if(g_m_stations[station]->occuAgv == occuAgv)
+            g_m_stations[station]->occuAgv = 0;
+
+    mutex.unlock();
+}
+void MapCenter::freeLineIfAgvOccu(int line,int occuAgv)
+{
+    mutex.lock();
+    if(g_m_lines.contains(line)){
+        if(g_m_lines[line]->occuAgv == occuAgv)
+            g_m_lines[line]->occuAgv = 0;
+        if(g_m_lines[g_reverseLines[line] ]->occuAgv == occuAgv)
+            g_m_lines[g_reverseLines[line] ]->occuAgv = 0;
+    }
+    mutex.unlock();
+}
+//释放车辆占用的线路，除了某条线路【因为车辆停在了一条线路上】
+void MapCenter::freeAgvLines(int agvId,int exceptLine)
+{
+    int kk = 0;
+    mutex.lock();
+    if(g_reverseLines.contains(exceptLine))kk = g_reverseLines[exceptLine];
+    //那么占用这个站点，线路全部释放
+    for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr)
+    {
+        //如果是在一个站点上，占用这个站点，否则占用当前所在线路的正反向。其他的线路站点，如果被占用，那么释放
+        if(itr.value()->occuAgv==agvId && itr.value()->id != kk && itr.value()->id !=exceptLine)
+        {
+            itr.value()->occuAgv = 0;
+        }
+    }
+    mutex.unlock();
+}
+
+//释放车辆占用的站点，除了某个站点【因为车辆站在某个站点上】
+void MapCenter::freeAgvStation(int agvId,int excepetStation)
+{
+    mutex.lock();
+    for(QMap<int,AgvStation *>::iterator itr = g_m_stations.begin();itr!=g_m_stations.end();++itr)
+    {
+        if(itr.value()->occuAgv == agvId && itr.value()->id!=excepetStation)
+            itr.value()->occuAgv = 0;
+    }
+    mutex.unlock();
+}
+
+int MapCenter::getLineId(int startStation,int endStation)
+{
+    int id = 0;
+    mutex.lock();
+    for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr)
+    {
+        if(itr.value()->startStation == startStation && itr.value()->endStation == endStation)
+        {
+            id = itr.key();
+            break;
+        }
+    }
+    mutex.unlock();
+    return id;
 }
 
 QList<int> MapCenter::getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect)//最后一个参数是是否可以换个方向

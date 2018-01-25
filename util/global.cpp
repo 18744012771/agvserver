@@ -104,14 +104,14 @@ bool getRequestParam(const std::string &xmlStr,QMap<QString,QString> &params,QLi
                 if(strcmp(ccchild.name(),"datalist")!=0){
                     params.insert(QString(ccchild.name()),QString(ccchild.child_value()));
                 }else{
-                    for (pugi::xml_node ccccccchild: ccchild.children())
+                    for (pugi::xml_node ccccchild: ccchild.children())
                     {
                         QMap<QString,QString> datalist_list;
-                        if(strcmp(ccccccchild.name(),"list")==0){
-                            for (pugi::xml_node cccccccccccccccccccchild: ccccccchild.children())
+                        if(strcmp(ccccchild.name(),"list")==0){
+                            for (pugi::xml_node cccccccchild: ccccchild.children())
                             {
-                                if(strcmp(ccccccchild.name(),"list")==0){
-                                    datalist_list.insert(QString(cccccccccccccccccccchild.name()),QString(cccccccccccccccccccchild.child_value()));
+                                if(strcmp(ccccchild.name(),"list")==0){
+                                    datalist_list.insert(QString(cccccccchild.name()),QString(cccccccchild.child_value()));
                                 }
                             }
                         }
@@ -133,10 +133,10 @@ std::string intToStdString(int x)
     return result;
 }
 
-bool agvTaskLessThan( const AgvTask *a, const AgvTask *b )
+bool agvTaskLessThan( const Task *a, const Task *b )
 {
-    AgvTask aa = *a;
-    AgvTask bb = *b;
+    Task aa = *a;
+    Task bb = *b;
     return aa < bb;
 }
 

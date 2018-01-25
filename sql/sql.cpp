@@ -24,12 +24,14 @@ bool Sql::checkTables()
     QList<QVariant> args;
     //检查表如下：
     /// 1.agv_stations
-    /// 2.agv_lines
+    /// 2.agv_line
     /// 3.agv_lmr
     /// 4.agv_adj
     /// 5.agv_log
     /// 6.agv_user
     /// 7.agv_agv
+    /// 8.agv_task
+    /// 9.agv_bkg
 
     args.clear();
     args<<"agv_station";
@@ -100,32 +102,6 @@ bool Sql::checkTables()
     }
 
     args.clear();
-    args<<"agv_task";
-    qsl = query(querySql,args);
-    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0].toInt()>0){
-        //存在了
-    }else{
-        //不存在.创建
-        QString createSql = "create table agv_task ( id INTEGER PRIMARY KEY AUTO_INCREMENT, task_producetime datetime,task_doTime datetime,task_doneTime datetime,task_excuteCar integer,task_status integer);";
-        args.clear();
-        bool b = exeSql(createSql,args);
-        if(!b)return false;
-    }
-
-    args.clear();
-    args<<"agv_task_node";
-    qsl = query(querySql,args);
-    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0]=="1"){
-        //存在了
-    }else{
-        //不存在.创建
-        QString createSql = "create table agv_task_node(id INTEGER PRIMARY KEY AUTO_INCREMENT, task_node_status integer,task_node_queuenumber integer,task_node_aimStation integer,task_node_waitType integer,task_node_waitTime integer,task_node_arriveTime datetime,task_node_leaveTime datetime,task_node_taskId integer);";
-        args.clear();
-        bool b = exeSql(createSql,args);
-        if(!b)return false;
-    }
-
-    args.clear();
     args<<"agv_user";
     qsl = query(querySql,args);
     if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0]=="1"){
@@ -146,6 +122,22 @@ bool Sql::checkTables()
     }else{
         //不存在.创建
         QString createSql = "CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTO_INCREMENT,agv_name text);";
+        args.clear();
+        bool b = exeSql(createSql,args);
+        if(!b)return false;
+    }
+
+    args.clear();
+    args<<"agv_task";
+    qsl = query(querySql,args);
+    if(qsl.length()==1&&qsl[0].length()==1&&qsl[0][0].toInt()>0){
+        //存在了
+    }else{
+        //不存在.创建
+        QString createSql = "create table agv_task ( id INTEGER PRIMARY KEY AUTO_INCREMENT, task_produceTime datetime,task_doTime datetime,task_doneTime datetime,task_excuteCar integer,task_status integer,task_circle bool,task_priority integer,task_currentDoIndex integer,"
+                            "task_getGoodStation integer,task_getGoodDirect integer,task_getGoodDistance integer,task_getStartTime datetime,task_getFinishTime datetime,"
+                            "task_putGoodStation integer,task_putGoodDirect integer,task_putGoodDistance integer,task_putStartTime datetime,task_putFinishTime datetime,"
+                            "task_standByStation integer,task_standByStartTime datetime,task_standByFinishTime datetime);";
         args.clear();
         bool b = exeSql(createSql,args);
         if(!b)return false;

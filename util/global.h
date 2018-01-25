@@ -18,7 +18,7 @@
 #include "bean/agv.h"
 #include "bean/agvline.h"
 #include "bean/agvstation.h"
-#include "bean/agvtask.h"
+#include "bean/task.h"
 
 #include "business/agvcenter.h"
 #include "business/mapcenter.h"
@@ -76,7 +76,7 @@ extern const QString DATE_TIME_FORMAT;
 extern moodycamel::ConcurrentQueue<OneLog> g_log_queue;
 
 
-bool agvTaskLessThan( const AgvTask *a, const AgvTask *b );
+bool agvTaskLessThan( const Task *a, const Task *b );
 
 unsigned char crc(unsigned char *data,int len);
 

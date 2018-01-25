@@ -33,26 +33,30 @@ void AgvStatusPublisher::run()
         responseDatas.insert(QString("type"),QString("agv"));
         responseDatas.insert(QString("todo"),QString("periodica"));
 
-        for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
+        QMap<int,Agv *> pp = g_hrgAgvCenter.getAgvs();
+        for(QMap<int,Agv *>::iterator itr = pp.begin();itr!=pp.end();++itr)
         {
             QMap<QString,QString> responseData;
             responseData.insert(QString("id"),QString("%1").arg(itr.value()->id));
-            responseData.insert(QString("speed"),QString("%1").arg(itr.value()->speed));
-            responseData.insert(QString("turnSpeed"),QString("%1").arg(itr.value()->turnSpeed));
-            responseData.insert(QString("cpu"),QString("%1").arg(itr.value()->cpu));
-            responseData.insert(QString("status"),QString("%1").arg(itr.value()->status));
-            responseData.insert(QString("leftMotorStatus"),QString("%1").arg(itr.value()->leftMotorStatus));
-            responseData.insert(QString("rightMotorStatus"),QString("%1").arg(itr.value()->rightMotorStatus));
-            responseData.insert(QString("systemVoltage"),QString("%1").arg(itr.value()->systemVoltage));
-            responseData.insert(QString("systemCurrent"),QString("%1").arg(itr.value()->systemCurrent));
-            responseData.insert(QString("positionMagneticStripe"),QString("%1").arg(itr.value()->positionMagneticStripe));
-            responseData.insert(QString("frontObstruct"),QString("%1").arg(itr.value()->frontObstruct));
-            responseData.insert(QString("backObstruct"),QString("%1").arg(itr.value()->backObstruct));
-            responseData.insert(QString("currentOrder"),QString("%1").arg(itr.value()->currentOrder));
-            responseData.insert(QString("currentQueueNumber"),QString("%1").arg(itr.value()->currentQueueNumber));
+            responseData.insert(QString("name"),QString("%1").arg(itr.value()->name));
+            responseData.insert(QString("ip"),QString("%1").arg(itr.value()->ip));
+            responseData.insert(QString("port"),QString("%1").arg(itr.value()->port));
+            responseData.insert(QString("mode"),QString("%1").arg(itr.value()->mode));
             responseData.insert(QString("mileage"),QString("%1").arg(itr.value()->mileage));
-            responseData.insert(QString("rad"),QString("%1").arg(itr.value()->rad));
             responseData.insert(QString("currentRfid"),QString("%1").arg(itr.value()->currentRfid));
+            responseData.insert(QString("current"),QString("%1").arg(itr.value()->current));
+            responseData.insert(QString("voltage"),QString("%1").arg(itr.value()->voltage));
+            responseData.insert(QString("positionMagneticStripe"),QString("%1").arg(itr.value()->positionMagneticStripe));
+            responseData.insert(QString("pcbTemperature"),QString("%1").arg(itr.value()->pcbTemperature));
+            responseData.insert(QString("motorTemperature"),QString("%1").arg(itr.value()->motorTemperature));
+            responseData.insert(QString("cpu"),QString("%1").arg(itr.value()->cpu));
+            responseData.insert(QString("speed"),QString("%1").arg(itr.value()->speed));
+            responseData.insert(QString("angle"),QString("%1").arg(itr.value()->angle));
+            responseData.insert(QString("error_no"),QString("%1").arg(itr.value()->error_no));
+            responseData.insert(QString("currentQueueNumber"),QString("%1").arg(itr.value()->currentQueueNumber));
+            responseData.insert(QString("orderCount"),QString("%1").arg(itr.value()->orderCount));
+            responseData.insert(QString("nextRfid"),QString("%1").arg(itr.value()->nextRfid));
+            responseData.insert(QString("status"),QString("%1").arg(itr.value()->status));
             responseDatalists.append(responseData);
         }
 

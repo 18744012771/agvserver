@@ -49,7 +49,7 @@ void TaskMaker::onInitResults(bool b)
 
 void TaskMaker::onNewTask(int workNo,int jobType,int startStation,int endStation,int priority)
 {
-    int taskid = g_taskCenter.makePickupTask(startStation,endStation,1,30,1,30);
+    int taskid = g_taskCenter.makePickupTask(startStation,endStation,endStation);
     if(taskid>0)
     {
         //说明成功进入队列

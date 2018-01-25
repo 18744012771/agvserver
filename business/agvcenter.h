@@ -15,9 +15,11 @@ public:
     explicit AgvCenter(QObject *parent = nullptr);
     QList<Agv *> getIdleAgvs();
 
-    bool agvStartTask(int agvId,QList<int> path);
+    bool agvStartTask(int agvId, QList<int> path, int type=0, int leftMidRight=0, int distance=0, int height=0);
 
     bool agvStopTask(int agvId);
+
+    bool agvCancelTask(int agvId);
 
     void init();
 
@@ -47,6 +49,16 @@ public:
         agvs = g_m_agvs;
         agvsMtx.unlock();
         return agvs;
+    }
+
+    Agv* getAgv(int id){
+        Agv *a = NULL;
+        agvsMtx.lock();
+        if(g_m_agvs.contains(id)){
+            a = g_m_agvs[id];
+        }
+        agvsMtx.unlock();
+        return a;
     }
 
     void addAgv(Agv *agv)

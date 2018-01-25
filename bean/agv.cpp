@@ -21,7 +21,7 @@ void Agv::init(QString _ip,int _port)
     connect(tcpClient,SIGNAL(connected()),this,SLOT(connectCallBack()));
     connect(tcpClient,SIGNAL(disconnected()),this,SLOT(disconnectCallBack()));
     connect(tcpClient,SIGNAL(readyRead()),this,SLOT(onAgvRead()));
-    connect(tcpClient,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT());
+    connect(tcpClient,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT(connectStateChanged(QAbstractSocket::SocketState)));
     tcpClient->connectToHost(ip,port);
 
     orderTimer.setInterval(200);
@@ -34,13 +34,13 @@ void Agv::onCheckOrder()
     if(orders.length()<=0)return ;
 
     //下发命令？
+    //TODO:
 
 }
 
 void Agv::onAgvRead()
 {
     static QByteArray buff;
-    QByteArray qba = tcpClient->readAll();
     buff += tcpClient->readAll();
     //截取一条消息
     //然后对其进行拆包，把拆出来的包放入队列
@@ -49,10 +49,9 @@ void Agv::onAgvRead()
         int end = buff.indexOf(0x33);
         if(start>=0&&end>=0){
             //这个是一个包:
-            QByteArray onPack = buff.mid(start,end-start+1);
-            if(onPack.length()>0){
-                //TODO
-
+            QByteArray onePack = buff.mid(start,end-start+1);
+            if(onePack.length()>0){
+                processOnePack(onePack);
             }
             //然后将之前的数据丢弃
             buff = buff.right(buff.length()-end-1);
@@ -67,12 +66,12 @@ void Agv::processOnePack(QByteArray qba)
     if(qba.startsWith(0x66) && qba.endsWith(0x33))
     {
         int kk = (int)(qba.at(1));
-        if(kk != qba.length()-4) return ;//除去包头、包尾、校验和、包长
+        if(kk != qba.length()-1) return ;//除去包头
         //上报的命令
         char *str = qba.data();
         str+=2;//跳过包头和包长
 
-        mileage = getInt32FromByte(str+2);
+        mileage = getInt32FromByte(str);
         str+=4;
 
         currentRfid = getInt32FromByte(str);
@@ -105,10 +104,13 @@ void Agv::processOnePack(QByteArray qba)
         angle = getInt8FromByte(str);
         str+=1;
 
+        height = getInt8FromByte(str);
+        str+=1;
+
         error_no = getInt8FromByte(str);
         str+=1;
 
-        status = getInt8FromByte(str);
+        mode = getInt8FromByte(str);
         str+=1;
 
         currentQueueNumber = getInt8FromByte(str);
@@ -123,7 +125,7 @@ void Agv::processOnePack(QByteArray qba)
 
         //校验CRC
         str = qba.data();
-        unsigned char c = checkSum(str+2,kk-4);
+        unsigned char c = checkSum((unsigned char *)(str+2),kk-4);
         if(c != CRC)
         {
             //TODO:
@@ -131,13 +133,12 @@ void Agv::processOnePack(QByteArray qba)
         }
 
         //更新小车状态
-        if(status == AGV_MODE_HAND && currentTaskId > 0)
-        {
-            //任务被取消了!
-            //TODO:
-            //1.更新队列
-            //2.发射信号
-            emit taskCancel(currentTaskId);
+        if(mode == AGV_MODE_HAND){
+            if(currentTaskId > 0){
+                //任务被取消了!
+                emit taskCancel(currentTaskId);
+            }
+            status = AGV_STATUS_HANDING;
         }
 
         //更新错误状态
@@ -164,7 +165,7 @@ void Agv::processOnePack(QByteArray qba)
         //更新命令
         if(currentQueueNumber == queueNumber-1)
         {
-
+            //判断当前序列的命令的第几个
         }
 
     }else{
@@ -193,4 +194,12 @@ void Agv::connectStateChanged(QAbstractSocket::SocketState s)
     {
         tcpClient->connectToHost(ip,port);
     }
+}
+
+bool Agv::send(const char *data,int len)
+{
+    if(tcpClient && tcpClient->isWritable()){
+        return len == tcpClient->write(data,len);
+    }
+    return false;
 }

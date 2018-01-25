@@ -56,8 +56,20 @@ public:
     //获取最优路径
     QList<int> getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect = false);//最后一个参数是是否可以换个方向
 
+    //占领一个站点
+    bool setStationOccuAgv(int station,int occuAgv);
     //设置lineid的反向线路的占用agv
     void setReverseOccuAgv(int lineid,int occagv);
+    //如果站点被agv占用了，那么释放
+    void freeStationIfAgvOccu(int station, int occuAgv);
+    //如果线路被agv占用了，那么释放[含反向线路]
+    void freeLineIfAgvOccu(int line,int occuAgv);
+    //释放车辆占用的线路，除了某条线路【因为车辆停在了一条线路上】
+    void freeAgvLines(int agvId,int exceptLine = 0);
+    //释放车辆占用的站点，除了某个站点【因为车辆站在某个站点上】
+    void freeAgvStation(int agvId,int excepetStation = 0);
+
+    int getLineId(int startStation,int endStation);
 
     AgvStation getAgvStation(int id){
         AgvStation s;

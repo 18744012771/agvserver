@@ -39,17 +39,10 @@ class Agv : public QObject
 public:
     explicit Agv(QObject *parent = nullptr);
     void init(QString _ip,int _port);
+    bool send(const char *data,int len);
 signals:
     void sigconnect();
     void sigdisconnect();
-public slots:
-    void onAgvRead();
-    void connectCallBack();
-    void disconnectCallBack();
-
-    void onCheckOrder();
-
-    void connectStateChanged(QAbstractSocket::SocketState s);
 
     //任务执行过程中，因为手动模式，被取消了
     void taskCancel(int taskId);
@@ -59,6 +52,15 @@ public slots:
 
     void updateOdometer(int odometer);
     void updateRfidAndOdometer(int rfid,int odomter);
+
+public slots:
+    void onAgvRead();
+    void connectCallBack();
+    void disconnectCallBack();
+
+    void onCheckOrder();
+
+    void connectStateChanged(QAbstractSocket::SocketState s);
 public:
     //ID
     int id;
@@ -86,9 +88,9 @@ public:
     //用于发送用的
     int8_t queueNumber;
 
-    //上报内容----------------------------------------------------
     //状态
     enum{
+        AGV_STATUS_HANDING = -1,//手动模式中，不可用
         AGV_STATUS_IDLE=0,//空闲可用
         AGV_STATUS_UNCONNECT=1,//未连接
         AGV_STATUS_TASKING=2,//正在执行任务
@@ -99,6 +101,7 @@ public:
     };
     int status;
 
+    //上报内容----------------------------------------------------
     //模式
     enum{
         AGV_MODE_AUTO = 0,//自动模式
@@ -116,6 +119,7 @@ public:
     int cpu;//cpu使用率
     int speed;//速度 [1,10]
     int angle;//保存反馈的小车转向角度[-90,90]
+    int height;//叉脚高度cm [0,250]
 
     enum{
         ERROR_D7 = 0xD7,//手动手柄放下。
@@ -136,6 +140,7 @@ public:
     //上报内容----------------------------------------------------
 
     //开机上报的--------------------------------------------------
+    //TODO
     char NET_MAC[8];//网关MAC
     char NET_IP[2];//ip两位
     //开机上报的--------------------------------------------------
@@ -145,6 +150,8 @@ public:
 
     //执行序列
     QQueue<AgvOrder> orders;
+
+    QList<int> currentPath;
 
     //执行任务
     int currentTaskId;

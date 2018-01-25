@@ -31,17 +31,16 @@ void AgvPositionPublisher::run()
         responseDatas.insert(QString("type"),QString("map"));
         responseDatas.insert(QString("todo"),QString("periodica"));
 
-
-        for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
+        QMap<int,Agv *> pp = g_hrgAgvCenter.getAgvs();
+        for(QMap<int,Agv *>::iterator itr = pp.begin();itr!=pp.end();++itr)
         {
-            ///<id,x,y,rotation,status>
             QMap<QString,QString> mm;
             mm.insert(QString("x"),QString("%1").arg(itr.value()->x));
             mm.insert(QString("y"),QString("%1").arg(itr.value()->y));
             mm.insert(QString("id"),QString("%1").arg(itr.value()->id));
             mm.insert(QString("name"),QString("%1").arg(itr.value()->name));
             mm.insert(QString("rotation"),QString("%1").arg(itr.value()->rotation));
-            mm.insert(QString("status"),QString("%1").arg(itr.value()->myStatus));
+            mm.insert(QString("status"),QString("%1").arg(itr.value()->status));
 
             responseDatalists.push_back(mm);
         }
