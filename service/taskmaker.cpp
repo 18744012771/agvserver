@@ -35,8 +35,8 @@ bool TaskMaker::init()
         QyhSleep(100);
     }
     if(initResult){
-        connect(&g_taskCenter,SIGNAL(sigTaskStart(int,int)),this,SLOT(onTaskStart(int,int)));
-        connect(&g_taskCenter,SIGNAL(sigTaskFinish(int)),this,SLOT(onTaskFinish(int)));
+        connect(g_taskCenter,SIGNAL(sigTaskStart(int,int)),this,SLOT(onTaskStart(int,int)));
+        connect(g_taskCenter,SIGNAL(sigTaskFinish(int)),this,SLOT(onTaskFinish(int)));
     }
     return initResult;
 }
@@ -49,7 +49,7 @@ void TaskMaker::onInitResults(bool b)
 
 void TaskMaker::onNewTask(int workNo,int jobType,int startStation,int endStation,int priority)
 {
-    int taskid = g_taskCenter.makePickupTask(startStation,endStation,endStation);
+    int taskid = g_taskCenter->makePickupTask(startStation,endStation,endStation);
     if(taskid>0)
     {
         //说明成功进入队列

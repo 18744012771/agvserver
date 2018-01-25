@@ -4,10 +4,11 @@
 #include <string>
 #include <QMutex>
 #include <QThread>
+#include <QObject>
 #include <zmq.hpp>
 
 
-class UserMsgProcessor : public QThread
+class UserMsgProcessor : public QObject
 {
     Q_OBJECT
 public:

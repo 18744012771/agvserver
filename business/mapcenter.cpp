@@ -477,7 +477,7 @@ void MapCenter::create()
 
 bool MapCenter::resetMap(QString stationStr, QString lineStr, QString arcStr, QString imagestr)//站点、直线、弧线
 {
-    mutex.lock();
+
     clear();
 
     //添加站点
@@ -494,7 +494,7 @@ bool MapCenter::resetMap(QString stationStr, QString lineStr, QString arcStr, QS
     //生成adj信息存库
     create();
 
-    mutex.unlock();
+
 
     emit mapUpdate();
 
@@ -503,7 +503,7 @@ bool MapCenter::resetMap(QString stationStr, QString lineStr, QString arcStr, QS
 
 bool MapCenter::load()
 {
-    mutex.lock();
+
 
     qDeleteAll(g_m_lines.values());
     qDeleteAll(g_m_stations.values());
@@ -528,7 +528,7 @@ bool MapCenter::load()
         if(qsl.length()!=8){
             QString ss =  "select error!!!!!!" + queryStationSql;
             g_log->log(AGV_LOG_LEVEL_ERROR,ss);
-            mutex.unlock();
+
             return false;
         }
         AgvStation *station = new AgvStation;
@@ -552,7 +552,7 @@ bool MapCenter::load()
             QString ss;
             ss = "select error!!!!!!"+squeryLineSql;
             g_log->log(AGV_LOG_LEVEL_ERROR,ss);
-            mutex.unlock();
+
             return false;
         }
         AgvLine *line = new AgvLine;
@@ -593,7 +593,7 @@ bool MapCenter::load()
         if(qsl.length()!=3){
             QString ss =  "select error!!!!!!"+queryLmrSql;
             g_log->log(AGV_LOG_LEVEL_ERROR,ss);
-            mutex.unlock();
+
             return false;
         }
         PATH_LEFT_MIDDLE_RIGHT ll;
@@ -611,7 +611,7 @@ bool MapCenter::load()
         if(qsl.length()!=2){
             QString ss = "select error!!!!!!"+queryAdjSql;
             g_log->log(AGV_LOG_LEVEL_ERROR,ss);
-            mutex.unlock();
+
             return false;
         }
         AgvLine* endLine = g_m_lines[qsl.at(1).toInt()];
@@ -624,54 +624,54 @@ bool MapCenter::load()
             g_m_l_adj[startLine] = lines;
         }
     }
-    mutex.unlock();
+
     return true;
 }
 bool MapCenter::setStationOccuAgv(int station,int occuAgv)
 {
     bool ret = false;
-    mutex.lock();
+
     if(g_m_stations.contains(station) && g_m_stations[station]->occuAgv==0){
         g_m_stations[station]->occuAgv = occuAgv;
         ret = true;
     }
-    mutex.unlock();
+
     return ret;
 }
 //设置lineid的反向线路的占用agv
 void MapCenter::setReverseOccuAgv(int lineid, int occagv)
 {
-    mutex.lock();
+
     int reverseLineKey = g_reverseLines[lineid];
     //将这条线路的可用性置为false
     g_m_lines[reverseLineKey]->occuAgv=occagv;
-    mutex.unlock();
+
 }
 void MapCenter::freeStationIfAgvOccu(int station,int occuAgv)
 {
-    mutex.lock();
+
     if(g_m_stations.contains(station))
         if(g_m_stations[station]->occuAgv == occuAgv)
             g_m_stations[station]->occuAgv = 0;
 
-    mutex.unlock();
+
 }
 void MapCenter::freeLineIfAgvOccu(int line,int occuAgv)
 {
-    mutex.lock();
+
     if(g_m_lines.contains(line)){
         if(g_m_lines[line]->occuAgv == occuAgv)
             g_m_lines[line]->occuAgv = 0;
         if(g_m_lines[g_reverseLines[line] ]->occuAgv == occuAgv)
             g_m_lines[g_reverseLines[line] ]->occuAgv = 0;
     }
-    mutex.unlock();
+
 }
 //释放车辆占用的线路，除了某条线路【因为车辆停在了一条线路上】
 void MapCenter::freeAgvLines(int agvId,int exceptLine)
 {
     int kk = 0;
-    mutex.lock();
+
     if(g_reverseLines.contains(exceptLine))kk = g_reverseLines[exceptLine];
     //那么占用这个站点，线路全部释放
     for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr)
@@ -682,25 +682,25 @@ void MapCenter::freeAgvLines(int agvId,int exceptLine)
             itr.value()->occuAgv = 0;
         }
     }
-    mutex.unlock();
+
 }
 
 //释放车辆占用的站点，除了某个站点【因为车辆站在某个站点上】
 void MapCenter::freeAgvStation(int agvId,int excepetStation)
 {
-    mutex.lock();
+
     for(QMap<int,AgvStation *>::iterator itr = g_m_stations.begin();itr!=g_m_stations.end();++itr)
     {
         if(itr.value()->occuAgv == agvId && itr.value()->id!=excepetStation)
             itr.value()->occuAgv = 0;
     }
-    mutex.unlock();
+
 }
 
 int MapCenter::getLineId(int startStation,int endStation)
 {
     int id = 0;
-    mutex.lock();
+
     for(QMap<int,AgvLine *>::iterator itr =  g_m_lines.begin();itr!=g_m_lines.end();++itr)
     {
         if(itr.value()->startStation == startStation && itr.value()->endStation == endStation)
@@ -709,8 +709,55 @@ int MapCenter::getLineId(int startStation,int endStation)
             break;
         }
     }
-    mutex.unlock();
+
     return id;
+}
+
+AgvStation MapCenter::getAgvStation(int id){
+    AgvStation s;
+    if(g_m_stations.contains(id)){
+        s = *(g_m_stations[id]);
+    }
+    return s;
+}
+
+QMap<int,AgvStation *> MapCenter::getAgvStations(){
+    QMap<int,AgvStation *> stations;
+    stations = g_m_stations;
+    return stations;
+}
+
+AgvLine MapCenter::getAgvLine(int id)
+{
+    AgvLine l;
+    if(g_m_lines.contains(id)){
+        l = *(g_m_lines[id]);
+    }
+    return l;
+}
+
+QMap<int,AgvLine *> MapCenter::getAgvLines()
+{
+    QMap<int,AgvLine *> lines;
+    lines = g_m_lines;
+    return lines;
+}
+
+int MapCenter::getReverseLine(int id)
+{
+    if(g_reverseLines.contains(id))return g_reverseLines[id];
+    return 0;
+}
+
+int MapCenter::getLMR(int startLineId,int nextLineId)
+{
+    int result = PATH_LMF_NOWAY;
+    PATH_LEFT_MIDDLE_RIGHT p;
+    p.lastLine = startLineId;
+    p.nextLine = nextLineId;
+    if(g_m_lmr.contains(p))
+        result = g_m_lmr[p];
+    return result;
 }
 
 QList<int> MapCenter::getBestPath(int agvId, int lastStation, int startStation, int endStation, int &distance, bool canChangeDirect)//最后一个参数是是否可以换个方向
@@ -740,7 +787,7 @@ QList<int> MapCenter::getBestPath(int agvId, int lastStation, int startStation, 
 QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoint,int &distance,bool changeDirect)
 {
     distance = distance_infinity;
-    mutex.lock();
+
     QList<int> result;
     //异常检查
     //如果上一站是未知的，例如第一次开机！
@@ -748,15 +795,15 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
         lastPoint = startPoint;
     }
     if(!g_m_stations.keys().contains(lastPoint)){
-        mutex.unlock();
+
         return result;
     }
     if(!g_m_stations.keys().contains(startPoint)){
-        mutex.unlock();
+
         return result;
     }
     if(!g_m_stations.keys().contains(endPoint)){
-        mutex.unlock();
+
         return result;
     }
 
@@ -766,7 +813,7 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
         {
             if(g_m_stations[endPoint]->occuAgv!=0 && g_m_stations[endPoint]->occuAgv!=agvId)
             {
-                mutex.unlock();
+
                 return result;
             }
             //那么返回一个结果
@@ -781,7 +828,7 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
         }else{
             distance = 0;
         }
-        mutex.unlock();
+
         return result;
     }
 
@@ -911,7 +958,7 @@ QList<int> MapCenter::getPath(int agvId,int lastPoint,int startPoint,int endPoin
             //            }
         }
     }
-    mutex.unlock();
+
     return result;
 }
 

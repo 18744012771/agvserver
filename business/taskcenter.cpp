@@ -8,7 +8,7 @@ TaskCenter::TaskCenter(QObject *parent) : QObject(parent)
 
 void TaskCenter::init()
 {
-    connect(&g_hrgAgvCenter,SIGNAL(carArriveStation(int,int)),this,SLOT(carArriveStation(int,int)));
+    connect(g_hrgAgvCenter,SIGNAL(carArriveStation(int,int)),this,SLOT(carArriveStation(int,int)));
     //每隔一秒对尚未分配进行的任务进行分配
     taskProcessTimer.setInterval(1000);
     connect(&taskProcessTimer,SIGNAL(timeout()),this,SLOT(unassignedTasksProcess()));
@@ -375,7 +375,7 @@ int TaskCenter::cancelTask(int taskId)
             Task *task = doingTasks.at(i);
 
             ////1.告诉小车，任务取消了
-            g_hrgAgvCenter.agvCancelTask(task->excuteCar);
+            g_hrgAgvCenter->agvCancelTask(task->excuteCar);
 
             ////2.对任务进行状态设置
             //置为取消
@@ -402,10 +402,10 @@ int TaskCenter::cancelTask(int taskId)
 
 void TaskCenter::carArriveStation(int car,int station)
 {
-    Agv *agv = g_hrgAgvCenter.getAgv(car);
-    if(agv==NULL)return ;
+    if(!g_m_agvs.contains(car))return ;
+    Agv *agv =g_m_agvs[car];
     //达到的站点
-    AgvStation sstation = g_agvMapCenter.getAgvStation(station);
+    AgvStation sstation = g_agvMapCenter->getAgvStation(station);
     if(sstation.id<=0)return ;
 
     //小车是手动模式，那么就不管了
@@ -437,7 +437,7 @@ void TaskCenter::carArriveStation(int car,int station)
     for(int i=0;i<pppath.length();++i)
     {
         int iLine = pppath.at(i);
-        AgvLine line = g_agvMapCenter.getAgvLine(iLine);
+        AgvLine line = g_agvMapCenter->getAgvLine(iLine);
         if(line.endStation == sstation.id){
             findStation = true;
             break;
@@ -458,18 +458,18 @@ void TaskCenter::carArriveStation(int car,int station)
             agv->currentPath = (pppath);
 
             //将反向的线路置为可用
-            g_agvMapCenter.freeLineIfAgvOccu(iLine,car);
+            g_agvMapCenter->freeLineIfAgvOccu(iLine,car);
 
-            AgvLine line = g_agvMapCenter.getAgvLine(iLine);
+            AgvLine line = g_agvMapCenter->getAgvLine(iLine);
             //如果是最后经过的这条线路，退出循环
             if(line.endStation == sstation.id)
             {
-                g_agvMapCenter.freeStationIfAgvOccu(line.startStation,car);
+                g_agvMapCenter->freeStationIfAgvOccu(line.startStation,car);
                 break;
             }else{
                 //将经过的站点的占用释放
-                g_agvMapCenter.freeStationIfAgvOccu(line.startStation,car);
-                g_agvMapCenter.freeStationIfAgvOccu(line.endStation,car);
+                g_agvMapCenter->freeStationIfAgvOccu(line.startStation,car);
+                g_agvMapCenter->freeStationIfAgvOccu(line.endStation,car);
             }
         }
 
@@ -490,7 +490,7 @@ void TaskCenter::carArriveStation(int car,int station)
 //            }
         }
         //更新发给小车的内容
-        g_hrgAgvCenter.taskControlCmd(car);
+        g_hrgAgvCenter->taskControlCmd(car);
     }
 }
 
@@ -518,15 +518,16 @@ void TaskCenter::unassignedTasksProcess()
         int tempDis = distance_infinity;
 
         if(ttask->excuteCar>0){//固定车辆去执行该任务
-            Agv *excutecar = g_hrgAgvCenter.getAgv(ttask->excuteCar);
+            if(!g_m_agvs.contains(ttask->excuteCar))continue;
+            Agv *excutecar = g_m_agvs[ttask->excuteCar];
             if(excutecar==NULL)continue;
             if(excutecar->status!=Agv::AGV_STATUS_IDLE)continue;
             QList<int> result;
 
             if(excutecar->nowStation>0){
-                result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nowStation,aimStation,tempDis,false);
+                result = g_agvMapCenter->getBestPath(excutecar->id,excutecar->lastStation,excutecar->nowStation,aimStation,tempDis,false);
             }else{
-                result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nextStation, aimStation,tempDis,false);
+                result = g_agvMapCenter->getBestPath(excutecar->id,excutecar->lastStation,excutecar->nextStation, aimStation,tempDis,false);
             }
             if(result.length()>0&&tempDis!=distance_infinity){
                 bestCar = excutecar;
@@ -535,7 +536,7 @@ void TaskCenter::unassignedTasksProcess()
             }
         }else{
             //寻找最优车辆去执行任务
-            QList<Agv *> idleAgvs = g_hrgAgvCenter.getIdleAgvs();
+            QList<Agv *> idleAgvs = g_hrgAgvCenter->getIdleAgvs();
             if(idleAgvs.length()<=0)//暂时没有可用车辆，直接退出对未分配的任务的操作
                 continue ;
             QList<Agv *>::iterator ppos;
@@ -544,9 +545,9 @@ void TaskCenter::unassignedTasksProcess()
                 Agv *agv = *ppos;
                 QList<int> result;
                 if(agv->nowStation>0){
-                    result = g_agvMapCenter.getBestPath(agv->id,agv->lastStation,agv->nowStation, aimStation,tempDis,false);
+                    result = g_agvMapCenter->getBestPath(agv->id,agv->lastStation,agv->nowStation, aimStation,tempDis,false);
                 }else{
-                    result = g_agvMapCenter.getBestPath(agv->id,agv->lastStation,agv->nextStation, aimStation,tempDis,false);
+                    result = g_agvMapCenter->getBestPath(agv->id,agv->lastStation,agv->nextStation, aimStation,tempDis,false);
                 }
                 if(result.length()>0&&tempDis!=distance_infinity)
                 {
@@ -567,10 +568,10 @@ void TaskCenter::unassignedTasksProcess()
             //TODO:!!!要求一下操作可以回滚，因为车辆可能不接受该任务！！！！！！！！！！！！！！
 
             //将终点，占领
-            g_agvMapCenter.setStationOccuAgv(aimStation,bestCar->id);
+            g_agvMapCenter->setStationOccuAgv(aimStation,bestCar->id);
 
             //将起点，释放 这里释放起点其实是不合适的，应该在小车启动的时候，释放这个位置,虽然这里就差几行
-            g_agvMapCenter.freeStationIfAgvOccu(bestCar->nowStation,bestCar->id);
+            g_agvMapCenter->freeStationIfAgvOccu(bestCar->nowStation,bestCar->id);
 
             //if(g_m_stations[bestCar->nowStation]->occuAgv == bestCar->id)g_m_stations[bestCar->nowStation]->occuAgv = (0);
 
@@ -581,7 +582,7 @@ void TaskCenter::unassignedTasksProcess()
 
             //对线路属性进行赋值         //4.把线路的反方向线路定为占用
             for(int i=0;i<path.length();++i){
-                g_agvMapCenter.setReverseOccuAgv(path[i],(bestCar->id));
+                g_agvMapCenter->setReverseOccuAgv(path[i],(bestCar->id));
             }
             //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
             bestCar->status = (Agv::AGV_STATUS_TASKING);
@@ -595,7 +596,7 @@ void TaskCenter::unassignedTasksProcess()
             dTaskMtx.unlock();
             //要看返回的结果的！！！！！！ 如果失败了，要回滚上述所有操作！太难了
             //TODO:
-            g_hrgAgvCenter.agvStartTask(bestCar->id,path);
+            g_hrgAgvCenter->agvStartTask(bestCar->id,path);
 
             emit sigTaskStart(ttask->id,ttask->excuteCar);
         }
@@ -627,7 +628,7 @@ void TaskCenter::doingTaskProcess()
 //            TaskNode *doingNode = task->taskNodes[task->currentDoingIndex];
 //            if(resent)
 //            {
-//                g_hrgAgvCenter.taskControlCmd(task->excuteCar);
+//                g_hrgAgvCenter->taskControlCmd(task->excuteCar);
 //            }
 //            //判断这个节点任务是否到达
 //            if(doingNode->arriveTime.isValid())
@@ -696,9 +697,9 @@ void TaskCenter::doingTaskProcess()
 //                            QList<int> result;
 
 //                            if(excutecar->nowStation>0){
-//                                result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nowStation, nextNode->aimStation,minDis,false);
+//                                result = g_agvMapCenter->getBestPath(excutecar->id,excutecar->lastStation,excutecar->nowStation, nextNode->aimStation,minDis,false);
 //                            }else{
-//                                result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nextStation, nextNode->aimStation,minDis,false);
+//                                result = g_agvMapCenter->getBestPath(excutecar->id,excutecar->lastStation,excutecar->nextStation, nextNode->aimStation,minDis,false);
 //                            }
 //                            if(result.length()>0&&minDis!=distance_infinity)
 //                            {
@@ -718,13 +719,13 @@ void TaskCenter::doingTaskProcess()
 //                                //对线路属性进行赋值
 //                                //4.把线路的反方向线路定为不可用
 //                                for(int i=0;i<result.length();++i){
-//                                    g_agvMapCenter.setReverseOccuAgv(result[i],(excutecar->id));
+//                                    g_agvMapCenter->setReverseOccuAgv(result[i],(excutecar->id));
 //                                }
 //                                //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
 //                                excutecar->myStatus = (AGV_STATUS_TASKING);
 //                                excutecar->currentPath = (result);
 //                                //TODO 要看返回的结果的！！！！！！ 如果失败了，要回滚上述所有操作！
-//                                g_hrgAgvCenter.agvStartTask(excutecar->id,result);
+//                                g_hrgAgvCenter->agvStartTask(excutecar->id,result);
 
 //                                //如果成功了，那么 将node设置为doing
 //                                //将未执行的节点，设置为正在执行
@@ -751,9 +752,9 @@ void TaskCenter::doingTaskProcess()
 //                Agv *excutecar = g_m_agvs[task->excuteCar];
 //                QList<int> result;
 //                if(excutecar->nowStation>0){
-//                    result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nowStation, nextNode->aimStation,minDis,false);
+//                    result = g_agvMapCenter->getBestPath(excutecar->id,excutecar->lastStation,excutecar->nowStation, nextNode->aimStation,minDis,false);
 //                }else{
-//                    result = g_agvMapCenter.getBestPath(excutecar->id,excutecar->lastStation,excutecar->nextStation, nextNode->aimStation,minDis,false);
+//                    result = g_agvMapCenter->getBestPath(excutecar->id,excutecar->lastStation,excutecar->nextStation, nextNode->aimStation,minDis,false);
 //                }
 //                if(result.length()>0&&minDis!=distance_infinity){
 //                    //将终点，占领
@@ -771,13 +772,13 @@ void TaskCenter::doingTaskProcess()
 //                    //对线路属性进行赋值
 //                    //4.把线路的反方向线路定为不可用
 //                    for(int i=0;i<result.length();++i){
-//                        g_agvMapCenter.setReverseOccuAgv(result[i],(excutecar->id));
+//                        g_agvMapCenter->setReverseOccuAgv(result[i],(excutecar->id));
 //                    }
 //                    //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
 //                    excutecar->myStatus = (AGV_STATUS_TASKING);
 //                    excutecar->currentPath = (result);
 //                    //TODO:要看返回的结果的！！！！！！ 如果失败了，要回滚上述所有操作！
-//                    g_hrgAgvCenter.agvStartTask(excutecar->id,result);
+//                    g_hrgAgvCenter->agvStartTask(excutecar->id,result);
 
 //                    //如果成功了，那么 将node设置为doing
 //                    //将未执行的节点，设置为正在执行

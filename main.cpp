@@ -18,9 +18,15 @@ int main(int argc, char *argv[])
     g_sql->createConnection();
 
     //初始化agv_center
-    g_hrgAgvCenter.init();//载入车辆
-    g_agvMapCenter.load();//地图路径中心
-    g_taskCenter.init();//任务中心
+    g_hrgAgvCenter = new AgvCenter;
+    g_hrgAgvCenter->init();//载入车辆
+
+
+    g_agvMapCenter->load();//地图路径中心
+
+    g_taskCenter = new TaskCenter;
+    g_taskCenter->init();//任务中心
+
     userMsgProcessor = new UserMsgProcessor;//消息处理
 
     g_server = new QyhZmqServer;

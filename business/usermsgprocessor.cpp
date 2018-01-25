@@ -7,7 +7,7 @@
 #include <stdarg.h>
 #include <QDebug>
 
-UserMsgProcessor::UserMsgProcessor(QObject *parent) : QThread(parent)
+UserMsgProcessor::UserMsgProcessor(QObject *parent) : QObject(parent)
 {
 }
 
@@ -646,7 +646,7 @@ void UserMsgProcessor::Map_Create(zmq::context_t *ctx, QMap<QString, QString> &r
     {
         responseParams.insert(QString("info"),QString(""));
         responseParams.insert(QString("result"),QString("success"));
-        g_agvMapCenter.resetMap(requestDatas["station"],requestDatas["line"],requestDatas["arc"],requestDatas["image"]);
+        g_agvMapCenter->resetMap(requestDatas["station"],requestDatas["line"],requestDatas["arc"],requestDatas["image"]);
     }
 }
 
@@ -655,7 +655,7 @@ void UserMsgProcessor::Map_StationList(zmq::context_t *ctx, QMap<QString, QStrin
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
 
-    QMap<int,AgvStation *> stations = g_agvMapCenter.getAgvStations();
+    QMap<int,AgvStation *> stations = g_agvMapCenter->getAgvStations();
 
     for(QMap<int,AgvStation *>::iterator itr=stations.begin();itr!=stations.end();++itr)
     {
@@ -677,7 +677,7 @@ void UserMsgProcessor::Map_StationList(zmq::context_t *ctx, QMap<QString, QStrin
 void UserMsgProcessor:: Map_LineList(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
-    QMap<int,AgvLine *> lines = g_agvMapCenter.getAgvLines();
+    QMap<int,AgvLine *> lines = g_agvMapCenter->getAgvLines();
     for(QMap<int,AgvLine *>::iterator itr=lines.begin();itr!=lines.end();++itr){
         QMap<QString,QString> list;
 
@@ -708,8 +708,7 @@ void UserMsgProcessor:: AgvManage_List(zmq::context_t *ctx, QMap<QString, QStrin
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
 
-    QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
-    for(QMap<int,Agv *>::iterator itr = agvs.begin();itr!=agvs.end();++itr){
+    for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
         QMap<QString,QString> list;
         Agv *agv = itr.value();
 
@@ -739,7 +738,7 @@ void UserMsgProcessor:: AgvManage_Add(zmq::context_t *ctx, QMap<QString, QString
                 agv->id = (newId);
                 agv->name = (requestDatas["name"]);
                 //agv->setIp(requestDatas["ip"]);
-                g_hrgAgvCenter.addAgv(agv);
+                g_m_agvs.insert(agv->id,agv);
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));
                 responseParams.insert(QString("id"),queryresult.at(0).at(0).toString());
@@ -760,9 +759,8 @@ void UserMsgProcessor:: AgvManage_Delete(zmq::context_t *ctx, QMap<QString, QStr
     if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid",NULL)){
         int iAgvId = requestDatas["agvid"].toInt();
 
-        QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
         //查找是否存在
-        if(agvs.contains(iAgvId)){
+        if(g_m_agvs.contains(iAgvId)){
             //从数据库中清除
             QString deleteSql = "delete from agv_agv where id=?";
             QList<QVariant> tempParams;
@@ -770,8 +768,8 @@ void UserMsgProcessor:: AgvManage_Delete(zmq::context_t *ctx, QMap<QString, QStr
             if(g_sql->exeSql(deleteSql,tempParams))
             {
                 //从列表中清楚
-                if(agvs.contains(iAgvId)){
-                    g_hrgAgvCenter.removeAgv(iAgvId);
+                if(g_m_agvs.contains(iAgvId)){
+                    g_m_agvs.remove(iAgvId);
                 }
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));
@@ -789,14 +787,13 @@ void UserMsgProcessor:: AgvManage_Delete(zmq::context_t *ctx, QMap<QString, QStr
 void UserMsgProcessor:: AgvManage_Modify(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"agvid","name","ip",NULL)){
         int iAgvId = requestDatas["agvid"].toInt();
-        QMap<int,Agv *> agvs = g_hrgAgvCenter.getAgvs();
 
-        if(!agvs.contains(iAgvId)){
+        if(!g_m_agvs.contains(iAgvId)){
             //不存在这辆车
             responseParams.insert(QString("info"),QString("not exist of this agvid."));
             responseParams.insert(QString("result"),QString("fail"));
         }else{
-            Agv *agv = agvs[iAgvId];
+            Agv *agv = g_m_agvs[iAgvId];
             QString updateSql = "update agv_agv set agv_name=?,agv_ip=? where id=?";
             QList<QVariant> params;
             params<<(requestDatas["name"])<<(requestDatas["ip"])<<(requestDatas["agvid"]);
@@ -820,10 +817,10 @@ void UserMsgProcessor::Task_CreateToX(zmq::context_t *ctx, QMap<QString, QString
     if(checkParamExistAndNotNull(requestDatas,responseParams,"x",NULL))
     {
         int iX = requestDatas["x"].toInt();
-        AgvStation station =  g_agvMapCenter.getAgvStation(iX);
+        AgvStation station =  g_agvMapCenter->getAgvStation(iX);
 
         if(station.id>0){
-            int id = g_taskCenter.makeAimTask(iX);
+            int id = g_taskCenter->makeAimTask(iX);
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("id"),QString("%1").arg(id));
@@ -840,17 +837,16 @@ void UserMsgProcessor::Task_CreateAgvToX(zmq::context_t *ctx, QMap<QString, QStr
         int iX = requestDatas["x"].toInt();
         int iAgvId = requestDatas["agvid"].toInt();
 
-        AgvStation station =  g_agvMapCenter.getAgvStation(iX);
-        Agv *agv = g_hrgAgvCenter.getAgv(iAgvId);
+        AgvStation station =  g_agvMapCenter->getAgvStation(iX);
 
         if(station.id<=0){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station"));
-        }else if(agv->id<=0){
+        }else if(!g_m_agvs.contains(iAgvId)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found agv"));
         }else{
-            int id = g_taskCenter.makeAgvAimTask(iAgvId,iX);
+            int id = g_taskCenter->makeAgvAimTask(iAgvId,iX);
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("id"),QString("%1").arg(id));
@@ -865,9 +861,9 @@ void UserMsgProcessor::Task_CreateYToX(zmq::context_t *ctx, QMap<QString, QStrin
         int iY = requestDatas["y"].toInt();
         int iZ = requestDatas["z"].toInt();
 
-        AgvStation xStation = g_agvMapCenter.getAgvStation(iX);
-        AgvStation yStation = g_agvMapCenter.getAgvStation(iY);
-        AgvStation zStation = g_agvMapCenter.getAgvStation(iZ);
+        AgvStation xStation = g_agvMapCenter->getAgvStation(iX);
+        AgvStation yStation = g_agvMapCenter->getAgvStation(iY);
+        AgvStation zStation = g_agvMapCenter->getAgvStation(iZ);
 
         //确保站点存在
         if(xStation.id<=0){
@@ -880,7 +876,7 @@ void UserMsgProcessor::Task_CreateYToX(zmq::context_t *ctx, QMap<QString, QStrin
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station z"));
         }else{
-            int id = g_taskCenter.makePickupTask(iX,iY,iZ);
+            int id = g_taskCenter->makePickupTask(iX,iY,iZ);
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("id"),QString("%1").arg(id));
@@ -898,10 +894,9 @@ void UserMsgProcessor::Task_CreateAgvYToX(zmq::context_t *ctx, QMap<QString, QSt
 
         int agvId = requestDatas["agvid"].toInt();
 
-        AgvStation xStation = g_agvMapCenter.getAgvStation(iX);
-        AgvStation yStation = g_agvMapCenter.getAgvStation(iY);
-        AgvStation zStation = g_agvMapCenter.getAgvStation(iZ);
-        Agv *agv = g_hrgAgvCenter.getAgv(agvId);
+        AgvStation xStation = g_agvMapCenter->getAgvStation(iX);
+        AgvStation yStation = g_agvMapCenter->getAgvStation(iY);
+        AgvStation zStation = g_agvMapCenter->getAgvStation(iZ);
 
         if(xStation.id<=0){
             responseParams.insert(QString("result"),QString("fail"));
@@ -912,11 +907,11 @@ void UserMsgProcessor::Task_CreateAgvYToX(zmq::context_t *ctx, QMap<QString, QSt
         }else if(zStation.id<=0){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station z"));
-        }else if(agv->id<=0){
+        }else if(g_m_agvs.contains(agvId)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found agv"));
         }else{
-            int id = g_taskCenter.makeAgvPickupTask(agvId,iX,iY,iZ);
+            int id = g_taskCenter->makeAgvPickupTask(agvId,iX,iY,iZ);
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("id"),QString("%1").arg(id));
@@ -934,10 +929,9 @@ void UserMsgProcessor::Task_CreateAgvYToXCircle(zmq::context_t *ctx, QMap<QStrin
 
         int agvId = requestDatas["agvid"].toInt();
 
-        AgvStation xStation = g_agvMapCenter.getAgvStation(iX);
-        AgvStation yStation = g_agvMapCenter.getAgvStation(iY);
-        AgvStation zStation = g_agvMapCenter.getAgvStation(iZ);
-        Agv *agv = g_hrgAgvCenter.getAgv(agvId);
+        AgvStation xStation = g_agvMapCenter->getAgvStation(iX);
+        AgvStation yStation = g_agvMapCenter->getAgvStation(iY);
+        AgvStation zStation = g_agvMapCenter->getAgvStation(iZ);
 
         if(xStation.id<=0){
             responseParams.insert(QString("result"),QString("fail"));
@@ -948,11 +942,11 @@ void UserMsgProcessor::Task_CreateAgvYToXCircle(zmq::context_t *ctx, QMap<QStrin
         }else if(zStation.id<=0){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found station z"));
-        }else if(agv->id<=0){
+        }else if(g_m_agvs.contains(agvId)){
             responseParams.insert(QString("result"),QString("fail"));
             responseParams.insert(QString("info"),QString("not found agv"));
         }else{
-            int id = g_taskCenter.makeLoopTask(agvId,iX,iY,iZ);
+            int id = g_taskCenter->makeLoopTask(agvId,iX,iY,iZ);
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
             responseParams.insert(QString("id"),QString("%1").arg(id));
@@ -963,7 +957,7 @@ void UserMsgProcessor::Task_CreateAgvYToXCircle(zmq::context_t *ctx, QMap<QStrin
 void UserMsgProcessor::Task_QueryStatus(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid",NULL)){
         int taskid = requestDatas["taskid"].toInt();
-        int status = g_taskCenter.queryTaskStatus(taskid);
+        int status = g_taskCenter->queryTaskStatus(taskid);
 
         responseParams.insert(QString("status"),QString("%1").arg(status));
         responseParams.insert(QString("info"),QString(""));
@@ -975,7 +969,7 @@ void UserMsgProcessor::Task_Cancel(zmq::context_t *ctx, QMap<QString, QString> &
     if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid",NULL)){
         int taskid = requestDatas["taskid"].toInt();
 
-        if(g_taskCenter.cancelTask(taskid)){
+        if(g_taskCenter->cancelTask(taskid)){
             responseParams.insert(QString("info"),QString(""));
             responseParams.insert(QString("result"),QString("success"));
         }else{
@@ -990,7 +984,7 @@ void UserMsgProcessor::Task_ListUnassigned(zmq::context_t *ctx, QMap<QString, QS
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
     //添加列表
-    QList<Task *> tasks = g_taskCenter.getUnassignedTasks();
+    QList<Task *> tasks = g_taskCenter->getUnassignedTasks();
     for(QList<Task *>::iterator itr = tasks.begin();itr!=tasks.end();++itr){
         Task * task = *itr;
         QMap<QString,QString> onetask;
@@ -1009,7 +1003,7 @@ void UserMsgProcessor::Task_ListDoing(zmq::context_t *ctx, QMap<QString, QString
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
     //添加列表
-    QList<Task *> tasks = g_taskCenter.getDoingTasks();
+    QList<Task *> tasks = g_taskCenter->getDoingTasks();
     for(QList<Task *>::iterator itr = tasks.begin();itr!=tasks.end();++itr){
         Task * task = *itr;
         QMap<QString,QString> onetask;
@@ -1132,11 +1126,11 @@ void UserMsgProcessor::Task_Detail(zmq::context_t *ctx, QMap<QString, QString> &
     if(checkParamExistAndNotNull(requestDatas,responseParams,"taskid",NULL)){
         int taskId = requestDatas["taskid"].toInt();
 
-        task = g_taskCenter.queryUndoTask(taskId);
+        task = g_taskCenter->queryUndoTask(taskId);
         if(task == NULL){
-            task = g_taskCenter.queryDoingTask(taskId);
+            task = g_taskCenter->queryDoingTask(taskId);
             if(task == NULL){
-                task = g_taskCenter.queryDoneTask(taskId);
+                task = g_taskCenter->queryDoneTask(taskId);
                 needDelete = true;
             }
         }

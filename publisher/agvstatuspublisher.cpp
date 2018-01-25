@@ -33,8 +33,7 @@ void AgvStatusPublisher::run()
         responseDatas.insert(QString("type"),QString("agv"));
         responseDatas.insert(QString("todo"),QString("periodica"));
 
-        QMap<int,Agv *> pp = g_hrgAgvCenter.getAgvs();
-        for(QMap<int,Agv *>::iterator itr = pp.begin();itr!=pp.end();++itr)
+        for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
         {
             QMap<QString,QString> responseData;
             responseData.insert(QString("id"),QString("%1").arg(itr.value()->id));

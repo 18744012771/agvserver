@@ -11,11 +11,19 @@ AgvLogProcess *g_logProcess = NULL;//日志存库、publish
 QyhZmqServer *g_server;//
 
 //所有的业务处理
-MapCenter g_agvMapCenter;//地图管理(地图载入，地图保存，地图计算)
-TaskCenter g_taskCenter;//任务管理(任务分配，任务保存，任务调度)
-AgvCenter g_hrgAgvCenter;//车辆管理(车辆载入。车辆保存。车辆增加。车辆删除)
+MapCenter *g_agvMapCenter;//地图管理(地图载入，地图保存，地图计算)
+TaskCenter *g_taskCenter;//任务管理(任务分配，任务保存，任务调度)
+AgvCenter *g_hrgAgvCenter;//车辆管理(车辆载入。车辆保存。车辆增加。车辆删除)
 UserMsgProcessor *userMsgProcessor = NULL;
 TaskMaker *g_taskMaker;
+
+//所有的bean集合
+QMap<int,Agv *> g_m_agvs;//车辆
+QMap<int,AgvStation *> g_m_stations;//站点
+QMap<int,AgvLine *> g_m_lines;//线路
+QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_lmr; //左中右
+QMap<int,QList<AgvLine*> > g_m_l_adj;  //从一条线路到另一条线路的关联表
+QMap<int,int> g_reverseLines;//线路和它的反方向线路的集合。
 
 const QString DATE_TIME_FORMAT = "yyyy-MM-dd hh:mm:ss";//统一时间格式
 

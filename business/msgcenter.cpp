@@ -16,11 +16,11 @@ MsgCenter::MsgCenter(QObject *parent) : QObject(parent),
 
 void MsgCenter::init()
 {
-    //启动8个线程，同时处理来自client的消息。
-    for(int i=0;i<8;++i){
-        UserMsgProcessor *workerThread = new UserMsgProcessor(this);
-        workerThread->start();
-    }
+//    //启动8个线程，同时处理来自client的消息。
+//    for(int i=0;i<8;++i){
+//        UserMsgProcessor *workerThread = new UserMsgProcessor(this);
+//        workerThread->start();
+//    }
     //启动订阅 小车状态信息的线程
     if(statusPublisher){
         delete statusPublisher;

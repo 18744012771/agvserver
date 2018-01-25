@@ -4,46 +4,7 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
-//宏定义一些
-//包头
-#define AGV_PACK_HEAD    0x55
-//包尾
-#define AGV_PACK_END   0xAA
 
-//功能码: 手动模式
-#define AGV_PACK_SEND_CODE_HAND_MODE    0x33
-//功能码：自动模式
-#define AGV_PACK_SEND_CODE_AUDTO_MODE   0x35
-//功能码:升级
-#define AGV_PACK_SEND_CODE_UPDATE_MODE  0x22
-
-//功能码：接收Agv上报状态的
-#define AGV_PACK_RECV_CODE_STATUS       0x44
-
-//rfid是立即执行
-#define AGV_PACK_SEND_RFID_CODE_IMMEDIATELY       0x00000000
-#define AGV_PACK_SEND_RFID_CODE_ETERNITY          0xFFFFFFFF
-
-//指令代码
-#define AGV_PACK_SEND_INSTRUC_CODE_STOP      0x00
-#define AGV_PACK_SEND_INSTRUC_CODE_FORWARD      0x01
-#define AGV_PACK_SEND_INSTRUC_CODE_BACKWARD      0x02
-#define AGV_PACK_SEND_INSTRUC_CODE_LEFT      0x03
-#define AGV_PACK_SEND_INSTRUC_CODE_RIGHT      0x04
-#define AGV_PACK_SEND_INSTRUC_CODE_MP3LEFT      0x05
-#define AGV_PACK_SEND_INSTRUC_CODE_MP3RIGHT      0x06
-#define AGV_PACK_SEND_INSTRUC_CODE_MP3VOLUME      0x07
-
-
-enum AGV_HAND_TYPE{
-    AGV_HAND_TYPE_STOP = 0,//停止移动
-    AGV_HAND_TYPE_FORWARD = 0x1,//前进
-    AGV_HAND_TYPE_BACKWARD = 0x2,//后退
-    AGV_HAND_TYPE_TURNLEFT = 0x3,//左转
-    AGV_HAND_TYPE_TURNRIGHT = 0x4,//右转
-};
-
-const char CHAR_NULL = '\0';
 
 AgvCenter::AgvCenter(QObject *parent) : QObject(parent)
 {
@@ -55,15 +16,12 @@ QList<Agv *> AgvCenter::getIdleAgvs()
 {
     QList<Agv *> result;
 
-    agvsMtx.lock();
     for(QMap<int,Agv *>::iterator itr =g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
     {
         if(itr.value()->status == Agv::AGV_STATUS_IDLE){
-            agvsMtx.unlock();
             result.push_back(itr.value());
         }
     }
-    agvsMtx.unlock();
     return result;
 }
 
@@ -95,11 +53,11 @@ void AgvCenter::updateOdometer(Agv *agv, int odometer)
 
     //这里需要合并所有的锁，因为要计算
     //需要如下几个因素 agvline + startstaion+ endstation
-    AgvLine line = g_agvMapCenter.getAgvLine(agv->currentPath.at(0));
+    AgvLine line = g_agvMapCenter->getAgvLine(agv->currentPath.at(0));
     if(line.id<=0)return ;
-    AgvStation startStation = g_agvMapCenter.getAgvStation(line.startStation);
+    AgvStation startStation = g_agvMapCenter->getAgvStation(line.startStation);
     if(startStation.id<=0)return ;
-    AgvStation endStation = g_agvMapCenter.getAgvStation(line.endStation);
+    AgvStation endStation = g_agvMapCenter->getAgvStation(line.endStation);
     if(endStation.id<=0)return ;
 
     if(odometer <= line.length*line.rate)
@@ -153,7 +111,7 @@ void AgvCenter::updateOdometer(Agv *agv, int odometer)
 //2.有站点信息和里程计信息
 void AgvCenter::updateStationOdometer(Agv *agv, int station, int odometer)
 {
-    AgvStation sstation = g_agvMapCenter.getAgvStation(station);
+    AgvStation sstation = g_agvMapCenter->getAgvStation(station);
     if(sstation.id<=0)return ;
 
     //到达了这么个站点
@@ -168,13 +126,13 @@ void AgvCenter::updateStationOdometer(Agv *agv, int station, int odometer)
     int nextStationTemp = 0;
     for(int i=0;i<agv->currentPath.length();++i)
     {
-        AgvLine line = g_agvMapCenter.getAgvLine(agv->currentPath.at(i));
+        AgvLine line = g_agvMapCenter->getAgvLine(agv->currentPath.at(i));
         if(line.id<=0)continue;
         if(line.endStation == station)
         {
             if(i+1!=agv->currentPath.length())
             {
-                AgvLine lineNext = g_agvMapCenter.getAgvLine(agv->currentPath.at(i+1));
+                AgvLine lineNext = g_agvMapCenter->getAgvLine(agv->currentPath.at(i+1));
                 nextStationTemp = lineNext.endStation;
             }
             else
@@ -200,9 +158,7 @@ bool AgvCenter::load()//从数据库载入所有的agv
             Agv *agv = new Agv;
             agv->id=(qsl.at(0).toInt());
             agv->name=(qsl.at(1).toString());
-            agvsMtx.lock();
             g_m_agvs.insert(agv->id,agv);
-            agvsMtx.unlock();
         }
     }
     return true;
@@ -222,7 +178,7 @@ bool AgvCenter::save()//将agv保存到数据库
             selectAgvIds.push_back(id);
         }
     }
-    agvsMtx.lock();
+
     for(int i=0;i<selectAgvIds.length();++i)
     {
         if(g_m_agvs.contains(selectAgvIds.at(i))){
@@ -233,7 +189,6 @@ bool AgvCenter::save()//将agv保存到数据库
 
             if(!g_sql->exeSql(updateSql,params))
             {
-                agvsMtx.unlock();
                 return false;
             }
         }else{
@@ -244,7 +199,6 @@ bool AgvCenter::save()//将agv保存到数据库
                 selectAgvIds.removeAt(i);
                 --i;
             }else{
-                agvsMtx.unlock();
                 return false;
             }
         }
@@ -259,11 +213,9 @@ bool AgvCenter::save()//将agv保存到数据库
         params.clear();
         params<<QString("%1").arg(itr.value()->id)<<itr.value()->name;
         if(!g_sql->exeSql(insertSql,params)){
-            agvsMtx.unlock();
             return false;
         }
     }
-    agvsMtx.unlock();
     return true;
 }
 
@@ -278,75 +230,71 @@ void AgvCenter::init()
 ///////////////////////协议封装///////////////////////////////////////////////
 bool AgvCenter::handControlCmd(int agvId,int agvHandType,int speed)
 {
+//    if(!g_m_agvs.contains(agvId))
+//    {
+//        return false;
+//    }
+//    Agv *agv = g_m_agvs[agvId];
 
-    agvsMtx.lock();
-    if(!g_m_agvs.contains(agvId))
-    {
-        agvsMtx.unlock();
-        return false;
-    }
-    agvsMtx.unlock();
-    //组装一个手控的命令
-    QByteArray content;
-    content.append(0x33);//手控的功能码
-    short baseSpeed = speed & 0xFFFF;
-    short forwardSpeed = 0;
-    short leftSpeed = 0;
-    switch(agvHandType){
-    case AGV_HAND_TYPE_STOP:
-        break;
-    case AGV_HAND_TYPE_FORWARD:
-        forwardSpeed = baseSpeed;
-        break;
-    case AGV_HAND_TYPE_BACKWARD:
-        forwardSpeed = -1*baseSpeed;
-        break;
-    case AGV_HAND_TYPE_TURNLEFT:
-        leftSpeed = baseSpeed;
-        break;
-    case AGV_HAND_TYPE_TURNRIGHT:
-        leftSpeed = -1 * baseSpeed;
-        break;
-    default:
-        return false;
-    }
+////    //组装一个手控的命令
+////    QByteArray content;
+////    content.append(0x33);//手控的功能码
+////    short baseSpeed = speed & 0xFFFF;
+////    short forwardSpeed = 0;
+////    short leftSpeed = 0;
+////    switch(agvHandType){
+////    case AGV_HAND_TYPE_STOP:
+////        break;
+////    case AGV_HAND_TYPE_FORWARD:
+////        forwardSpeed = baseSpeed;
+////        break;
+////    case AGV_HAND_TYPE_BACKWARD:
+////        forwardSpeed = -1*baseSpeed;
+////        break;
+////    case AGV_HAND_TYPE_TURNLEFT:
+////        leftSpeed = baseSpeed;
+////        break;
+////    case AGV_HAND_TYPE_TURNRIGHT:
+////        leftSpeed = -1 * baseSpeed;
+////        break;
+////    default:
+////        return false;
+////    }
 
-    //前后方向 2Byte
-    content.append((forwardSpeed>>8) &0xFF);
-    content.append((forwardSpeed) &0xFF);
+////    //前后方向 2Byte
+////    content.append((forwardSpeed>>8) &0xFF);
+////    content.append((forwardSpeed) &0xFF);
 
-    //左右方向 2Byte
-    content.append((leftSpeed>>8) &0xFF);
-    content.append((leftSpeed) &0xFF);
+////    //左右方向 2Byte
+////    content.append((leftSpeed>>8) &0xFF);
+////    content.append((leftSpeed) &0xFF);
 
-    //附件命令 4Byte
-    content.append(CHAR_NULL);
-    content.append(CHAR_NULL);
-    content.append(CHAR_NULL);
-    content.append(CHAR_NULL);
+////    //附件命令 4Byte
+////    content.append(CHAR_NULL);
+////    content.append(CHAR_NULL);
+////    content.append(CHAR_NULL);
+////    content.append(CHAR_NULL);
 
-    //灯带数据 1Byte
-    content.append(CHAR_NULL);
+////    //灯带数据 1Byte
+////    content.append(CHAR_NULL);
 
-    //控制交接 1Byte
-    content.append(CHAR_NULL);
+////    //控制交接 1Byte
+////    content.append(CHAR_NULL);
 
-    //设备地址，指令发起者 2Byte
-    content.append(CHAR_NULL);
-    content.append(CHAR_NULL);
+////    //设备地址，指令发起者 2Byte
+////    content.append(CHAR_NULL);
+////    content.append(CHAR_NULL);
 
-    //备用字节S32*4 = 16Byte
-    for(int i=0;i<16;++i){
-        content.append(CHAR_NULL);
-    }
+////    //备用字节S32*4 = 16Byte
+////    for(int i=0;i<16;++i){
+////        content.append(CHAR_NULL);
+////    }
 
-    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_HAND_MODE,content);
+////    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_HAND_MODE,content);
 
-    agvsMtx.lock();
-    Agv *agv = g_m_agvs[agvId];
-    bool b = agv->send(result.data(),result.length());
-    agvsMtx.unlock();
-    return b;
+////    Agv *agv = g_m_agvs[agvId];
+//    bool b = agv->send(result.data(),result.length());
+//    return b;
 }
 
 QByteArray AgvCenter::taskStopCmd(int agvId)
@@ -354,14 +302,12 @@ QByteArray AgvCenter::taskStopCmd(int agvId)
     //组装一个agv执行path的命令
     QByteArray content;
 
-    agvsMtx.lock();
     (g_m_agvs[agvId]->queueNumber) +=1;
     g_m_agvs[agvId]->queueNumber &=  0xFF;
 
 
     //队列编号 0-255循环使用
     content[0] = g_m_agvs[agvId]->queueNumber;
-    agvsMtx.unlock();
     //首先需要启动
     //1.立即停止
     content.append(auto_instruct_stop(AGV_PACK_SEND_RFID_CODE_ETERNITY,0));
@@ -380,12 +326,13 @@ QByteArray AgvCenter::taskStopCmd(int agvId)
 
     return result;
 }
+
+
 QByteArray AgvCenter::taskControlCmd(int agvId)
 {
     //组装一个agv执行path的命令
     QByteArray content;
 
-    agvsMtx.lock();
     ++(g_m_agvs[agvId]->queueNumber);
     g_m_agvs[agvId]->queueNumber &=  0xFF;
     //队列编号 0-255循环使用
@@ -397,12 +344,11 @@ QByteArray AgvCenter::taskControlCmd(int agvId)
     //然后对接下来的要执行的数量进行预判
     for(int i=0;i<g_m_agvs[agvId]->currentPath.length() && content.length()+5 < 28;++i)
     {
-        AgvLine line = g_agvMapCenter.getAgvLine(g_m_agvs[agvId]->currentPath.at(i));
-        AgvStation station = g_agvMapCenter.getAgvStation(line.endStation);
+        AgvLine line = g_agvMapCenter->getAgvLine(g_m_agvs[agvId]->currentPath.at(i));
+        AgvStation station = g_agvMapCenter->getAgvStation(line.endStation);
         //加入一个命令
         content.append(auto_instruct_forward(station.rfid,g_m_agvs[agvId]->speed));
     }
-    agvsMtx.unlock();
 
     //然后对 到达站后的 执行命令进行处理
     while(content.length()+5<28)
@@ -448,13 +394,13 @@ bool AgvCenter::agvCancelTask(int agvId)
     if(agv->nowStation>0)
     {
         //那么只占用这个站点，线路全部释放
-        g_agvMapCenter.freeAgvLines(agvId);
-        g_agvMapCenter.freeAgvStation(agvId,agv->nowStation);
+        g_agvMapCenter->freeAgvLines(agvId);
+        g_agvMapCenter->freeAgvStation(agvId,agv->nowStation);
     }else{
         //那么小车位于一条线路中间，需要释放所有的站点，但是要占用这条线路的正反两个方向
-        int lineId = g_agvMapCenter.getLineId(agv->lastStation,agv->nextStation);
-        g_agvMapCenter.freeAgvLines(agvId,lineId);
-        g_agvMapCenter.freeAgvStation(agvId);
+        int lineId = g_agvMapCenter->getLineId(agv->lastStation,agv->nextStation);
+        g_agvMapCenter->freeAgvLines(agvId,lineId);
+        g_agvMapCenter->freeAgvStation(agvId);
     }
 
     //设置小车路径为空
@@ -469,14 +415,11 @@ bool AgvCenter::agvCancelTask(int agvId)
 
 bool AgvCenter::agvStopTask(int agvId)
 {
-    agvsMtx.lock();
     if(!g_m_agvs.contains(agvId))
     {
-        agvsMtx.unlock();
         return false;
     }
     Agv *agv = g_m_agvs[agvId];
-    agvsMtx.unlock();
     agv->orders.clear();
     QByteArray qba =  taskControlCmd(agvId);
     //组包完成，发送
@@ -484,7 +427,6 @@ bool AgvCenter::agvStopTask(int agvId)
 }
 
 /*
- *
  *leftmidright: 走完路径后，左转、右转还是直行
  *distance:走完路径后(左右转后)，前进的距离
  *height:叉板的高度
@@ -492,14 +434,11 @@ bool AgvCenter::agvStopTask(int agvId)
  * */
 bool AgvCenter::agvStartTask(int agvId, QList<int> path,int type,int leftMidRight,int distance,int height)
 {
-    agvsMtx.lock();
     if(!g_m_agvs.contains(agvId))
     {
-        agvsMtx.unlock();
         return false;
     }
     Agv *agv = g_m_agvs[agvId];
-    agvsMtx.unlock();
 
     //TODO:这里需要启动小车，告诉小车下一站和下几站，还有就是左中右信息(回头再说左中右)
     agv->currentPath = (path);
@@ -507,7 +446,7 @@ bool AgvCenter::agvStartTask(int agvId, QList<int> path,int type,int leftMidRigh
     //获取path中的下一站
     if(agv->currentPath.length()>0)
     {
-        AgvLine line = g_agvMapCenter.getAgvLine(agv->currentPath.at(0));
+        AgvLine line = g_agvMapCenter->getAgvLine(agv->currentPath.at(0));
         if(agv->nowStation!=line.startStation){
             agv->nextStation = line.startStation;
         }else{
@@ -620,30 +559,27 @@ QByteArray AgvCenter::auto_instruct_mp3_volume(int rfid,int volume)
 
 //将内容封包
 //加入包头、(功能码)、包长、(内容)、校验和、包尾
-QByteArray AgvCenter::packet(int id, char code_mode, QByteArray content)
+QByteArray AgvCenter::packet(QByteArray content)
 {
-    //计算校验和
-    unsigned char sum = checkSum((unsigned char *)content.data(),content.length());
-
     //组包//加入包头、功能码、内容、校验和、包尾
     QByteArray result;
-    //目标地址、频段
-    short _id = id & 0xFFFF;
-    char chanel = 0;
-    result.append((_id>>8)&0xFF);
-    result.append(_id&0xFF);
-    result.append(chanel);
-    result.append(AGV_PACK_HEAD);//包头
-    result.append(code_mode);//功能码
 
-    //包长2Byte
-    int contentLength = content.length();
-    result.append((contentLength>>8) & 0xFF);
-    result.append((contentLength) & 0xFF);
+    //包头
+    result.append(AGV_PACK_HEAD);
 
-    result.append(content);//内容
-    result.append(sum);//校验和
-    result.append(AGV_PACK_END);//包尾
+    //包长
+    int len = 1/*包长*/+content.length()/*内容长*/+1/*校验码*/+1/*包尾*/;
+    result.append(len&0xFF);
+
+    //内容
+    result.append(content);
+
+    //校验和
+    unsigned char sum = checkSum((unsigned char *)content.data(),content.length());
+    result.append(sum);
+
+    //包尾
+    result.append(AGV_PACK_END);
 
     return result;
 }

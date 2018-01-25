@@ -30,8 +30,8 @@ void AgvTaskPublisher::run()
         responseDatas.insert(QString("type"),QString("task"));
         responseDatas.insert(QString("todo"),QString("periodica"));
 
-        QList<Task *> undos =  g_taskCenter.getUnassignedTasks();
-        QList<Task *> doings = g_taskCenter.getDoingTasks();
+        QList<Task *> undos =  g_taskCenter->getUnassignedTasks();
+        QList<Task *> doings = g_taskCenter->getDoingTasks();
 
         for(int i=0;i<undos.length();++i){
             QMap<QString,QString> mm;

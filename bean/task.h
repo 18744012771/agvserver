@@ -91,6 +91,7 @@ public:
     int getGoodDirect = GET_PUT_DIRECT_LEFT;
     int getGoodDistance = GET_PUT_DEFAULT_DISTANCE;//取货前进的距离
     int getGoodStation = 0;//取货点
+    int getGoodHeight = 0;//取货的高度
     QDateTime getStartTime;//开始取货时间
     QDateTime getFinishTime;//完成取货时间
 
@@ -98,6 +99,7 @@ public:
     int putGoodDirect = GET_PUT_DIRECT_LEFT;
     int putGoodDistance = GET_PUT_DEFAULT_DISTANCE;//放货前进的距离
     int putGoodStation = 0;//送货点
+    int putGoodHeight = 0;//放货的高度
     QDateTime putStartTime;//开始放货时间
     QDateTime putFinishTime;//完成返货时间
 

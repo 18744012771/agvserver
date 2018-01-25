@@ -6,6 +6,46 @@
 #include <QQueue>
 #include <QTimer>
 
+//一些宏定义
+//包头
+#define AGV_PACK_HEAD    0x55
+//包尾
+#define AGV_PACK_END   0xAA
+
+//功能码: 手动模式
+#define AGV_PACK_SEND_CODE_CONFIG_MODE    0x70
+//功能码: 手动模式
+#define AGV_PACK_SEND_CODE_HAND_MODE    0x71
+//功能码: 手动模式
+#define AGV_PACK_SEND_CODE_AUTO_MODE    0x72
+//功能码：自动模式
+#define AGV_PACK_SEND_CODE_DISPATCH_MODE   0x73
+
+//rfid是立即执行
+#define AGV_PACK_SEND_RFID_CODE_IMMEDIATELY       0x00000000
+#define AGV_PACK_SEND_RFID_CODE_ETERNITY          0xFFFFFFFF
+
+//指令代码
+#define AGV_PACK_SEND_INSTRUC_CODE_STOP      0x00
+#define AGV_PACK_SEND_INSTRUC_CODE_FORWARD      0x01
+#define AGV_PACK_SEND_INSTRUC_CODE_BACKWARD      0x02
+#define AGV_PACK_SEND_INSTRUC_CODE_LEFT      0x03
+#define AGV_PACK_SEND_INSTRUC_CODE_RIGHT      0x04
+#define AGV_PACK_SEND_INSTRUC_CODE_MP3LEFT      0x05
+#define AGV_PACK_SEND_INSTRUC_CODE_MP3RIGHT      0x06
+#define AGV_PACK_SEND_INSTRUC_CODE_MP3VOLUME      0x07A
+
+
+enum AGV_HAND_TYPE{
+    AGV_HAND_TYPE_STOP = 0,//停止移动
+    AGV_HAND_TYPE_FORWARD = 0x1,//前进
+    AGV_HAND_TYPE_BACKWARD = 0x2,//后退
+    AGV_HAND_TYPE_TURNLEFT = 0x3,//左转
+    AGV_HAND_TYPE_TURNRIGHT = 0x4,//右转
+};
+
+const char CHAR_NULL = '\0';
+
 class AgvOrder{
 public:
     //卡ID(也就是RFID)
@@ -37,9 +77,22 @@ class Agv : public QObject
 {
     Q_OBJECT
 public:
+
+    enum{
+        PICK_PUT_HEIGHT = 30,//叉起或者放下需要的升降的高度
+    };
+
     explicit Agv(QObject *parent = nullptr);
     void init(QString _ip,int _port);
     bool send(const char *data,int len);
+
+
+    void doPick();
+    void doPut();
+    void doStandBy();
+
+    void doStop();
+
 signals:
     void sigconnect();
     void sigdisconnect();
@@ -86,7 +139,7 @@ public:
     int nextStation;
 
     //用于发送用的
-    int8_t queueNumber;
+    int8_t sendQueueNumber;
 
     //状态
     enum{
@@ -133,7 +186,7 @@ public:
     };
     int error_no;//错误代码
 
-    int currentQueueNumber;//当前命令的序列编号
+    int recvQueueNumber;//当前命令的序列编号
     int orderCount;//当前执行到命令条数(0,4)
     int nextRfid;//下一个目标ID号
     int CRC;//crc和
@@ -149,7 +202,8 @@ public:
     QTcpSocket *tcpClient;
 
     //执行序列
-    QQueue<AgvOrder> orders;
+    QList<AgvOrder> orders;
+    int ordersIndex;
 
     QList<int> currentPath;
 
@@ -160,6 +214,8 @@ public:
 
 private:
     void processOnePack(QByteArray qba);
+    void sendOrder();
+    QByteArray getSendPacket(QByteArray content);
 };
 
 #endif // AGV_H

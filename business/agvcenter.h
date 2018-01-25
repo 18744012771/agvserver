@@ -5,7 +5,6 @@
 #include <QList>
 #include <QMutex>
 #include <QMap>
-#include <qyhtcpclient.h>
 #include "bean/agv.h"
 
 class AgvCenter : public QObject
@@ -34,48 +33,9 @@ public:
 
     bool save();//将agv保存到数据库
 
-    //void processOneMsg(int id,QByteArray oneMsg);
-
-    //void onAgvRead(const char *data,int len);
-
     void agvConnectCallBack();
 
     void agvDisconnectCallBack();
-
-    QMap<int,Agv *> getAgvs()
-    {
-        QMap<int,Agv *> agvs;
-        agvsMtx.lock();
-        agvs = g_m_agvs;
-        agvsMtx.unlock();
-        return agvs;
-    }
-
-    Agv* getAgv(int id){
-        Agv *a = NULL;
-        agvsMtx.lock();
-        if(g_m_agvs.contains(id)){
-            a = g_m_agvs[id];
-        }
-        agvsMtx.unlock();
-        return a;
-    }
-
-    void addAgv(Agv *agv)
-    {
-        agvsMtx.lock();
-        g_m_agvs.insert(agv->id,agv);
-        agvsMtx.unlock();
-    }
-
-    void removeAgv(int id)
-    {
-        agvsMtx.lock();
-        g_m_agvs.remove(id);
-        agvsMtx.unlock();
-
-    }
-
 signals:
     void carArriveStation(int agvId,int station);
 public slots:
@@ -88,7 +48,7 @@ private:
     void updateStationOdometer(Agv *agv,int station,int odometer);
 
 
-    QByteArray packet(int id,char code_mode,QByteArray content);
+    QByteArray packet(QByteArray content);
     QByteArray auto_instruct_stop(int rfid,int delay);
     QByteArray auto_instruct_forward(int rfid,int speed);
     QByteArray auto_instruct_backward(int rfid,int speed);
@@ -98,10 +58,6 @@ private:
     QByteArray auto_instruct_mp3_right(int rfid, int mp3Id);
     QByteArray auto_instruct_mp3_volume(int rfid, int volume);
     QByteArray auto_instruct_wait();
-
-    //所有的bean集合
-    QMap<int,Agv *> g_m_agvs;             //所有车辆们
-    QMutex agvsMtx;
 };
 
 #endif // AGVCENTER_H
