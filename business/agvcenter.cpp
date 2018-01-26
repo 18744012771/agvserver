@@ -27,8 +27,10 @@ QList<Agv *> AgvCenter::getIdleAgvs()
 
 
 //1.只有里程计
-void AgvCenter::updateOdometer(Agv *agv, int odometer)
+void AgvCenter::updateOdometer(int odometer)
 {
+    Agv *agv = static_cast<Agv *>(sender());
+
     if(odometer == agv->lastStationOdometer)//在原来的位置没动
         return ;
 
@@ -109,9 +111,10 @@ void AgvCenter::updateOdometer(Agv *agv, int odometer)
 }
 
 //2.有站点信息和里程计信息
-void AgvCenter::updateStationOdometer(Agv *agv, int station, int odometer)
+void AgvCenter::updateStationOdometer(int rfid, int odometer)
 {
-    AgvStation sstation = g_agvMapCenter->getAgvStation(station);
+    Agv *agv = static_cast<Agv *>(sender());
+    AgvStation sstation = g_agvMapCenter->getAgvStationByRfid(rfid);
     if(sstation.id<=0)return ;
 
     //到达了这么个站点
@@ -119,7 +122,7 @@ void AgvCenter::updateStationOdometer(Agv *agv, int station, int odometer)
     agv->y = (sstation.y);
 
     //设置当前站点
-    agv->nowStation=station;
+    agv->nowStation=sstation.id;
     agv->lastStationOdometer=odometer;
 
     //获取path中的下一站
@@ -128,7 +131,7 @@ void AgvCenter::updateStationOdometer(Agv *agv, int station, int odometer)
     {
         AgvLine line = g_agvMapCenter->getAgvLine(agv->currentPath.at(i));
         if(line.id<=0)continue;
-        if(line.endStation == station)
+        if(line.endStation == sstation.id)
         {
             if(i+1!=agv->currentPath.length())
             {
@@ -143,21 +146,44 @@ void AgvCenter::updateStationOdometer(Agv *agv, int station, int odometer)
     agv->nextStation = nextStationTemp;
 
     //到站消息上报(更新任务信息、更新线路占用问题)
-    emit carArriveStation(agv->id,station);
+    emit carArriveStation(agv->id,sstation.id);
 }
 
+void  AgvCenter::onPickFinish()
+{
+    Agv *agv = static_cast<Agv *>( sender());
+    emit pickFinish(agv->id);
+}
+
+void  AgvCenter::onPutFinish()
+{
+    Agv *agv = static_cast<Agv *>( sender());
+    emit putFinish(agv->id);
+}
+
+void  AgvCenter::onStandByFinish()
+{
+    Agv *agv = static_cast<Agv *>( sender());
+    emit standByFinish(agv->id);
+}
 
 bool AgvCenter::load()//从数据库载入所有的agv
 {
-    QString querySql = "select id,agv_name from agv_agv";
+    QString querySql = "select id,agv_name,agv_ip,agv_port from agv_agv";
     QList<QVariant> params;
     QList<QList<QVariant> > result = g_sql->query(querySql,params);
     for(int i=0;i<result.length();++i){
         QList<QVariant> qsl = result.at(i);
-        if(qsl.length() == 2){
+        if(qsl.length() == 4){
             Agv *agv = new Agv;
             agv->id=(qsl.at(0).toInt());
             agv->name=(qsl.at(1).toString());
+            agv->init(qsl.at(2).toString(),qsl.at(3).toInt());
+            connect(agv,SIGNAL(updateOdometer(int)),this,SLOT(updateOdometer(int)));
+            connect(agv,SIGNAL(updateRfidAndOdometer(int,int)),this,SLOT(updateStationOdometer(int,int)));
+            connect(agv,SIGNAL(pickFinish()),this,SLOT(onPickFinish()));
+            connect(agv,SIGNAL(putFinish()),this,SLOT(onPutFinish()));
+            connect(agv,SIGNAL(standByFinish()),this,SLOT(onStandByFinish()));
             g_m_agvs.insert(agv->id,agv);
         }
     }
@@ -183,9 +209,9 @@ bool AgvCenter::save()//将agv保存到数据库
     {
         if(g_m_agvs.contains(selectAgvIds.at(i))){
             //含有,进行更新
-            QString updateSql = "update agv_agv set agv_name=? where id=?";
+            QString updateSql = "update agv_agv set agv_name=?,agv_ip=?,agv_port=? where id=?";
             params.clear();
-            params<<g_m_agvs[selectAgvIds.at(i)]->name<<QString("%1").arg(g_m_agvs[selectAgvIds.at(i)]->id);
+            params<<g_m_agvs[selectAgvIds.at(i)]->name<<g_m_agvs[selectAgvIds.at(i)]->ip<<g_m_agvs[selectAgvIds.at(i)]->port<<QString("%1").arg(g_m_agvs[selectAgvIds.at(i)]->id);
 
             if(!g_sql->exeSql(updateSql,params))
             {
@@ -194,7 +220,8 @@ bool AgvCenter::save()//将agv保存到数据库
         }else{
             //不含有，就删除
             QString deleteSql = "delete from agv_agv where id=?";
-            params.clear();params.push_back(QString("%1").arg(selectAgvIds.at(i)));
+            params.clear();
+            params<<selectAgvIds.at(i);
             if(g_sql->exeSql(deleteSql,params)){
                 selectAgvIds.removeAt(i);
                 --i;
@@ -209,9 +236,9 @@ bool AgvCenter::save()//将agv保存到数据库
     for(QMap<int,Agv *>::iterator itr=g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
         if(selectAgvIds.contains(itr.key()))continue;
         //插入操作
-        QString insertSql = "insert into agv_agv(id,agv_name) values(?,?)";
+        QString insertSql = "insert into agv_agv(id,agv_name,agv_ip,agv_port) values(?,?,?,?)";
         params.clear();
-        params<<QString("%1").arg(itr.value()->id)<<itr.value()->name;
+        params<<itr.value()->id<<itr.value()->name<<itr.value()->ip<<itr.value()->port;
         if(!g_sql->exeSql(insertSql,params)){
             return false;
         }
@@ -227,150 +254,150 @@ void AgvCenter::init()
 }
 
 
-///////////////////////协议封装///////////////////////////////////////////////
-bool AgvCenter::handControlCmd(int agvId,int agvHandType,int speed)
-{
-//    if(!g_m_agvs.contains(agvId))
-//    {
-//        return false;
-//    }
-//    Agv *agv = g_m_agvs[agvId];
-
-////    //组装一个手控的命令
-////    QByteArray content;
-////    content.append(0x33);//手控的功能码
-////    short baseSpeed = speed & 0xFFFF;
-////    short forwardSpeed = 0;
-////    short leftSpeed = 0;
-////    switch(agvHandType){
-////    case AGV_HAND_TYPE_STOP:
-////        break;
-////    case AGV_HAND_TYPE_FORWARD:
-////        forwardSpeed = baseSpeed;
-////        break;
-////    case AGV_HAND_TYPE_BACKWARD:
-////        forwardSpeed = -1*baseSpeed;
-////        break;
-////    case AGV_HAND_TYPE_TURNLEFT:
-////        leftSpeed = baseSpeed;
-////        break;
-////    case AGV_HAND_TYPE_TURNRIGHT:
-////        leftSpeed = -1 * baseSpeed;
-////        break;
-////    default:
+/////////////////////////协议封装///////////////////////////////////////////////
+//bool AgvCenter::handControlCmd(int agvId,int agvHandType,int speed)
+//{
+////    if(!g_m_agvs.contains(agvId))
+////    {
 ////        return false;
 ////    }
+////    Agv *agv = g_m_agvs[agvId];
 
-////    //前后方向 2Byte
-////    content.append((forwardSpeed>>8) &0xFF);
-////    content.append((forwardSpeed) &0xFF);
+//////    //组装一个手控的命令
+//////    QByteArray content;
+//////    content.append(0x33);//手控的功能码
+//////    short baseSpeed = speed & 0xFFFF;
+//////    short forwardSpeed = 0;
+//////    short leftSpeed = 0;
+//////    switch(agvHandType){
+//////    case AGV_HAND_TYPE_STOP:
+//////        break;
+//////    case AGV_HAND_TYPE_FORWARD:
+//////        forwardSpeed = baseSpeed;
+//////        break;
+//////    case AGV_HAND_TYPE_BACKWARD:
+//////        forwardSpeed = -1*baseSpeed;
+//////        break;
+//////    case AGV_HAND_TYPE_TURNLEFT:
+//////        leftSpeed = baseSpeed;
+//////        break;
+//////    case AGV_HAND_TYPE_TURNRIGHT:
+//////        leftSpeed = -1 * baseSpeed;
+//////        break;
+//////    default:
+//////        return false;
+//////    }
 
-////    //左右方向 2Byte
-////    content.append((leftSpeed>>8) &0xFF);
-////    content.append((leftSpeed) &0xFF);
+//////    //前后方向 2Byte
+//////    content.append((forwardSpeed>>8) &0xFF);
+//////    content.append((forwardSpeed) &0xFF);
 
-////    //附件命令 4Byte
-////    content.append(CHAR_NULL);
-////    content.append(CHAR_NULL);
-////    content.append(CHAR_NULL);
-////    content.append(CHAR_NULL);
+//////    //左右方向 2Byte
+//////    content.append((leftSpeed>>8) &0xFF);
+//////    content.append((leftSpeed) &0xFF);
 
-////    //灯带数据 1Byte
-////    content.append(CHAR_NULL);
+//////    //附件命令 4Byte
+//////    content.append(CHAR_NULL);
+//////    content.append(CHAR_NULL);
+//////    content.append(CHAR_NULL);
+//////    content.append(CHAR_NULL);
 
-////    //控制交接 1Byte
-////    content.append(CHAR_NULL);
+//////    //灯带数据 1Byte
+//////    content.append(CHAR_NULL);
 
-////    //设备地址，指令发起者 2Byte
-////    content.append(CHAR_NULL);
-////    content.append(CHAR_NULL);
+//////    //控制交接 1Byte
+//////    content.append(CHAR_NULL);
 
-////    //备用字节S32*4 = 16Byte
-////    for(int i=0;i<16;++i){
-////        content.append(CHAR_NULL);
+//////    //设备地址，指令发起者 2Byte
+//////    content.append(CHAR_NULL);
+//////    content.append(CHAR_NULL);
+
+//////    //备用字节S32*4 = 16Byte
+//////    for(int i=0;i<16;++i){
+//////        content.append(CHAR_NULL);
+//////    }
+
+//////    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_HAND_MODE,content);
+
+//////    Agv *agv = g_m_agvs[agvId];
+////    bool b = agv->send(result.data(),result.length());
+////    return b;
+//}
+
+//QByteArray AgvCenter::taskStopCmd(int agvId)
+//{
+////    //组装一个agv执行path的命令
+////    QByteArray content;
+
+////    (g_m_agvs[agvId]->queueNumber) +=1;
+////    g_m_agvs[agvId]->queueNumber &=  0xFF;
+
+
+////    //队列编号 0-255循环使用
+////    content[0] = g_m_agvs[agvId]->queueNumber;
+////    //首先需要启动
+////    //1.立即停止
+////    content.append(auto_instruct_stop(AGV_PACK_SEND_RFID_CODE_ETERNITY,0));
+
+////    //固定长度五组
+////    while(content.length()+5 < 28){
+////        content.append(auto_instruct_wait());///////////////////////////////////////////////////////5*5=25Byte
 ////    }
 
-////    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_HAND_MODE,content);
+////    content.append(CHAR_NULL);
+////    content.append(CHAR_NULL);/////////////////////////////////////////////设备地址 2Byte
 
-////    Agv *agv = g_m_agvs[agvId];
-//    bool b = agv->send(result.data(),result.length());
-//    return b;
-}
+////    assert(content.length() == 28);
+////    //组包//加入包头、功能码、内容、校验和、包尾
+////    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_AUDTO_MODE,content);
 
-QByteArray AgvCenter::taskStopCmd(int agvId)
-{
-    //组装一个agv执行path的命令
-    QByteArray content;
-
-    (g_m_agvs[agvId]->queueNumber) +=1;
-    g_m_agvs[agvId]->queueNumber &=  0xFF;
+////    return result;
+//}
 
 
-    //队列编号 0-255循环使用
-    content[0] = g_m_agvs[agvId]->queueNumber;
-    //首先需要启动
-    //1.立即停止
-    content.append(auto_instruct_stop(AGV_PACK_SEND_RFID_CODE_ETERNITY,0));
+//QByteArray AgvCenter::taskControlCmd(int agvId)
+//{
+//    //组装一个agv执行path的命令
+//    QByteArray content;
 
-    //固定长度五组
-    while(content.length()+5 < 28){
-        content.append(auto_instruct_wait());///////////////////////////////////////////////////////5*5=25Byte
-    }
+//    ++(g_m_agvs[agvId]->queueNumber);
+//    g_m_agvs[agvId]->queueNumber &=  0xFF;
+//    //队列编号 0-255循环使用
+//    content[0] = g_m_agvs[agvId]->queueNumber;
+//    //首先需要启动
+//    //1.立即启动
+//    content.append(auto_instruct_forward(AGV_PACK_SEND_RFID_CODE_IMMEDIATELY,g_m_agvs[agvId]->speed));
 
-    content.append(CHAR_NULL);
-    content.append(CHAR_NULL);/////////////////////////////////////////////设备地址 2Byte
+//    //然后对接下来的要执行的数量进行预判
+//    for(int i=0;i<g_m_agvs[agvId]->currentPath.length() && content.length()+5 < 28;++i)
+//    {
+//        AgvLine line = g_agvMapCenter->getAgvLine(g_m_agvs[agvId]->currentPath.at(i));
+//        AgvStation station = g_agvMapCenter->getAgvStation(line.endStation);
+//        //加入一个命令
+//        content.append(auto_instruct_forward(station.rfid,g_m_agvs[agvId]->speed));
+//    }
 
-    assert(content.length() == 28);
-    //组包//加入包头、功能码、内容、校验和、包尾
-    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_AUDTO_MODE,content);
+//    //然后对 到达站后的 执行命令进行处理
+//    while(content.length()+5<28)
+//    {
+//        //TODO
+//        //判断后续跟的是什么：
 
-    return result;
-}
+//    }
+//    //固定长度五组
+//    while(content.length()+5 < 28){
+//        content.append(auto_instruct_wait());///////////////////////////////////////////////////////5*5=25Byte
+//    }
 
+//    content.append(CHAR_NULL);
+//    content.append(CHAR_NULL);/////////////////////////////////////////////设备地址 2Byte
 
-QByteArray AgvCenter::taskControlCmd(int agvId)
-{
-    //组装一个agv执行path的命令
-    QByteArray content;
+//    assert(content.length() == 28);
+//    //组包//加入包头、功能码、内容、校验和、包尾
+//    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_AUDTO_MODE,content);
 
-    ++(g_m_agvs[agvId]->queueNumber);
-    g_m_agvs[agvId]->queueNumber &=  0xFF;
-    //队列编号 0-255循环使用
-    content[0] = g_m_agvs[agvId]->queueNumber;
-    //首先需要启动
-    //1.立即启动
-    content.append(auto_instruct_forward(AGV_PACK_SEND_RFID_CODE_IMMEDIATELY,g_m_agvs[agvId]->speed));
-
-    //然后对接下来的要执行的数量进行预判
-    for(int i=0;i<g_m_agvs[agvId]->currentPath.length() && content.length()+5 < 28;++i)
-    {
-        AgvLine line = g_agvMapCenter->getAgvLine(g_m_agvs[agvId]->currentPath.at(i));
-        AgvStation station = g_agvMapCenter->getAgvStation(line.endStation);
-        //加入一个命令
-        content.append(auto_instruct_forward(station.rfid,g_m_agvs[agvId]->speed));
-    }
-
-    //然后对 到达站后的 执行命令进行处理
-    while(content.length()+5<28)
-    {
-        //TODO
-        //判断后续跟的是什么：
-
-    }
-    //固定长度五组
-    while(content.length()+5 < 28){
-        content.append(auto_instruct_wait());///////////////////////////////////////////////////////5*5=25Byte
-    }
-
-    content.append(CHAR_NULL);
-    content.append(CHAR_NULL);/////////////////////////////////////////////设备地址 2Byte
-
-    assert(content.length() == 28);
-    //组包//加入包头、功能码、内容、校验和、包尾
-    QByteArray result = packet(agvId,AGV_PACK_SEND_CODE_AUDTO_MODE,content);
-
-    return result;
-}
+//    return result;
+//}
 
 void AgvCenter::agvConnectCallBack()
 {
@@ -403,10 +430,6 @@ bool AgvCenter::agvCancelTask(int agvId)
         g_agvMapCenter->freeAgvStation(agvId);
     }
 
-    //设置小车路径为空
-    QList<int> pp;
-    agv->currentPath = pp;
-    agv->task = (0);
     if(agv->status == Agv::AGV_STATUS_TASKING)
         agv->status = (Agv::AGV_STATUS_IDLE);
 
@@ -420,10 +443,8 @@ bool AgvCenter::agvStopTask(int agvId)
         return false;
     }
     Agv *agv = g_m_agvs[agvId];
-    agv->orders.clear();
-    QByteArray qba =  taskControlCmd(agvId);
-    //组包完成，发送
-    agv->send(qba.data(),qba.length());
+    agv->doStop();
+    return true;
 }
 
 /*
@@ -432,154 +453,144 @@ bool AgvCenter::agvStopTask(int agvId)
  *height:叉板的高度
  *type: 0原地待命 1取货  -1放货
  * */
-bool AgvCenter::agvStartTask(int agvId, QList<int> path,int type,int leftMidRight,int distance,int height)
+bool AgvCenter::agvStartTask(Agv *agv,Task *task)
 {
-    if(!g_m_agvs.contains(agvId))
+    if(task->currentDoIndex == Task::INDEX_GETTING_GOOD)
     {
+        agv->doPick();
+    }else if(task->currentDoIndex == Task::INDEX_PUTTING_GOOD)
+    {
+        agv->doPut();
+    }else if(task->currentDoIndex == Task::INDEX_GOING_STANDBY)
+    {
+        agv->doStandBy();
+    }else{
         return false;
     }
-    Agv *agv = g_m_agvs[agvId];
-
-    //TODO:这里需要启动小车，告诉小车下一站和下几站，还有就是左中右信息(回头再说左中右)
-    agv->currentPath = (path);
-
-    //获取path中的下一站
-    if(agv->currentPath.length()>0)
-    {
-        AgvLine line = g_agvMapCenter->getAgvLine(agv->currentPath.at(0));
-        if(agv->nowStation!=line.startStation){
-            agv->nextStation = line.startStation;
-        }else{
-            agv->nextStation = line.endStation;
-        }
-    }
-
-    QByteArray qba =  taskControlCmd(agvId);
-    //组包完成，发送
-    return agv->send(qba.data(),qba.length());
+    return true;
 }
 
-QByteArray AgvCenter::auto_instruct_wait(){
-    QByteArray qba;
-    qba.append(0xFF);
-    qba.append(0xFF);
-    qba.append(0xFF);
-    qba.append(0xFF);
-    qba.append(0xFF);
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_wait(){
+//    QByteArray qba;
+//    qba.append(0xFF);
+//    qba.append(0xFF);
+//    qba.append(0xFF);
+//    qba.append(0xFF);
+//    qba.append(0xFF);
+//    return qba;
+//}
 
-QByteArray AgvCenter::auto_instruct_stop(int rfid,int delay)
-{
-    QByteArray qba;
-    qba.append(((rfid>>24) & 0xFF));
-    qba.append(((rfid>>16) & 0xFF));
-    qba.append(((rfid>>8) & 0xFF));
-    qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_STOP<<4)&0xF0)|(delay & 0x0F));
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_stop(int rfid,int delay)
+//{
+//    QByteArray qba;
+//    qba.append(((rfid>>24) & 0xFF));
+//    qba.append(((rfid>>16) & 0xFF));
+//    qba.append(((rfid>>8) & 0xFF));
+//    qba.append(((rfid) & 0xFF));
+//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_STOP<<4)&0xF0)|(delay & 0x0F));
+//    return qba;
+//}
 
-QByteArray AgvCenter::auto_instruct_forward(int rfid,int speed)
-{
-    QByteArray qba;
-    qba.append(((rfid>>24) & 0xFF));
-    qba.append(((rfid>>16) & 0xFF));
-    qba.append(((rfid>>8) & 0xFF));
-    qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_FORWARD<<4)&0xF0)|(speed & 0x0F));
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_forward(int rfid,int speed)
+//{
+//    QByteArray qba;
+//    qba.append(((rfid>>24) & 0xFF));
+//    qba.append(((rfid>>16) & 0xFF));
+//    qba.append(((rfid>>8) & 0xFF));
+//    qba.append(((rfid) & 0xFF));
+//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_FORWARD<<4)&0xF0)|(speed & 0x0F));
+//    return qba;
+//}
 
-QByteArray AgvCenter::auto_instruct_backward(int rfid,int speed)
-{
-    QByteArray qba;
-    qba.append(((rfid>>24) & 0xFF));
-    qba.append(((rfid>>16) & 0xFF));
-    qba.append(((rfid>>8) & 0xFF));
-    qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_BACKWARD<<4)&0xF0)|(speed & 0x0F));
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_backward(int rfid,int speed)
+//{
+//    QByteArray qba;
+//    qba.append(((rfid>>24) & 0xFF));
+//    qba.append(((rfid>>16) & 0xFF));
+//    qba.append(((rfid>>8) & 0xFF));
+//    qba.append(((rfid) & 0xFF));
+//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_BACKWARD<<4)&0xF0)|(speed & 0x0F));
+//    return qba;
+//}
 
-QByteArray AgvCenter::auto_instruct_turnleft(int rfid,int angle)
-{
-    QByteArray qba;
-    qba.append(((rfid>>24) & 0xFF));
-    qba.append(((rfid>>16) & 0xFF));
-    qba.append(((rfid>>8) & 0xFF));
-    qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_LEFT<<4)&0xF0)|(angle & 0x0F));
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_turnleft(int rfid,int angle)
+//{
+//    QByteArray qba;
+//    qba.append(((rfid>>24) & 0xFF));
+//    qba.append(((rfid>>16) & 0xFF));
+//    qba.append(((rfid>>8) & 0xFF));
+//    qba.append(((rfid) & 0xFF));
+//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_LEFT<<4)&0xF0)|(angle & 0x0F));
+//    return qba;
+//}
 
-QByteArray AgvCenter::auto_instruct_turnright(int rfid,int speed)
-{
-    QByteArray qba;
-    qba.append(((rfid>>24) & 0xFF));
-    qba.append(((rfid>>16) & 0xFF));
-    qba.append(((rfid>>8) & 0xFF));
-    qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_RIGHT<<4)&0xF0)|(speed & 0x0F));
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_turnright(int rfid,int speed)
+//{
+//    QByteArray qba;
+//    qba.append(((rfid>>24) & 0xFF));
+//    qba.append(((rfid>>16) & 0xFF));
+//    qba.append(((rfid>>8) & 0xFF));
+//    qba.append(((rfid) & 0xFF));
+//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_RIGHT<<4)&0xF0)|(speed & 0x0F));
+//    return qba;
+//}
 
-QByteArray AgvCenter::auto_instruct_mp3_left(int rfid, int mp3Id)
-{
-    QByteArray qba;
-    qba.append(((rfid>>24) & 0xFF));
-    qba.append(((rfid>>16) & 0xFF));
-    qba.append(((rfid>>8) & 0xFF));
-    qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3LEFT<<4)&0xF0)|(mp3Id>>4 & 0x0F));
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_mp3_left(int rfid, int mp3Id)
+//{
+//    QByteArray qba;
+//    qba.append(((rfid>>24) & 0xFF));
+//    qba.append(((rfid>>16) & 0xFF));
+//    qba.append(((rfid>>8) & 0xFF));
+//    qba.append(((rfid) & 0xFF));
+//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3LEFT<<4)&0xF0)|(mp3Id>>4 & 0x0F));
+//    return qba;
+//}
 
-QByteArray AgvCenter::auto_instruct_mp3_right(int rfid,int mp3Id)
-{
-    QByteArray qba;
-    qba.append(((rfid>>24) & 0xFF));
-    qba.append(((rfid>>16) & 0xFF));
-    qba.append(((rfid>>8) & 0xFF));
-    qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3RIGHT<<4)&0xF0)|(mp3Id & 0x0F));
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_mp3_right(int rfid,int mp3Id)
+//{
+//    QByteArray qba;
+//    qba.append(((rfid>>24) & 0xFF));
+//    qba.append(((rfid>>16) & 0xFF));
+//    qba.append(((rfid>>8) & 0xFF));
+//    qba.append(((rfid) & 0xFF));
+//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3RIGHT<<4)&0xF0)|(mp3Id & 0x0F));
+//    return qba;
+//}
 
-QByteArray AgvCenter::auto_instruct_mp3_volume(int rfid,int volume)
-{
-    QByteArray qba;
-    qba.append(((rfid>>24) & 0xFF));
-    qba.append(((rfid>>16) & 0xFF));
-    qba.append(((rfid>>8) & 0xFF));
-    qba.append(((rfid) & 0xFF));
-    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3VOLUME<<4)&0xF0)|(volume&0x0F));
-    return qba;
-}
+//QByteArray AgvCenter::auto_instruct_mp3_volume(int rfid,int volume)
+//{
+//    QByteArray qba;
+//    qba.append(((rfid>>24) & 0xFF));
+//    qba.append(((rfid>>16) & 0xFF));
+//    qba.append(((rfid>>8) & 0xFF));
+//    qba.append(((rfid) & 0xFF));
+//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3VOLUME<<4)&0xF0)|(volume&0x0F));
+//    return qba;
+//}
 
-//将内容封包
-//加入包头、(功能码)、包长、(内容)、校验和、包尾
-QByteArray AgvCenter::packet(QByteArray content)
-{
-    //组包//加入包头、功能码、内容、校验和、包尾
-    QByteArray result;
+////将内容封包
+////加入包头、(功能码)、包长、(内容)、校验和、包尾
+//QByteArray AgvCenter::packet(QByteArray content)
+//{
+//    //组包//加入包头、功能码、内容、校验和、包尾
+//    QByteArray result;
 
-    //包头
-    result.append(AGV_PACK_HEAD);
+//    //包头
+//    result.append(AGV_PACK_HEAD);
 
-    //包长
-    int len = 1/*包长*/+content.length()/*内容长*/+1/*校验码*/+1/*包尾*/;
-    result.append(len&0xFF);
+//    //包长
+//    int len = 1/*包长*/+content.length()/*内容长*/+1/*校验码*/+1/*包尾*/;
+//    result.append(len&0xFF);
 
-    //内容
-    result.append(content);
+//    //内容
+//    result.append(content);
 
-    //校验和
-    unsigned char sum = checkSum((unsigned char *)content.data(),content.length());
-    result.append(sum);
+//    //校验和
+//    unsigned char sum = checkSum((unsigned char *)content.data(),content.length());
+//    result.append(sum);
 
-    //包尾
-    result.append(AGV_PACK_END);
+//    //包尾
+//    result.append(AGV_PACK_END);
 
-    return result;
-}
+//    return result;
+//}

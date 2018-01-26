@@ -48,9 +48,12 @@ signals:
     void sigTaskFinish(int);
 public slots:
     void carArriveStation(int car,int station);
+    void onPickFinish(int agvId);
+    void onPutFinish(int agvId);
+    void onStandByFinish(int agvId);
 private slots:
     void unassignedTasksProcess();//未分配的任务
-    void doingTaskProcess();//正在执行的任务(由于线路占用的问题，导致小车停在了某个位置，需要启动它)
+    //void doingTaskProcess();//正在执行的任务(由于线路占用的问题，导致小车停在了某个位置，需要启动它)
 
 private:
     //这里可以对任务进行扩展。将任务要做的事情做成一个不定的

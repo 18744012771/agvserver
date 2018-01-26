@@ -52,7 +52,7 @@ void AgvStatusPublisher::run()
             responseData.insert(QString("speed"),QString("%1").arg(itr.value()->speed));
             responseData.insert(QString("angle"),QString("%1").arg(itr.value()->angle));
             responseData.insert(QString("error_no"),QString("%1").arg(itr.value()->error_no));
-            responseData.insert(QString("currentQueueNumber"),QString("%1").arg(itr.value()->currentQueueNumber));
+            responseData.insert(QString("currentQueueNumber"),QString("%1").arg(itr.value()->recvQueueNumber));
             responseData.insert(QString("orderCount"),QString("%1").arg(itr.value()->orderCount));
             responseData.insert(QString("nextRfid"),QString("%1").arg(itr.value()->nextRfid));
             responseData.insert(QString("status"),QString("%1").arg(itr.value()->status));

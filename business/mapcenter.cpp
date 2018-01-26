@@ -713,6 +713,19 @@ int MapCenter::getLineId(int startStation,int endStation)
     return id;
 }
 
+AgvStation MapCenter::getAgvStationByRfid(int rfid)
+{
+    AgvStation s;
+    for(QMap<int,AgvStation *>::iterator itr = g_m_stations.begin();itr!=g_m_stations.end();++itr)
+    {
+        if(itr.value()->rfid == rfid){
+            s = *(itr.value());
+            break;
+        }
+    }
+    return s;
+}
+
 AgvStation MapCenter::getAgvStation(int id){
     AgvStation s;
     if(g_m_stations.contains(id)){

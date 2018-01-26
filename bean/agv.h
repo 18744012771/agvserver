@@ -106,6 +106,10 @@ signals:
     void updateOdometer(int odometer);
     void updateRfidAndOdometer(int rfid,int odomter);
 
+    void pickFinish();
+    void putFinish();
+    void standByFinish();
+
 public slots:
     void onAgvRead();
     void connectCallBack();
@@ -204,6 +208,8 @@ public:
     //执行序列
     QList<AgvOrder> orders;
     int ordersIndex;
+    int lastSendOrderAmount;
+
 
     QList<int> currentPath;
 
@@ -213,6 +219,14 @@ public:
     QTimer orderTimer;
 
 private:
+    enum{
+        AGV_DOING_PICKING = 0,
+        AGV_DOING_PUTTING = 1,
+        AGV_DOING_STANDING = 2,
+        AGV_DOING_NOTHING = 3,
+    };
+    int agvDoing = AGV_DOING_NOTHING;
+
     void processOnePack(QByteArray qba);
     void sendOrder();
     QByteArray getSendPacket(QByteArray content);

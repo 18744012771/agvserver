@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
     g_taskCenter = new TaskCenter;
     g_taskCenter->init();//任务中心
 
+
+
     userMsgProcessor = new UserMsgProcessor;//消息处理
 
     g_server = new QyhZmqServer;

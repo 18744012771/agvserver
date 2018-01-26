@@ -722,11 +722,11 @@ void UserMsgProcessor:: AgvManage_List(zmq::context_t *ctx, QMap<QString, QStrin
 //增加
 void UserMsgProcessor:: AgvManage_Add(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     //要求name和ip
-    if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip",NULL)){
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"name","ip","port",NULL)){
         //TODO
-        QString insertSql = "insert into agv_agv (agv_name)values(?)";
+        QString insertSql = "insert into agv_agv (agv_name,agv_ip,agv_port)values(?,?,?);";
         QList<QVariant> tempParams;
-        tempParams<<requestDatas["name"]<<requestDatas["ip"];
+        tempParams<<requestDatas["name"]<<requestDatas["ip"]<<requestDatas["port"];
         if(g_sql->exeSql(insertSql,tempParams)){
             int newId;
             QString querySql = "select id from agv_agv where agv_name = ? ";
@@ -737,7 +737,8 @@ void UserMsgProcessor:: AgvManage_Add(zmq::context_t *ctx, QMap<QString, QString
                 Agv *agv = new Agv;
                 agv->id = (newId);
                 agv->name = (requestDatas["name"]);
-                //agv->setIp(requestDatas["ip"]);
+                agv->ip = (requestDatas["ip"]);
+                agv->port = requestDatas["port"].toInt();
                 g_m_agvs.insert(agv->id,agv);
                 responseParams.insert(QString("info"),QString(""));
                 responseParams.insert(QString("result"),QString("success"));

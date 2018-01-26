@@ -121,7 +121,7 @@ bool Sql::checkTables()
         //存在了
     }else{
         //不存在.创建
-        QString createSql = "CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTO_INCREMENT,agv_name text);";
+        QString createSql = "CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTO_INCREMENT,agv_name text,agv_ip text,agv_port int);";
         args.clear();
         bool b = exeSql(createSql,args);
         if(!b)return false;
@@ -175,7 +175,7 @@ bool Sql::createConnection()
         database.setPort(3306);
 
         database.setUserName("root");
-        database.setPassword("6980103");
+        database.setPassword("123456");
     }
 
     if(!database.isValid())return false;

@@ -1,4 +1,4 @@
-#include "agv.h"
+﻿#include "agv.h"
 #include "util/common.h"
 #include "util/global.h"
 
@@ -26,7 +26,6 @@ void Agv::init(QString _ip,int _port)
 
     orderTimer.setInterval(200);
     connect(&orderTimer,SIGNAL(timeout()),this,SLOT(onCheckOrder()));
-    orderTimer.start();
 }
 
 void Agv::onCheckOrder()
@@ -51,6 +50,9 @@ void Agv::onCheckOrder()
 void Agv::onAgvRead()
 {
     static QByteArray buff;
+    QByteArray qba =  tcpClient->readAll();
+    qDebug()<<"recv:"<<qba.length();
+    return ;
     buff += tcpClient->readAll();
     //截取一条消息
     //然后对其进行拆包，把拆出来的包放入队列
@@ -175,7 +177,7 @@ void Agv::processOnePack(QByteArray qba)
         //更新命令
         if(recvQueueNumber == sendQueueNumber)
         {
-            if(orderCount==4){
+            if(orderCount>=1){
                 sendOrder();
             }
         }
@@ -369,6 +371,9 @@ void Agv::doPick()
     aor7.order = AgvOrder::ORDER_UP_DOWN;
     aor7.param = PICK_PUT_HEIGHT;
     orders.push_back(aor7);
+
+    agvDoing = AGV_DOING_PICKING;
+    orderTimer.start();
 }
 
 
@@ -509,6 +514,9 @@ void Agv::doPut()
     aor7.order = AgvOrder::ORDER_UP_DOWN;
     aor7.param =0;
     orders.push_back(aor7);
+
+    agvDoing = AGV_DOING_PUTTING;
+    orderTimer.start();
 }
 
 //前提是path已经赋值
@@ -571,10 +579,32 @@ void Agv::doStandBy()
         orders.push_back(aor2);
         lastLine = line;
     }
+
+    agvDoing = AGV_DOING_STANDING;
+    orderTimer.start();
 }
 
 void Agv::sendOrder()
 {
+    if(ordersIndex>0){
+        if(lastSendOrderAmount==0){
+            //完成了
+            if(agvDoing == AGV_DOING_PICKING){
+                emit pickFinish();
+            }else if(agvDoing == AGV_DOING_PUTTING)
+            {
+                emit putFinish();
+            }else if(agvDoing == AGV_DOING_STANDING){
+                emit standByFinish();
+                orderTimer.stop();
+            }
+        }else{
+            if(lastSendOrderAmount>orderCount)
+                ordersIndex -= (lastSendOrderAmount-orderCount-1);
+        }
+    }
+
+    if(ordersIndex>=orders.length())return ;
     //根据orders封装一个发送的命令
     QByteArray content;
 
@@ -584,27 +614,19 @@ void Agv::sendOrder()
     //命令编号
     content.append(++sendQueueNumber);
 
-    //为了不打断当前操作：
-    //第一个放入一个ID:0xFF
-    content.append(0x00);
-    content.append(0x00);
-    content.append(0x00);
-    content.append(0xFF);
-    content.append(0x00);
-    content.append(0x00);
 
-    int plus = 0;
+    lastSendOrderAmount = 0;
 
     for(int i=0;i<3;++i)
     {
         if(i+ordersIndex>=orders.length()){
             //放入一个空
-            content.append(0x00);
-            content.append(0x00);
-            content.append(0x00);
-            content.append(0x00);
-            content.append(0x00);
-            content.append(0x00);
+            content.append((char)0x00);
+            content.append((char)0x00);
+            content.append((char)0x00);
+            content.append((char)0x00);
+            content.append((char)0x00);
+            content.append((char)0x00);
         }else{
             AgvOrder order = orders.at(i+ordersIndex);
             content.append((order.rfid>>24)&0xFF);
@@ -613,10 +635,18 @@ void Agv::sendOrder()
             content.append((order.rfid)&0xFF);
             content.append(order.order&0xFF);
             content.append(order.param&0xFF);
-            plus+=1;
+            lastSendOrderAmount+=1;
         }
     }
-    ordersIndex+=plus;
+
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append((char)0x00);
+
+    ordersIndex+=lastSendOrderAmount;
     QByteArray qba = getSendPacket(content);
     send(qba.data(),qba.length());
 }

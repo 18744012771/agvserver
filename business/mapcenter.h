@@ -47,6 +47,8 @@ public:
 
     AgvStation getAgvStation(int id);
 
+    AgvStation getAgvStationByRfid(int rfid);
+
     QMap<int,AgvStation *> getAgvStations();
 
     AgvLine getAgvLine(int id);
