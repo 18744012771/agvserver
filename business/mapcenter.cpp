@@ -122,12 +122,12 @@ void MapCenter::addLine(QString s)
                         delete aLine;
                         continue;
                     }
-                    double startX = g_m_stations[aLine->startStation]->x;
-                    double startY = g_m_stations[aLine->startStation]->y;
-                    double endX = g_m_stations[aLine->endStation]->x;
-                    double endY = g_m_stations[aLine->endStation]->y;
+//                    double startX = g_m_stations[aLine->startStation]->x;
+//                    double startY = g_m_stations[aLine->startStation]->y;
+//                    double endX = g_m_stations[aLine->endStation]->x;
+//                    double endY = g_m_stations[aLine->endStation]->y;
 
-                    aLine->length = sqrt((startX-endX)*(startX-endX)+(startY-endY)*(startY-endY));
+                    aLine->length = aLine->rate; //TODO:sqrt((startX-endX)*(startX-endX)+(startY-endY)*(startY-endY));
 
                     QString insertSql = "INSERT INTO agv_line (id,line_startStation,line_endStation,line_rate,line_color_r,line_color_g,line_color_b,line_line,line_length,line_draw) VALUES (?,?,?,?,?,?,?,?,?,?);";
                     QList<QVariant> params;
@@ -186,12 +186,12 @@ void MapCenter::addArc(QString s)
                         delete aLine;
                         continue;
                     }
-                    double startX = g_m_stations[aLine->startStation]->x;
-                    double startY = g_m_stations[aLine->startStation]->y;
-                    double endX = g_m_stations[aLine->endStation]->x;
-                    double endY = g_m_stations[aLine->endStation]->y;
+//                    double startX = g_m_stations[aLine->startStation]->x;
+//                    double startY = g_m_stations[aLine->startStation]->y;
+//                    double endX = g_m_stations[aLine->endStation]->x;
+//                    double endY = g_m_stations[aLine->endStation]->y;
 
-                    aLine->length = BezierArc::BezierArcLength(QPointF(startX,startY),QPointF(aLine->p1x,aLine->p1y),QPointF(aLine->p2x,aLine->p2y),QPointF(endX,endY));
+                    aLine->length = aLine->rate;//TODO: BezierArc::BezierArcLength(QPointF(startX,startY),QPointF(aLine->p1x,aLine->p1y),QPointF(aLine->p2x,aLine->p2y),QPointF(endX,endY));
 
                     QString insertSql = "INSERT INTO agv_line (id,line_startStation,line_endStation,line_rate,line_color_r,line_color_g,line_color_b,line_line,line_length,line_draw,line_p1x,line_p1y,line_p2x,line_p2y) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
                     QList<QVariant> params;

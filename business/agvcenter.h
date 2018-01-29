@@ -30,6 +30,9 @@ public:
     void agvConnectCallBack();
 
     void agvDisconnectCallBack();
+
+    void goStandBy();
+
 signals:
     void carArriveStation(int agvId,int station);
 

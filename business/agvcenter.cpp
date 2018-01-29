@@ -470,127 +470,13 @@ bool AgvCenter::agvStartTask(Agv *agv,Task *task)
     return true;
 }
 
-//QByteArray AgvCenter::auto_instruct_wait(){
-//    QByteArray qba;
-//    qba.append(0xFF);
-//    qba.append(0xFF);
-//    qba.append(0xFF);
-//    qba.append(0xFF);
-//    qba.append(0xFF);
-//    return qba;
-//}
+void AgvCenter::goStandBy()
+{
+    for(QMap<int,Agv *>::iterator itr =g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
+    {
+        if(itr.value()->status == Agv::AGV_STATUS_IDLE){
+            itr.value()->go(0x02000020);
+        }
+    }
+}
 
-//QByteArray AgvCenter::auto_instruct_stop(int rfid,int delay)
-//{
-//    QByteArray qba;
-//    qba.append(((rfid>>24) & 0xFF));
-//    qba.append(((rfid>>16) & 0xFF));
-//    qba.append(((rfid>>8) & 0xFF));
-//    qba.append(((rfid) & 0xFF));
-//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_STOP<<4)&0xF0)|(delay & 0x0F));
-//    return qba;
-//}
-
-//QByteArray AgvCenter::auto_instruct_forward(int rfid,int speed)
-//{
-//    QByteArray qba;
-//    qba.append(((rfid>>24) & 0xFF));
-//    qba.append(((rfid>>16) & 0xFF));
-//    qba.append(((rfid>>8) & 0xFF));
-//    qba.append(((rfid) & 0xFF));
-//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_FORWARD<<4)&0xF0)|(speed & 0x0F));
-//    return qba;
-//}
-
-//QByteArray AgvCenter::auto_instruct_backward(int rfid,int speed)
-//{
-//    QByteArray qba;
-//    qba.append(((rfid>>24) & 0xFF));
-//    qba.append(((rfid>>16) & 0xFF));
-//    qba.append(((rfid>>8) & 0xFF));
-//    qba.append(((rfid) & 0xFF));
-//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_BACKWARD<<4)&0xF0)|(speed & 0x0F));
-//    return qba;
-//}
-
-//QByteArray AgvCenter::auto_instruct_turnleft(int rfid,int angle)
-//{
-//    QByteArray qba;
-//    qba.append(((rfid>>24) & 0xFF));
-//    qba.append(((rfid>>16) & 0xFF));
-//    qba.append(((rfid>>8) & 0xFF));
-//    qba.append(((rfid) & 0xFF));
-//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_LEFT<<4)&0xF0)|(angle & 0x0F));
-//    return qba;
-//}
-
-//QByteArray AgvCenter::auto_instruct_turnright(int rfid,int speed)
-//{
-//    QByteArray qba;
-//    qba.append(((rfid>>24) & 0xFF));
-//    qba.append(((rfid>>16) & 0xFF));
-//    qba.append(((rfid>>8) & 0xFF));
-//    qba.append(((rfid) & 0xFF));
-//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_RIGHT<<4)&0xF0)|(speed & 0x0F));
-//    return qba;
-//}
-
-//QByteArray AgvCenter::auto_instruct_mp3_left(int rfid, int mp3Id)
-//{
-//    QByteArray qba;
-//    qba.append(((rfid>>24) & 0xFF));
-//    qba.append(((rfid>>16) & 0xFF));
-//    qba.append(((rfid>>8) & 0xFF));
-//    qba.append(((rfid) & 0xFF));
-//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3LEFT<<4)&0xF0)|(mp3Id>>4 & 0x0F));
-//    return qba;
-//}
-
-//QByteArray AgvCenter::auto_instruct_mp3_right(int rfid,int mp3Id)
-//{
-//    QByteArray qba;
-//    qba.append(((rfid>>24) & 0xFF));
-//    qba.append(((rfid>>16) & 0xFF));
-//    qba.append(((rfid>>8) & 0xFF));
-//    qba.append(((rfid) & 0xFF));
-//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3RIGHT<<4)&0xF0)|(mp3Id & 0x0F));
-//    return qba;
-//}
-
-//QByteArray AgvCenter::auto_instruct_mp3_volume(int rfid,int volume)
-//{
-//    QByteArray qba;
-//    qba.append(((rfid>>24) & 0xFF));
-//    qba.append(((rfid>>16) & 0xFF));
-//    qba.append(((rfid>>8) & 0xFF));
-//    qba.append(((rfid) & 0xFF));
-//    qba.append(((AGV_PACK_SEND_INSTRUC_CODE_MP3VOLUME<<4)&0xF0)|(volume&0x0F));
-//    return qba;
-//}
-
-////将内容封包
-////加入包头、(功能码)、包长、(内容)、校验和、包尾
-//QByteArray AgvCenter::packet(QByteArray content)
-//{
-//    //组包//加入包头、功能码、内容、校验和、包尾
-//    QByteArray result;
-
-//    //包头
-//    result.append(AGV_PACK_HEAD);
-
-//    //包长
-//    int len = 1/*包长*/+content.length()/*内容长*/+1/*校验码*/+1/*包尾*/;
-//    result.append(len&0xFF);
-
-//    //内容
-//    result.append(content);
-
-//    //校验和
-//    unsigned char sum = checkSum((unsigned char *)content.data(),content.length());
-//    result.append(sum);
-
-//    //包尾
-//    result.append(AGV_PACK_END);
-
-//    return result;
-//}

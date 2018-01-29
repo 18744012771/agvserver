@@ -51,14 +51,14 @@ void Agv::onAgvRead()
 {
     static QByteArray buff;
     QByteArray qba =  tcpClient->readAll();
-    qDebug()<<"recv:"<<qba.length();
-    return ;
-    buff += tcpClient->readAll();
+    //qDebug()<<"recv:"<<qba.length();
+    //return ;
+    buff += qba;
     //截取一条消息
     //然后对其进行拆包，把拆出来的包放入队列
     while(true){
         int start = buff.indexOf(0x66);
-        int end = buff.indexOf(0x33);
+        int end = buff.indexOf(0x88);
         if(start>=0&&end>=0){
             //这个是一个包:
             QByteArray onePack = buff.mid(start,end-start+1);
@@ -75,9 +75,10 @@ void Agv::onAgvRead()
 }
 void Agv::processOnePack(QByteArray qba)
 {
-    if(qba.startsWith(0x66) && qba.endsWith(0x33))
+    if(qba.startsWith(0x66) && qba.endsWith(0x88))
     {
         int kk = (int)(qba.at(1));
+        //qDebug()<<"qba.length=="<<qba.length();
         if(kk != qba.length()-1) return ;//除去包头
         //上报的命令
         char *str = qba.data();
@@ -87,6 +88,7 @@ void Agv::processOnePack(QByteArray qba)
         str+=4;
 
         currentRfid = getInt32FromByte(str);
+        //qDebug()<<"current rfid="<<currentRfid;
         str+=4;
 
         nextRfid = getInt32FromByte(str);
@@ -126,6 +128,7 @@ void Agv::processOnePack(QByteArray qba)
         str+=1;
 
         recvQueueNumber = getInt8FromByte(str);
+        //qDebug()<<"recv queue="<<recvQueueNumber;
         str+=1;
 
         orderCount = getInt8FromByte(str);
@@ -203,8 +206,9 @@ void Agv::disconnectCallBack()
 void Agv::connectStateChanged(QAbstractSocket::SocketState s)
 {
 
-    if(s==QAbstractSocket::ClosingState ||s==QAbstractSocket::UnconnectedState )
+    if(s==QAbstractSocket::UnconnectedState )
     {
+        QyhSleep(5000);
         tcpClient->connectToHost(ip,port);
     }
 }
@@ -215,6 +219,61 @@ bool Agv::send(const char *data,int len)
         return len == tcpClient->write(data,len);
     }
     return false;
+}
+
+void Agv::go(int rfid)
+{
+    //根据orders封装一个发送的命令
+    QByteArray content;
+
+    //工作方式
+    content.append(AGV_PACK_SEND_CODE_DISPATCH_MODE);
+
+    //命令编号
+    content.append(++sendQueueNumber);
+
+
+    lastSendOrderAmount = 0;
+
+    //放入一个前进指令
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append(AgvOrder::ORDER_FORWARD);
+    content.append((char)0x04);
+
+    //放入一个RFID 停下等3秒
+    content.append((rfid)&0xFF);
+    content.append((rfid>>8)&0xFF);
+    content.append((rfid>>16)&0xFF);
+    content.append((rfid>>24)&0xFF);
+    content.append(AgvOrder::ORDER_STOP);
+    content.append((char)0x03);
+
+    //立即左转90°
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append((char)0x00);
+    content.append(AgvOrder::ORDER_TURN_LEFT);
+    content.append((char)90);
+
+    //放入一个空
+    content.append((char)0xff);
+    content.append((char)0xff);
+    content.append((char)0xff);
+    content.append((char)0xff);
+    content.append((char)0xff);
+    content.append((char)0xff);
+
+    QByteArray qba = getSendPacket(content);
+    while(true){
+        send(qba.data(),qba.length());
+        QyhSleep(600);
+        if(sendQueueNumber == recvQueueNumber)break;
+    }
+    qDebug()<<"send OK";
 }
 
 void Agv::doStop()
@@ -629,10 +688,17 @@ void Agv::sendOrder()
             content.append((char)0x00);
         }else{
             AgvOrder order = orders.at(i+ordersIndex);
-            content.append((order.rfid>>24)&0xFF);
-            content.append((order.rfid>>16)&0xFF);
-            content.append((order.rfid>>8)&0xFF);
+            //            content.append((rfid)&0xFF);
+            //            content.append((rfid>>8)&0xFF);
+            //            content.append((rfid>>16)&0xFF);
+            //            content.append((rfid>>24)&0xFF);
             content.append((order.rfid)&0xFF);
+            content.append((order.rfid>>8)&0xFF);
+            content.append((order.rfid>>16)&0xFF);
+            content.append((order.rfid>>24)&0xFF);
+
+
+
             content.append(order.order&0xFF);
             content.append(order.param&0xFF);
             lastSendOrderAmount+=1;
