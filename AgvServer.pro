@@ -32,7 +32,10 @@ SOURCES += main.cpp \
     publisher/agvtaskpublisher.cpp \
     publisher/logpublisher.cpp \
     bean/agv.cpp \
-    bean/task.cpp
+    bean/task.cpp \
+    bean/agvconnection.cpp \
+    bean/agvcmdqueue.cpp \
+    bean/agvagent.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -71,7 +74,10 @@ HEADERS += \
     publisher/agvtaskpublisher.h \
     publisher/logpublisher.h \
     bean/agv.h \
-    bean/task.h
+    bean/task.h \
+    bean/agvconnection.h \
+    bean/agvcmdqueue.h \
+    bean/agvagent.h
 
 #pluginXml
 INCLUDEPATH += D:\thirdparty\pugixml\include

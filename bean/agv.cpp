@@ -688,10 +688,6 @@ void Agv::sendOrder()
             content.append((char)0x00);
         }else{
             AgvOrder order = orders.at(i+ordersIndex);
-            //            content.append((rfid)&0xFF);
-            //            content.append((rfid>>8)&0xFF);
-            //            content.append((rfid>>16)&0xFF);
-            //            content.append((rfid>>24)&0xFF);
             content.append((order.rfid)&0xFF);
             content.append((order.rfid>>8)&0xFF);
             content.append((order.rfid>>16)&0xFF);

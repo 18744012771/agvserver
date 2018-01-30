@@ -17,4 +17,5 @@ int getInt32FromByte(char *data);
 uint16_t getInt16FromByte(char *data);
 
 uint8_t getInt8FromByte(char *data);
+
 #endif // COMMON_H
