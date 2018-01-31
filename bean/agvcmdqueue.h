@@ -59,6 +59,7 @@ class AgvCmdQueue
 public:
 
     typedef std::function<bool (const char *data,int len)> ToSendCallback;
+    typedef std::function<void ()> FinishCallback;
 
     enum{
         PICK_PUT_HEIGHT = 30,//叉起或者放下需要的升降的高度
@@ -67,11 +68,11 @@ public:
     AgvCmdQueue();
     ~AgvCmdQueue();
 
-    void init(ToSendCallback _toSend);
+    void init(ToSendCallback _toSend, FinishCallback _finish);
 
     void clear();
 
-    void setQueue(std::list<AgvOrder> ord);
+    void setQueue(const std::list<AgvOrder>& ord);
 
     void onOrderQueueChanged(int queueNumber,int orderQueueNumber);
 
@@ -93,6 +94,7 @@ private:
     volatile int lastSendOrderAmount = 0;//上一次发送的指令的数量
 
     ToSendCallback toSend;
+    FinishCallback finish;
 };
 
 #endif // AGVCMDQUEUE_H

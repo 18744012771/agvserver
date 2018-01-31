@@ -56,6 +56,7 @@ void AgvCmdQueue::cmdProcess()
                 {
                     //对上一次的内容重新发送:
                     ordersSendIndex -= lastSendOrderAmount;
+                    --sendQueueNumber;
                     sendOrder();
                     sendFailTimes = 0;
                 }
@@ -65,12 +66,12 @@ void AgvCmdQueue::cmdProcess()
             sendFailTimes = 0;
         }
 
-        //如果当前执行的序列>=1表示已经执行了1个或几个发过去的指令了，那么要赶紧填充新的指令给它
+        //如果当前执行的序列>=1表示已经执行了1个或几个发过去的指令了，那么要填充新的指令给它
         if(orderExcuteIndex >= 1)
         {
-            if(lastSendOrderAmount>orderExcuteIndex)
+            if(lastSendOrderAmount>=orderExcuteIndex)
             {
-                ordersSendIndex -= (lastSendOrderAmount-orderExcuteIndex-1);
+                ordersSendIndex -= (lastSendOrderAmount-orderExcuteIndex);
             }
             sendOrder();
         }
@@ -83,6 +84,11 @@ void AgvCmdQueue::sendOrder()
     mtx.lock();
     if(ordersSendIndex>=orders.size()){
         mtx.unlock();
+        //TODO:完成了队列的发送:
+        if(orders.size()!=0 && finish!=nullptr)
+        {
+            finish();
+        }
         return ;
     }
 
@@ -126,9 +132,10 @@ void AgvCmdQueue::sendOrder()
     }
 }
 
-void AgvCmdQueue::init(ToSendCallback _toSend)
+void AgvCmdQueue::init(ToSendCallback _toSend, FinishCallback _finish)
 {
     toSend = _toSend;
+    finish = _finish;
     //启动一个线程，创建socket并连接，然后发送和读取
     std::thread(cmdThread,this).detach();
 }
@@ -143,13 +150,16 @@ void AgvCmdQueue::onOrderQueueChanged(int queueNumber,int orderQueueNumber)
 void AgvCmdQueue::clear()
 {
     mtx.lock();
+    ordersSendIndex = 0;
     orders.clear();
+    sendOrder();
     mtx.unlock();
 }
 
-void AgvCmdQueue::setQueue(std::list<AgvOrder> ord)
+void AgvCmdQueue::setQueue(const std::list<AgvOrder>& ord)
 {
     mtx.lock();
+    ordersSendIndex = 0;
     orders=ord;
     mtx.unlock();
 }

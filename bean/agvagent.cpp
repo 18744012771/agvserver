@@ -14,10 +14,33 @@ AgvAgent::~AgvAgent()
     if(connection)delete connection;
 }
 
-bool AgvAgent::init(QString _ip, int _port)
+//开始任务
+void AgvAgent::startTask(const std::list<AgvOrder>& ord)
+{
+    if(cmdQueue)
+    {
+        cmdQueue->setQueue(ord);
+    }
+}
+
+//停止、取消任务
+void AgvAgent::stopTask()
+{
+    if(cmdQueue)
+    {
+        cmdQueue->clear();
+    }
+}
+
+bool AgvAgent::init(QString _ip, int _port,TaskFinishCallback _taskFinish,TaskErrorCallback _taskError,TaskInteruptCallback _taskInteruput,UpdateMCallback _updateM,UpdateMRCallback _updateMR)
 {
     ip = _ip;
     port = _port;
+    taskFinish = _taskFinish;
+    taskError = _taskError;
+    taskInteruput = _taskInteruput;
+    updateM = _updateM;
+    updateMR = _updateMR;
     if(cmdQueue){
         delete cmdQueue;
         cmdQueue = NULL;
@@ -37,7 +60,7 @@ bool AgvAgent::init(QString _ip, int _port)
     //创建队列处理
     AgvCmdQueue::ToSendCallback s = std::bind(&AgvConnection::send,connection,std::placeholders::_1,std::placeholders::_2);
     cmdQueue = new AgvCmdQueue;
-    cmdQueue->init(s);
+    cmdQueue->init(s,taskFinish);
 }
 
 void  AgvAgent::onRecv(const char *data,int len)
@@ -135,13 +158,17 @@ void AgvAgent::processOnePack(QByteArray qba)
 
     //更新小车状态
     if(mode == AGV_MODE_HAND){
-        if(currentTaskId > 0){
+        if(currentTaskId > 0)
+        {
+            if(taskInteruput!= nullptr){
+                taskInteruput();
+            }
+
             //1.通知cmdqueue，取消任务
 
             //2.通知上面的，取消任务了
 
             //3.任务置空
-
 
             //emit taskCancel(currentTaskId);
         }
@@ -151,6 +178,10 @@ void AgvAgent::processOnePack(QByteArray qba)
     //更新错误状态
     if(error_no !=0 && currentTaskId > 0)
     {
+        if(taskError!=nullptr){
+            taskError(error_no);
+        }
+
         //任务过程中发生错误
         //TODO:
         //1.更新队列
@@ -164,9 +195,16 @@ void AgvAgent::processOnePack(QByteArray qba)
     {
         lastRfid = currentRfid;
         lastStationOdometer = mileage;
+
+        if(updateMR!=nullptr){
+            updateMR(currentRfid,mileage,this);
+        }
         //TODO:
         //emit updateRfidAndOdometer(currentRfid,mileage);
     }else{
+        if(updateM!=nullptr){
+            updateM(mileage,this);
+        }
         //TODO:
         //emit updateOdometer(mileage);
     }

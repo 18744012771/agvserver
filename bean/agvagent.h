@@ -9,12 +9,49 @@ class AgvAgent
 public:
     AgvAgent();
     ~AgvAgent();
-    bool init(QString _ip, int _port);
+    bool init(QString _ip, int _port, TaskFinishCallback _taskFinish, TaskErrorCallback _taskError, TaskInteruptCallback _taskInteruput, UpdateMCallback _updateM, UpdateMRCallback _updateMR);
 
     void onRecv(const char *data,int len);
     void onConnect();
     void onDisconnect();
 
+    //开始任务
+    void startTask(const std::list<AgvOrder>& ord);
+
+    //停止、取消任务
+    void stopTask();
+
+    void setTaskFinishCallback(TaskFinishCallback _taskFinish){
+        taskFinish = _taskFinish;
+    }
+
+    void setTaskErrorCallback(TaskErrorCallback _taskError){
+        taskError = _taskError;
+    }
+
+    void setTaskInteruptCallback(TaskInteruptCallback _taskInteruput){
+        taskInteruput = _taskInteruput;
+    }
+
+    //任务结束回调
+    typedef std::function<void ()> TaskFinishCallback;
+    TaskFinishCallback taskFinish;
+
+    //任务错误回调
+    typedef std::function<void (int)> TaskErrorCallback;
+    TaskErrorCallback taskError;
+
+    //任务被打断回调
+    typedef std::function<void (int)> TaskInteruptCallback;
+    TaskInteruptCallback taskInteruput;
+
+    //更新里程计
+    typedef std::function<void (int,AgvAgent*)> UpdateMCallback;
+    UpdateMCallback updateM;
+
+    //更新里程计和站点
+    typedef std::function<void (int,int,AgvAgent *)> UpdateMRCallback;
+    UpdateMRCallback updateMR;
 
     /////////////-------------------------------------------------------------------------
     //ID
