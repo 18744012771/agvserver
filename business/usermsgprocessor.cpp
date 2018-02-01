@@ -295,10 +295,12 @@ std::string UserMsgProcessor::clientMsgTaskProcess(zmq::context_t *ctx,QMap<QStr
     if(!checkAccessToken(ctx,requestDatas,responseParams,loginUserinfo)){
         return getResponseXml(responseParams,responseDatalists);
     }
-    /// 创建任务(创建到X点的任务)
+
+    /// 创建测试执行任务
     else if(requestDatas["todo"]=="excute"){
-        Task_CreateToX(ctx,requestDatas,datalists,responseParams,responseDatalists);
+        Task_Excute(ctx,requestDatas,datalists,responseParams,responseDatalists);
     }
+
     /// 创建任务(创建到X点的任务)
     else if(requestDatas["todo"]=="toX"){
         Task_CreateToX(ctx,requestDatas,datalists,responseParams,responseDatalists);

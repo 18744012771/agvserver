@@ -66,15 +66,21 @@ void AgvCmdQueue::cmdProcess()
             sendFailTimes = 0;
         }
 
-        //如果当前执行的序列>=1表示已经执行了1个或几个发过去的指令了，那么要填充新的指令给它
-        if(orderExcuteIndex >= 1)
-        {
-            if(lastSendOrderAmount>=orderExcuteIndex)
-            {
-                ordersSendIndex -= (lastSendOrderAmount-orderExcuteIndex);
-            }
+        //第一次发送任务
+        if(ordersSendIndex == 0 && orderExcuteIndex == 0){
             sendOrder();
+        }else{
+            //如果当前执行的序列>=1表示已经执行了1个或几个发过去的指令了，那么要填充新的指令给它
+            if(orderExcuteIndex >= 1)
+            {
+                if(lastSendOrderAmount>=orderExcuteIndex)
+                {
+                    ordersSendIndex -= (lastSendOrderAmount-orderExcuteIndex);
+                }
+                sendOrder();
+            }
         }
+
     }
     threadAlreadQuit = true;
 }
@@ -83,7 +89,7 @@ void AgvCmdQueue::sendOrder()
 {
     mtx.lock();
     if(orders.length() == 0 && ordersSendIndex == 0){
-        //
+        //要发送停止指令
     }else{
         if(ordersSendIndex>=orders.length()){
             orders.clear();
@@ -191,7 +197,8 @@ QByteArray AgvCmdQueue::getSendPacket(QByteArray content)
     result.append(AGV_PACK_HEAD);
 
     //包长
-    int len = 1/*包长*/+content.length()/*内容长*/+1/*校验码*/+1/*包尾*/;
+    //       包长 内容长         校验码 包尾
+    int len = 1+content.length()+1+1;
     result.append(len&0xFF);
 
     //内容

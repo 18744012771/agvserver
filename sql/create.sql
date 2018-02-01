@@ -25,7 +25,7 @@ create table agv_task_node(id INTEGER PRIMARY KEY AUTO_INCREMENT, task_node_stat
 CREATE TABLE agv_user(id INTEGER PRIMARY KEY AUTO_INCREMENT,user_username text,user_password text,user_realName TEXT,user_lastSignTime datetime,user_signState integer,user_sex bool,user_age int,user_createTime datetime,user_role INTEGER);
 
 #创建 agv 表
-CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTO_INCREMENT,agv_name text,agv_ip text);
+CREATE TABLE agv_agv(id INTEGER PRIMARY KEY AUTO_INCREMENT,agv_name text,agv_ip text,agv_port int);
 
 ###############查询表是否存在
 #select count(*) from INFORMATION_SCHEMA.TABLES where TABLE_NAME='agv_agv' ;
