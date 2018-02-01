@@ -32,7 +32,7 @@ void AgvCmdQueue::cmdProcess()
     {
         //如果没有要发送的内容，等待
         mtx.lock();
-        if(orders.size()<=0)
+        if(orders.length()<=0)
         {
             mtx.unlock();
             std::chrono::milliseconds dura(50);
@@ -82,15 +82,21 @@ void AgvCmdQueue::cmdProcess()
 void AgvCmdQueue::sendOrder()
 {
     mtx.lock();
-    if(ordersSendIndex>=orders.size()){
-        mtx.unlock();
-        //TODO:完成了队列的发送:
-        if(orders.size()!=0 && finish!=nullptr)
-        {
-            finish();
+    if(orders.length() == 0 && ordersSendIndex == 0){
+        //
+    }else{
+        if(ordersSendIndex>=orders.length()){
+            orders.clear();
+            mtx.unlock();
+            //TODO:完成了队列的发送:
+            if(orders.size()!=0 && finish!=nullptr)
+            {
+                finish();
+            }
+            return ;
         }
-        return ;
     }
+
 
     //根据orders封装一个发送的命令
     QByteArray content;
@@ -105,13 +111,13 @@ void AgvCmdQueue::sendOrder()
 
     for(int i=0;i<3;++i)
     {
-        if(i+ordersSendIndex>=orders.length()){
+        if(i+ordersSendIndex>=orders.size()){
             //放入一个空
             content.append(getRfidByte(AgvOrder::RFID_CODE_IMMEDIATELY));
             content.append((char)(AgvOrder::ORDER_STOP));
             content.append((char)0x00);
         }else{
-            AgvOrder order = orders.at(i+ordersSendIndex);
+            AgvOrder order = orders[i+ordersSendIndex];
             content.append(getRfidByte(order.rfid));
             content.append(order.order&0xFF);
             content.append(order.param&0xFF);
@@ -156,7 +162,7 @@ void AgvCmdQueue::clear()
     mtx.unlock();
 }
 
-void AgvCmdQueue::setQueue(const std::list<AgvOrder>& ord)
+void AgvCmdQueue::setQueue(const QList<AgvOrder> &ord)
 {
     mtx.lock();
     ordersSendIndex = 0;

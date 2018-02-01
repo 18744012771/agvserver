@@ -111,6 +111,9 @@ private:
 
     ////////////////////////////////任务部分
 
+
+    //直接执行任务
+    void Task_Excute(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists);
     //创建任务(创建到X点的任务)
     void Task_CreateToX(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists);
     //创建任务(创建指定车辆到X点的任务)

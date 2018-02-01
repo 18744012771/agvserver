@@ -15,7 +15,7 @@ AgvAgent::~AgvAgent()
 }
 
 //开始任务
-void AgvAgent::startTask(const std::list<AgvOrder>& ord)
+void AgvAgent::startTask(QList<AgvOrder>& ord)
 {
     if(cmdQueue)
     {
@@ -29,6 +29,14 @@ void AgvAgent::stopTask()
     if(cmdQueue)
     {
         cmdQueue->clear();
+    }
+}
+
+
+void AgvAgent::onQueueFinish()
+{
+    if(taskFinish!=nullptr){
+        taskFinish(this);
     }
 }
 
@@ -54,13 +62,16 @@ bool AgvAgent::init(QString _ip, int _port,TaskFinishCallback _taskFinish,TaskEr
     connection = new AgvConnection;
     QyhTcp::QyhClientReadCallback r =  std::bind( &AgvAgent::onRecv, this, std::placeholders::_1,std::placeholders::_2);
     QyhTcp::QyhClientConnectCallback c =  std::bind( &AgvAgent::onConnect, this);
-    QyhTcp::QyhClientConnectCallback d =  std::bind( &AgvAgent::onDisconnect, this);
+    QyhTcp::QyhClientDisconnectCallback d =  std::bind( &AgvAgent::onDisconnect, this);
     connection->init(_ip,_port,r,c,d);
 
     //创建队列处理
     AgvCmdQueue::ToSendCallback s = std::bind(&AgvConnection::send,connection,std::placeholders::_1,std::placeholders::_2);
+    AgvCmdQueue::FinishCallback f = std::bind(&AgvAgent::onQueueFinish,this);
     cmdQueue = new AgvCmdQueue;
-    cmdQueue->init(s,taskFinish);
+    cmdQueue->init(s,f);
+
+    return true;
 }
 
 void  AgvAgent::onRecv(const char *data,int len)
@@ -160,15 +171,16 @@ void AgvAgent::processOnePack(QByteArray qba)
     if(mode == AGV_MODE_HAND){
         if(currentTaskId > 0)
         {
-            if(taskInteruput!= nullptr){
-                taskInteruput();
-            }
 
             //1.通知cmdqueue，取消任务
+            cmdQueue->clear();
 
             //2.通知上面的，取消任务了
+            if(taskInteruput!= nullptr){
+                taskInteruput(this);
+            }
 
-            //3.任务置空
+            //3.任务置空? 交给上面完成吧
 
             //emit taskCancel(currentTaskId);
         }
@@ -178,16 +190,12 @@ void AgvAgent::processOnePack(QByteArray qba)
     //更新错误状态
     if(error_no !=0 && currentTaskId > 0)
     {
-        if(taskError!=nullptr){
-            taskError(error_no);
-        }
-
+        //1.通知cmdqueue，取消任务
+        cmdQueue->clear();
         //任务过程中发生错误
-        //TODO:
-        //1.更新队列
-
-        //2.发射信号
-        //emit taskError(currentTaskId);
+        if(taskError!=nullptr){
+            taskError(error_no,this);
+        }
     }
 
     //更新rfid       //更新里程计
@@ -199,14 +207,10 @@ void AgvAgent::processOnePack(QByteArray qba)
         if(updateMR!=nullptr){
             updateMR(currentRfid,mileage,this);
         }
-        //TODO:
-        //emit updateRfidAndOdometer(currentRfid,mileage);
     }else{
         if(updateM!=nullptr){
             updateM(mileage,this);
         }
-        //TODO:
-        //emit updateOdometer(mileage);
     }
 
     if(cmdQueue){

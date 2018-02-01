@@ -5,25 +5,6 @@
 #include <iostream>
 using std::cin;
 
-
-void handcontrol()
-{
-    bool quit = false;
-    while(!quit){
-        char c;
-        cin>>c;
-        switch(c){
-        case 'q':
-            quit = true;
-            break;
-        default:
-            g_hrgAgvCenter->goStandBy();
-            break;
-        }
-    }
-
-}
-
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -62,12 +43,6 @@ int main(int argc, char *argv[])
     //    {
     //        g_log->log(AGV_LOG_LEVEL_ERROR,"task make fail init,check your sqlserver connection!");
     //    }
-    QyhSleep(2000);
-
-    g_hrgAgvCenter->goStandBy();
-
-    //std::thread(handcontrol).detach();
-
 
     return a.exec();
 }

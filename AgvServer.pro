@@ -31,7 +31,6 @@ SOURCES += main.cpp \
     publisher/agvstatuspublisher.cpp \
     publisher/agvtaskpublisher.cpp \
     publisher/logpublisher.cpp \
-    bean/agv.cpp \
     bean/task.cpp \
     bean/agvconnection.cpp \
     bean/agvcmdqueue.cpp \
@@ -73,7 +72,6 @@ HEADERS += \
     publisher/agvstatuspublisher.h \
     publisher/agvtaskpublisher.h \
     publisher/logpublisher.h \
-    bean/agv.h \
     bean/task.h \
     bean/agvconnection.h \
     bean/agvcmdqueue.h \

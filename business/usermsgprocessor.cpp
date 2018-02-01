@@ -295,7 +295,10 @@ std::string UserMsgProcessor::clientMsgTaskProcess(zmq::context_t *ctx,QMap<QStr
     if(!checkAccessToken(ctx,requestDatas,responseParams,loginUserinfo)){
         return getResponseXml(responseParams,responseDatalists);
     }
-
+    /// 创建任务(创建到X点的任务)
+    else if(requestDatas["todo"]=="excute"){
+        Task_CreateToX(ctx,requestDatas,datalists,responseParams,responseDatalists);
+    }
     /// 创建任务(创建到X点的任务)
     else if(requestDatas["todo"]=="toX"){
         Task_CreateToX(ctx,requestDatas,datalists,responseParams,responseDatalists);
@@ -708,9 +711,9 @@ void UserMsgProcessor:: AgvManage_List(zmq::context_t *ctx, QMap<QString, QStrin
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
 
-    for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
+    for(QMap<int,AgvAgent *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
         QMap<QString,QString> list;
-        Agv *agv = itr.value();
+        AgvAgent *agv = itr.value();
 
         list.insert(QString("id"),QString("%1").arg(agv->id));
         list.insert(QString("name"),QString("%1").arg(agv->name));
@@ -734,7 +737,7 @@ void UserMsgProcessor:: AgvManage_Add(zmq::context_t *ctx, QMap<QString, QString
             if(queryresult.length()>0 &&queryresult.at(0).length()>0)
             {
                 newId = queryresult.at(0).at(0).toInt();
-                Agv *agv = new Agv;
+                AgvAgent *agv = new AgvAgent;
                 agv->id = (newId);
                 agv->name = (requestDatas["name"]);
                 agv->ip = (requestDatas["ip"]);
@@ -794,7 +797,7 @@ void UserMsgProcessor:: AgvManage_Modify(zmq::context_t *ctx, QMap<QString, QStr
             responseParams.insert(QString("info"),QString("not exist of this agvid."));
             responseParams.insert(QString("result"),QString("fail"));
         }else{
-            Agv *agv = g_m_agvs[iAgvId];
+            AgvAgent *agv = g_m_agvs[iAgvId];
             QString updateSql = "update agv_agv set agv_name=?,agv_ip=? where id=?";
             QList<QVariant> params;
             params<<(requestDatas["name"])<<(requestDatas["ip"])<<(requestDatas["agvid"]);
@@ -813,6 +816,30 @@ void UserMsgProcessor:: AgvManage_Modify(zmq::context_t *ctx, QMap<QString, QStr
 
 
 ////////////////////////////////任务部分
+//直接执行任务
+void UserMsgProcessor::Task_Excute(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists)
+{
+    if(checkParamExistAndNotNull(requestDatas,responseParams,"orders",NULL))
+    {
+        QList<AgvOrder> orders;
+        QString ss = requestDatas["orders"];
+        QStringList qsl = ss.split(";");
+        foreach (auto str, qsl) {
+            QStringList qqsl = str.split(",");
+            if(qqsl.length() == 3){
+                AgvOrder o;
+                o.rfid = qqsl.at(0).toInt();
+                o.order = qqsl.at(1).toInt();
+                o.param = qqsl.at(2).toInt();
+                orders.append(o);
+            }
+        }
+
+        g_hrgAgvCenter->doExcute(orders);
+        responseParams.insert(QString("info"),QString(""));
+        responseParams.insert(QString("result"),QString("success"));
+    }
+}
 //创建任务(创建到X点的任务)
 void UserMsgProcessor::Task_CreateToX(zmq::context_t *ctx, QMap<QString, QString> &requestDatas, QList<QMap<QString, QString> > &datalists,QMap<QString,QString> &responseParams,QList<QMap<QString,QString> > &responseDatalists){
     if(checkParamExistAndNotNull(requestDatas,responseParams,"x",NULL))

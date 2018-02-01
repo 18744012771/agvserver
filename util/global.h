@@ -15,7 +15,7 @@
 #include "sql/sqlserver.h"
 #include "network/qyhzmqserver.h"
 
-#include "bean/agv.h"
+#include "bean/agvagent.h"
 #include "bean/agvline.h"
 #include "bean/agvstation.h"
 #include "bean/task.h"
@@ -81,7 +81,7 @@ extern UserMsgProcessor *userMsgProcessor;
 extern TaskMaker *g_taskMaker;
 
 //所有的bean集合
-extern QMap<int,Agv *> g_m_agvs;//车辆
+extern QMap<int,AgvAgent *> g_m_agvs;//车辆
 extern QMap<int,AgvStation *> g_m_stations;//站点
 extern QMap<int,AgvLine *> g_m_lines;//线路
 extern QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_lmr; //左中右

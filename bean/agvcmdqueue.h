@@ -1,7 +1,7 @@
 #ifndef AGVCMDQUEUE_H
 #define AGVCMDQUEUE_H
 
-#include <list>
+#include <QList>
 #include <mutex>
 #include <QByteArray>
 /*
@@ -28,6 +28,17 @@ const char CHAR_NULL = '\0';
 
 class AgvOrder{
 public:
+    AgvOrder(){
+        rfid = RFID_CODE_IMMEDIATELY;
+        order = ORDER_STOP;
+        param = 0x00;
+    }
+    AgvOrder(const AgvOrder &b){
+        rfid = b.rfid;
+        order = b.order;
+        param = b.param;
+    }
+
     //卡ID(也就是RFID)
     enum{
         RFID_CODE_IMMEDIATELY = 0x00000000,//立即执行命令
@@ -72,7 +83,7 @@ public:
 
     void clear();
 
-    void setQueue(const std::list<AgvOrder>& ord);
+    void setQueue(const QList<AgvOrder>& ord);
 
     void onOrderQueueChanged(int queueNumber,int orderQueueNumber);
 
@@ -82,7 +93,7 @@ private:
     QByteArray getSendPacket(QByteArray content);
     QByteArray getRfidByte(int rfid);
     void sendOrder();
-    std::list<AgvOrder> orders;
+    QList<AgvOrder> orders;
     std::mutex mtx;
     volatile bool quit;
     volatile bool threadAlreadQuit;
