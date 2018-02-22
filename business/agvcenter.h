@@ -5,7 +5,7 @@
 #include <QList>
 #include <QMutex>
 #include <QMap>
-#include "bean/agvagent.h"
+#include "bean/agv.h"
 class Task;
 
 class AgvCenter : public QObject
@@ -13,9 +13,9 @@ class AgvCenter : public QObject
     Q_OBJECT
 public:
     explicit AgvCenter(QObject *parent = nullptr);
-    QList<AgvAgent *> getIdleAgvs();
+    QList<Agv *> getIdleAgvs();
 
-    bool agvStartTask(AgvAgent *agv, Task *task);
+    bool agvStartTask(Agv *agv, Task *task);
 
     bool agvStopTask(int agvId);
 
@@ -34,15 +34,15 @@ public:
     void doExcute(QList<AgvOrder> orders);
 
 
-    void updateOdometer(int odometer,AgvAgent *agv);
+    void updateOdometer(int odometer,Agv *agv);
 
-    void updateStationOdometer(int rfid, int odometer,AgvAgent *agv);
+    void updateStationOdometer(int rfid, int odometer,Agv *agv);
 
-    void onFinish(AgvAgent *agv);
+    void onFinish(Agv *agv);
 
-    void onError(int code, AgvAgent *agv);
+    void onError(int code, Agv *agv);
 
-    void onInterupt(AgvAgent *agv);
+    void onInterupt(Agv *agv);
 
 signals:
     void carArriveStation(int agvId,int station);

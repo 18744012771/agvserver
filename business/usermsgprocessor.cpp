@@ -713,9 +713,9 @@ void UserMsgProcessor:: AgvManage_List(zmq::context_t *ctx, QMap<QString, QStrin
     responseParams.insert(QString("info"),QString(""));
     responseParams.insert(QString("result"),QString("success"));
 
-    for(QMap<int,AgvAgent *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
+    for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
         QMap<QString,QString> list;
-        AgvAgent *agv = itr.value();
+        Agv *agv = itr.value();
 
         list.insert(QString("id"),QString("%1").arg(agv->id));
         list.insert(QString("name"),QString("%1").arg(agv->name));
@@ -739,7 +739,7 @@ void UserMsgProcessor:: AgvManage_Add(zmq::context_t *ctx, QMap<QString, QString
             if(queryresult.length()>0 &&queryresult.at(0).length()>0)
             {
                 newId = queryresult.at(0).at(0).toInt();
-                AgvAgent *agv = new AgvAgent;
+                Agv *agv = new Agv;
                 agv->id = (newId);
                 agv->name = (requestDatas["name"]);
                 agv->ip = (requestDatas["ip"]);
@@ -799,7 +799,7 @@ void UserMsgProcessor:: AgvManage_Modify(zmq::context_t *ctx, QMap<QString, QStr
             responseParams.insert(QString("info"),QString("not exist of this agvid."));
             responseParams.insert(QString("result"),QString("fail"));
         }else{
-            AgvAgent *agv = g_m_agvs[iAgvId];
+            Agv *agv = g_m_agvs[iAgvId];
             QString updateSql = "update agv_agv set agv_name=?,agv_ip=? where id=?";
             QList<QVariant> params;
             params<<(requestDatas["name"])<<(requestDatas["ip"])<<(requestDatas["agvid"]);

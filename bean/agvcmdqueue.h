@@ -69,7 +69,7 @@ class AgvCmdQueue
 {
 public:
 
-    typedef std::function<bool (const char *data,int len)> ToSendCallback;
+    typedef std::function<void (const char *data,int len)> ToSendCallback;
     typedef std::function<void ()> FinishCallback;
 
     enum{

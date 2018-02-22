@@ -5,7 +5,7 @@
 #include <QTimer>
 #include <QMutex>
 #include "bean/task.h"
-//#include "bean/agvagent.h"
+//#include "bean/agv.h"
 
 
 class TaskCenter : public QObject

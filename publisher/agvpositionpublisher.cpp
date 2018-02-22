@@ -31,7 +31,7 @@ void AgvPositionPublisher::run()
         responseDatas.insert(QString("type"),QString("map"));
         responseDatas.insert(QString("todo"),QString("periodica"));
 
-        for(QMap<int,AgvAgent *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
+        for(QMap<int,Agv *>::iterator itr = g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
         {
             QMap<QString,QString> mm;
             mm.insert(QString("x"),QString("%1").arg(itr.value()->x));

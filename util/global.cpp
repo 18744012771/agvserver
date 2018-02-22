@@ -18,7 +18,7 @@ UserMsgProcessor *userMsgProcessor = NULL;
 TaskMaker *g_taskMaker;
 
 //所有的bean集合
-QMap<int,AgvAgent *> g_m_agvs;//车辆
+QMap<int,Agv *> g_m_agvs;//车辆
 QMap<int,AgvStation *> g_m_stations;//站点
 QMap<int,AgvLine *> g_m_lines;//线路
 QMap<PATH_LEFT_MIDDLE_RIGHT,int> g_m_lmr; //左中右

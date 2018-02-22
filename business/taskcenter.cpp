@@ -406,13 +406,13 @@ int TaskCenter::cancelTask(int taskId)
 void TaskCenter::carArriveStation(int car,int station)
 {
     if(!g_m_agvs.contains(car))return ;
-    AgvAgent *agv =g_m_agvs[car];
+    Agv *agv =g_m_agvs[car];
     //达到的站点
     AgvStation sstation = g_agvMapCenter->getAgvStation(station);
     if(sstation.id<=0)return ;
 
     //小车是手动模式，那么就不管了
-    if(agv->mode == AgvAgent::AGV_MODE_HAND){
+    if(agv->mode == Agv::AGV_MODE_HAND){
         return ;
     }
 
@@ -466,7 +466,7 @@ void TaskCenter::carArriveStation(int car,int station)
 //取货OK，那么把任务设置成送货状态放回未分配队列
 void  TaskCenter::onPickFinish(int agvId)
 {
-    AgvAgent *agv = g_m_agvs[agvId];
+    Agv *agv = g_m_agvs[agvId];
     Task *task =queryDoingTask(agv->task);
     if(task==NULL)return ;
     if(task->currentDoIndex != Task::INDEX_GETTING_GOOD)return ;
@@ -485,7 +485,7 @@ void  TaskCenter::onPickFinish(int agvId)
 //放货OK，那么把任务设置成去到固定地点，放回未分配队列
 void  TaskCenter::onPutFinish(int agvId)
 {
-    AgvAgent *agv = g_m_agvs[agvId];
+    Agv *agv = g_m_agvs[agvId];
     Task *task =queryDoingTask(agv->task);
     if(task==NULL)return ;
     if(task->currentDoIndex != Task::INDEX_PUTTING_GOOD)return ;
@@ -504,7 +504,7 @@ void  TaskCenter::onPutFinish(int agvId)
 //任务完成了！
 void  TaskCenter::onStandByFinish(int agvId)
 {
-    AgvAgent *agv = g_m_agvs[agvId];
+    Agv *agv = g_m_agvs[agvId];
     Task *task =queryDoingTask(agv->task);
     if(task==NULL)return ;
     if(task->currentDoIndex != Task::INDEX_GOING_STANDBY)return ;
@@ -547,16 +547,16 @@ void TaskCenter::unassignedTasksProcess()
             aimStation = ttask->standByStation;
         }
 
-        AgvAgent *bestCar = NULL;
+        Agv *bestCar = NULL;
         int minDis = distance_infinity;
         QList<int> path;
         int tempDis = distance_infinity;
 
         if(ttask->excuteCar>0){//固定车辆去执行该任务
             if(!g_m_agvs.contains(ttask->excuteCar))continue;
-            AgvAgent *excutecar = g_m_agvs[ttask->excuteCar];
+            Agv *excutecar = g_m_agvs[ttask->excuteCar];
             if(excutecar==NULL)continue;
-            if(excutecar->status!=AgvAgent::AGV_STATUS_IDLE)continue;
+            if(excutecar->status!=Agv::AGV_STATUS_IDLE)continue;
             QList<int> result;
 
             if(excutecar->nowStation>0){
@@ -571,13 +571,13 @@ void TaskCenter::unassignedTasksProcess()
             }
         }else{
             //寻找最优车辆去执行任务
-            QList<AgvAgent *> idleAgvs = g_hrgAgvCenter->getIdleAgvs();
+            QList<Agv *> idleAgvs = g_hrgAgvCenter->getIdleAgvs();
             if(idleAgvs.length()<=0)//暂时没有可用车辆，直接退出对未分配的任务的操作
                 continue ;
-            QList<AgvAgent *>::iterator ppos;
+            QList<Agv *>::iterator ppos;
             for(ppos = idleAgvs.begin();ppos!=idleAgvs.end();++ppos)
             {
-                AgvAgent *agv = *ppos;
+                Agv *agv = *ppos;
                 QList<int> result;
                 if(agv->nowStation>0){
                     result = g_agvMapCenter->getBestPath(agv->id,agv->lastStation,agv->nowStation, aimStation,tempDis,false);
@@ -620,7 +620,7 @@ void TaskCenter::unassignedTasksProcess()
                 g_agvMapCenter->setReverseOccuAgv(path[i],(bestCar->id));
             }
             //对车子属性进行赋值        //5.把这个车辆置为 非空闲,对车辆的其他信息进行更新
-            bestCar->status = (AgvAgent::AGV_STATUS_TASKING);
+            bestCar->status = (Agv::AGV_STATUS_TASKING);
             bestCar->task = (ttask->id);
             bestCar->currentPath = (path);
             //将任务移动到正在执行的任务//6.把这个任务定为doing。

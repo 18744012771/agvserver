@@ -12,13 +12,13 @@ AgvCenter::AgvCenter(QObject *parent) : QObject(parent)
 }
 
 //获取空闲的车辆
-QList<AgvAgent *> AgvCenter::getIdleAgvs()
+QList<Agv *> AgvCenter::getIdleAgvs()
 {
-    QList<AgvAgent *> result;
+    QList<Agv *> result;
 
-    for(QMap<int,AgvAgent *>::iterator itr =g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
+    for(QMap<int,Agv *>::iterator itr =g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
     {
-        if(itr.value()->status == AgvAgent::AGV_STATUS_IDLE){
+        if(itr.value()->status == Agv::AGV_STATUS_IDLE){
             result.push_back(itr.value());
         }
     }
@@ -27,7 +27,7 @@ QList<AgvAgent *> AgvCenter::getIdleAgvs()
 
 
 //1.只有里程计
-void AgvCenter::updateOdometer(int odometer, AgvAgent *agv)
+void AgvCenter::updateOdometer(int odometer, Agv *agv)
 {
     if(odometer == agv->lastStationOdometer)//在原来的位置没动
         return ;
@@ -109,7 +109,7 @@ void AgvCenter::updateOdometer(int odometer, AgvAgent *agv)
 }
 
 //2.有站点信息和里程计信息
-void AgvCenter::updateStationOdometer(int rfid, int odometer, AgvAgent *agv)
+void AgvCenter::updateStationOdometer(int rfid, int odometer, Agv *agv)
 {
     AgvStation sstation = g_agvMapCenter->getAgvStationByRfid(rfid);
     if(sstation.id<=0)return ;
@@ -146,17 +146,17 @@ void AgvCenter::updateStationOdometer(int rfid, int odometer, AgvAgent *agv)
     emit carArriveStation(agv->id,sstation.id);
 }
 
-void AgvCenter::onFinish(AgvAgent *agv)
+void AgvCenter::onFinish(Agv *agv)
 {
     //TODO
 }
 
-void AgvCenter::onError(int code,AgvAgent *agv)
+void AgvCenter::onError(int code,Agv *agv)
 {
 
 }
 
-void AgvCenter::onInterupt(AgvAgent *agv)
+void AgvCenter::onInterupt(Agv *agv)
 {
 
 }
@@ -167,17 +167,17 @@ bool AgvCenter::load()//从数据库载入所有的agv
     QList<QVariant> params;
     QList<QList<QVariant> > result = g_sql->query(querySql,params);
 
-    AgvAgent::TaskFinishCallback _finish = std::bind(&AgvCenter::onFinish,this,std::placeholders::_1);
-    AgvAgent::TaskErrorCallback _error = std::bind(&AgvCenter::onError,this,std::placeholders::_1,std::placeholders::_2);
-    AgvAgent::TaskInteruptCallback _interupt = std::bind(&AgvCenter::onInterupt,this,std::placeholders::_1);
-    AgvAgent::UpdateMCallback _updateM = std::bind(&AgvCenter::updateOdometer,this,std::placeholders::_1,std::placeholders::_2);
-    AgvAgent::UpdateMRCallback _updateMR = std::bind(&AgvCenter::updateStationOdometer,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3);
+    Agv::TaskFinishCallback _finish = std::bind(&AgvCenter::onFinish,this,std::placeholders::_1);
+    Agv::TaskErrorCallback _error = std::bind(&AgvCenter::onError,this,std::placeholders::_1,std::placeholders::_2);
+    Agv::TaskInteruptCallback _interupt = std::bind(&AgvCenter::onInterupt,this,std::placeholders::_1);
+    Agv::UpdateMCallback _updateM = std::bind(&AgvCenter::updateOdometer,this,std::placeholders::_1,std::placeholders::_2);
+    Agv::UpdateMRCallback _updateMR = std::bind(&AgvCenter::updateStationOdometer,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3);
 
 
     for(int i=0;i<result.length();++i){
         QList<QVariant> qsl = result.at(i);
         if(qsl.length() == 4){
-            AgvAgent *agv = new AgvAgent;
+            Agv *agv = new Agv;
             agv->id=(qsl.at(0).toInt());
             agv->name=(qsl.at(1).toString());
             agv->init(qsl.at(2).toString(),qsl.at(3).toInt(),_finish,_error,_interupt,_updateM,_updateMR);
@@ -230,7 +230,7 @@ bool AgvCenter::save()//将agv保存到数据库
     }
 
     //如果在g_m_agvs中有更多的呢，怎么呢，插入
-    for(QMap<int,AgvAgent *>::iterator itr=g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
+    for(QMap<int,Agv *>::iterator itr=g_m_agvs.begin();itr!=g_m_agvs.end();++itr){
         if(selectAgvIds.contains(itr.key()))continue;
         //插入操作
         QString insertSql = "insert into agv_agv(id,agv_name,agv_ip,agv_port) values(?,?,?,?)";
@@ -408,9 +408,9 @@ void AgvCenter::agvDisconnectCallBack()
 
 bool AgvCenter::agvCancelTask(int agvId)
 {
-    AgvAgent *agv= g_m_agvs[agvId];
-    if(agv->status ==AgvAgent:: AGV_STATUS_TASKING)
-        agv->status = AgvAgent::AGV_STATUS_IDLE;
+    Agv *agv= g_m_agvs[agvId];
+    if(agv->status ==Agv:: AGV_STATUS_TASKING)
+        agv->status = Agv::AGV_STATUS_IDLE;
     //先让小车停下来
     agvStopTask(agvId);
 
@@ -427,8 +427,8 @@ bool AgvCenter::agvCancelTask(int agvId)
         g_agvMapCenter->freeAgvStation(agvId);
     }
 
-    if(agv->status == AgvAgent::AGV_STATUS_TASKING)
-        agv->status = (AgvAgent::AGV_STATUS_IDLE);
+    if(agv->status == Agv::AGV_STATUS_TASKING)
+        agv->status = (Agv::AGV_STATUS_IDLE);
 
     return true;
 }
@@ -439,7 +439,7 @@ bool AgvCenter::agvStopTask(int agvId)
     {
         return false;
     }
-    AgvAgent *agv = g_m_agvs[agvId];
+    Agv *agv = g_m_agvs[agvId];
     agv->stopTask();
     return true;
 }
@@ -450,7 +450,7 @@ bool AgvCenter::agvStopTask(int agvId)
  *height:叉板的高度
  *type: 0原地待命 1取货  -1放货
  * */
-bool AgvCenter::agvStartTask(AgvAgent *agv, Task *task)
+bool AgvCenter::agvStartTask(Agv *agv, Task *task)
 {
 //    if(task->currentDoIndex == Task::INDEX_GETTING_GOOD)
 //    {
@@ -469,9 +469,9 @@ bool AgvCenter::agvStartTask(AgvAgent *agv, Task *task)
 
 void AgvCenter::doExcute(QList<AgvOrder> orders)
 {
-    for(QMap<int,AgvAgent *>::iterator itr =g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
+    for(QMap<int,Agv *>::iterator itr =g_m_agvs.begin();itr!=g_m_agvs.end();++itr)
     {
-        if(itr.value()->status == AgvAgent::AGV_STATUS_IDLE){
+        if(itr.value()->status == Agv::AGV_STATUS_IDLE){
             if(orders.length()>0)
                 itr.value()->startTask(orders);
             else

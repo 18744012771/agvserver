@@ -1,39 +1,38 @@
-#ifndef AGVAGENT_H
-#define AGVAGENT_H
+#ifndef AGV_H
+#define AGV_H
 
+#include <QObject>
 #include "agvcmdqueue.h"
-#include "agvconnection.h"
+#include <QTcpSocket>
 
-class AgvAgent
+class Agv : public QObject
 {
+    Q_OBJECT
 public:
+    explicit Agv(QObject *parent = nullptr);
+    ~Agv();
+
     //任务结束回调
-    typedef std::function<void (AgvAgent *)> TaskFinishCallback;
+    typedef std::function<void (Agv *)> TaskFinishCallback;
     TaskFinishCallback taskFinish;
 
     //任务错误回调
-    typedef std::function<void (int,AgvAgent *)> TaskErrorCallback;
+    typedef std::function<void (int,Agv *)> TaskErrorCallback;
     TaskErrorCallback taskError;
 
     //任务被打断回调
-    typedef std::function<void (AgvAgent *)> TaskInteruptCallback;
+    typedef std::function<void (Agv *)> TaskInteruptCallback;
     TaskInteruptCallback taskInteruput;
 
     //更新里程计
-    typedef std::function<void (int,AgvAgent*)> UpdateMCallback;
+    typedef std::function<void (int,Agv *)> UpdateMCallback;
     UpdateMCallback updateM;
 
     //更新里程计和站点
-    typedef std::function<void (int,int,AgvAgent *)> UpdateMRCallback;
+    typedef std::function<void (int,int,Agv *)> UpdateMRCallback;
     UpdateMRCallback updateMR;
 
-    AgvAgent();
-    ~AgvAgent();
     bool init(QString _ip, int _port, TaskFinishCallback _taskFinish = nullptr, TaskErrorCallback _taskError = nullptr, TaskInteruptCallback _taskInteruput = nullptr, UpdateMCallback _updateM = nullptr, UpdateMRCallback _updateMR = nullptr);
-
-    void onRecv(const char *data,int len);
-    void onConnect();
-    void onDisconnect();
 
     //开始任务
     void startTask(QList<AgvOrder> &ord);
@@ -42,6 +41,8 @@ public:
     void stopTask();
 
     void onQueueFinish();
+
+    void onSend(const char *data,int len);
 
     void setTaskFinishCallback(TaskFinishCallback _taskFinish){
         taskFinish = _taskFinish;
@@ -142,11 +143,17 @@ public:
 
     /////////////-------------------------------------------------------------------------
 
+signals:
+
+public slots:
+    void onRecv();
+    void onConnect();
+    void onDisconnect();
 private:
     AgvCmdQueue *cmdQueue;//维护长队列、短队列
-    AgvConnection *connection;//维护和AGV的连接
+    QTcpSocket *connection;//维护和AGV的连接
 
     void processOnePack(QByteArray qba);
 };
 
-#endif // AGVAGENT_H
+#endif // AGV_H

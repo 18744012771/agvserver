@@ -175,7 +175,7 @@ bool Sql::createConnection()
         database.setPort(3306);
 
         database.setUserName("root");
-        database.setPassword("123456");
+        database.setPassword("6980103");
     }
 
     if(!database.isValid())return false;

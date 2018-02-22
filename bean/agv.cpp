@@ -1,21 +1,22 @@
-#include "agvagent.h"
+#include "agv.h"
 #include "util/common.h"
 
-AgvAgent::AgvAgent():
+Agv::Agv(QObject *parent) : QObject(parent),
     cmdQueue(NULL),
     connection(NULL)
 {
 
 }
 
-AgvAgent::~AgvAgent()
+
+Agv::~Agv()
 {
     if(cmdQueue)delete cmdQueue;
     if(connection)delete connection;
 }
 
 //开始任务
-void AgvAgent::startTask(QList<AgvOrder>& ord)
+void Agv::startTask(QList<AgvOrder>& ord)
 {
     if(cmdQueue)
     {
@@ -24,7 +25,7 @@ void AgvAgent::startTask(QList<AgvOrder>& ord)
 }
 
 //停止、取消任务
-void AgvAgent::stopTask()
+void Agv::stopTask()
 {
     if(cmdQueue)
     {
@@ -33,14 +34,22 @@ void AgvAgent::stopTask()
 }
 
 
-void AgvAgent::onQueueFinish()
+void Agv::onQueueFinish()
 {
     if(taskFinish!=nullptr){
         taskFinish(this);
     }
 }
 
-bool AgvAgent::init(QString _ip, int _port,TaskFinishCallback _taskFinish,TaskErrorCallback _taskError,TaskInteruptCallback _taskInteruput,UpdateMCallback _updateM,UpdateMRCallback _updateMR)
+void Agv::onSend(const char *data,int len)
+{
+    if(connection && connection->isWritable())
+    {
+        connection->write(data,len);
+    }
+}
+
+bool Agv::init(QString _ip, int _port,TaskFinishCallback _taskFinish,TaskErrorCallback _taskError,TaskInteruptCallback _taskInteruput,UpdateMCallback _updateM,UpdateMRCallback _updateMR)
 {
     ip = _ip;
     port = _port;
@@ -59,27 +68,28 @@ bool AgvAgent::init(QString _ip, int _port,TaskFinishCallback _taskFinish,TaskEr
     }
 
     //创建连接
-    connection = new AgvConnection;
-    QyhTcp::QyhClientReadCallback r =  std::bind( &AgvAgent::onRecv, this, std::placeholders::_1,std::placeholders::_2);
-    QyhTcp::QyhClientConnectCallback c =  std::bind( &AgvAgent::onConnect, this);
-    QyhTcp::QyhClientDisconnectCallback d =  std::bind( &AgvAgent::onDisconnect, this);
-    connection->init(_ip,_port,r,c,d);
+    connection = new QTcpSocket;
+    connect(connection,SIGNAL(connected()),this,SLOT(onConnect()));
+    connect(connection,SIGNAL(disconnected()),this,SLOT(onDisconnect()));
+    connect(connection,SIGNAL(readyRead()),this,SLOT(onRecv()));
+    connection->connectToHost(_ip,_port);
 
     //创建队列处理
-    AgvCmdQueue::ToSendCallback s = std::bind(&AgvConnection::send,connection,std::placeholders::_1,std::placeholders::_2);
-    AgvCmdQueue::FinishCallback f = std::bind(&AgvAgent::onQueueFinish,this);
+    AgvCmdQueue::ToSendCallback s = std::bind(&Agv::onSend,this,std::placeholders::_1,std::placeholders::_2);
+    AgvCmdQueue::FinishCallback f = std::bind(&Agv::onQueueFinish,this);
     cmdQueue = new AgvCmdQueue;
     cmdQueue->init(s,f);
 
     return true;
 }
 
-void  AgvAgent::onRecv(const char *data,int len)
+void  Agv::onRecv()
 {
-    if(data==NULL||len<=0)return ;
+    QByteArray qba = connection->readAll();
     static QByteArray buff;
-    buff+= QByteArray(data,len);
-    while(true){
+    buff+= qba;
+    while(true)
+    {
         int start = buff.indexOf(0x66);
         int end = buff.indexOf(0x88);
         if(start>=0&&end>=0){
@@ -96,7 +106,7 @@ void  AgvAgent::onRecv(const char *data,int len)
     }
 }
 
-void AgvAgent::processOnePack(QByteArray qba)
+void Agv::processOnePack(QByteArray qba)
 {
     int kk = (int)(qba.at(1));
     //qDebug()<<"qba.length=="<<qba.length();
@@ -220,11 +230,11 @@ void AgvAgent::processOnePack(QByteArray qba)
 
 }
 
-void  AgvAgent::onConnect()
+void  Agv::onConnect()
 {
     //TODO:
 }
-void  AgvAgent::onDisconnect()
+void  Agv::onDisconnect()
 {
     //TODO:
 }
