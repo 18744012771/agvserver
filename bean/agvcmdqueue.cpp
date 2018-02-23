@@ -1,6 +1,7 @@
-#include "agvcmdqueue.h"
+﻿#include "agvcmdqueue.h"
 #include <QByteArray>
 #include "util/common.h"
+#include "util/global.h"
 
 AgvCmdQueue::AgvCmdQueue():
     quit(false)
@@ -26,7 +27,6 @@ void AgvCmdQueue::cmdThread(void *param)
 
 void AgvCmdQueue::cmdProcess()
 {
-    int sendFailTimes;
     threadAlreadQuit = false;
     while(!quit)
     {
@@ -41,33 +41,8 @@ void AgvCmdQueue::cmdProcess()
         }
         mtx.unlock();
 
-        //如果两个序列值不同，表示上次的发送没有成功，隔400ms后重新发送
-        if(recvQueueNumber!=sendQueueNumber)
-        {
-            //上一次的发送失败
-            if(sendFailTimes<4)
-            {
-                std::chrono::milliseconds dura(100);
-                std::this_thread::sleep_for(dura);
-                ++sendFailTimes;
-            }else{
-                //上一次指令没有发送成功,重新发送
-                if(ordersSendIndex - lastSendOrderAmount>=0)
-                {
-                    //对上一次的内容重新发送:
-                    ordersSendIndex -= lastSendOrderAmount;
-                    --sendQueueNumber;
-                    sendOrder();
-                    sendFailTimes = 0;
-                }
-            }
-            continue;
-        }else{
-            sendFailTimes = 0;
-        }
-
         //第一次发送任务
-        if(ordersSendIndex == 0 && orderExcuteIndex == 0){
+        if(ordersSendIndex == 0){
             sendOrder();
         }else{
             //如果当前执行的序列>=1表示已经执行了1个或几个发过去的指令了，那么要填充新的指令给它
@@ -80,7 +55,6 @@ void AgvCmdQueue::cmdProcess()
                 sendOrder();
             }
         }
-
     }
     threadAlreadQuit = true;
 }
@@ -88,19 +62,17 @@ void AgvCmdQueue::cmdProcess()
 void AgvCmdQueue::sendOrder()
 {
     mtx.lock();
-    if(orders.length() == 0 && ordersSendIndex == 0){
-        //要发送停止指令
-    }else{
-        if(ordersSendIndex>=orders.length()){
-            orders.clear();
-            mtx.unlock();
-            //TODO:完成了队列的发送:
-            if(orders.size()!=0 && finish!=nullptr)
-            {
-                finish();
-            }
-            return ;
+    if(ordersSendIndex>=orders.length()){
+        orders.clear();
+        ordersSendIndex = 0;
+        lastSendOrderAmount = 0;
+        mtx.unlock();
+        //TODO:完成了队列的发送:
+        if(finish!=nullptr)
+        {
+            finish();
         }
+        return ;
     }
 
 
@@ -135,12 +107,47 @@ void AgvCmdQueue::sendOrder()
     content.append((char)(AgvOrder::ORDER_STOP));
     content.append((char)0x00);
 
-    ordersSendIndex+=lastSendOrderAmount;
     QByteArray qba = getSendPacket(content);
 
     if(toSend != nullptr)
     {
-        toSend(qba.data(),qba.length());
+        int sendTime = 3;//失败重复发送三次
+        int interval = 200;//200ms记一次发送失败
+        int per = 50;//每50ms查看一次结果
+        int times = interval/per;//多少次查看结果失败后 记一次发送失败
+        int percount = 0;//记录查看结果 失败的次数
+        bool sendResult = false;//发送结果 默认是失败的
+
+        for(int i=0;i<sendTime;++i)
+        {
+            toSend(qba.data(),qba.length());
+
+            while(true)
+            {
+                QyhSleep(per);
+
+                if(recvQueueNumber==sendQueueNumber)//发送成功
+                {
+                    sendResult = true;
+                    break;
+                }
+
+                ++percount;
+                if(percount>=times)
+                {
+                    sendResult = false;
+                    break;
+                }
+            }
+
+            if(sendResult)
+            {
+                ordersSendIndex+=lastSendOrderAmount;//发送成功，index改变
+                break;
+            }
+        }
+
+        if(!sendResult)++sendQueueNumber;//如果一直发送失败，可能是queueNumber相同造成的，这里增加1，下次就不会还是相同的
     }
 }
 
